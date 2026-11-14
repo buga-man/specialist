@@ -1,13 +1,13 @@
 {
   "name": "specialist",
-  "version": "0.22.1",
-  "description": "The specialist plugin for pi agent (skills, hooks, extensions)",
+  "version": "0.23.0",
+  "description": "The specialist plugin: a full-cycle feature development framework (skills, hooks, extensions)",
   "keywords": [
     "pi-package"
   ],
   "private": true,
   "scripts": {
-    "test": "node --test hooks/lib/spec-core.test.mjs hooks/lib/format-core.test.mjs hooks/lib/secrets-core.test.mjs hooks/lib/lint-core.test.mjs hooks/lib/plan-context-core.test.mjs hooks/lib/vuln-core.test.mjs hooks/lib/kb-gate.test.mjs hooks/lib/codestyle-reminder.test.mjs hooks/lib/skill-gate-core.test.mjs hooks/lib/skill-gate.test.mjs hooks/lib/git-watch-core.test.mjs hooks/lib/git-watch.test.mjs skills/kb-index/scripts/lib/kb-core.test.mjs skills/kb-index/scripts/lib/kb-fs.test.mjs skills/kb-index/scripts/kb.mjs.test.mjs skills/codestyle/scripts/lib/codestyle-core.test.mjs skills/tech-writer/scripts/build-manual.test.mjs"
+    "test": "node --test hooks/lib/spec-core.test.mjs hooks/lib/format-core.test.mjs hooks/lib/secrets-core.test.mjs hooks/lib/lint-core.test.mjs hooks/lib/plan-context-core.test.mjs hooks/lib/vuln-core.test.mjs hooks/lib/kb-gate.test.mjs hooks/lib/codestyle-reminder.test.mjs hooks/lib/skill-gate-core.test.mjs hooks/lib/skill-gate.test.mjs hooks/lib/git-watch-core.test.mjs hooks/lib/git-watch.test.mjs hooks/lib/hooks-manifest.test.mjs skills/kb-index/scripts/lib/kb-core.test.mjs skills/kb-index/scripts/lib/kb-fs.test.mjs skills/kb-index/scripts/kb.mjs.test.mjs skills/codestyle/scripts/lib/codestyle-core.test.mjs skills/tech-writer/scripts/build-manual.test.mjs"
   },
   "pi": {
     "skills": [

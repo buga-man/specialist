@@ -1,10 +1,10 @@
 # specialist
 
-The repository is the **specialist** plugin: full-cycle feature development skills for
-**Claude Code** and **pi agent** — from a raw task to spec-driven code and up-to-date
-documentation. Skills are written once and work in both programs (the shared Agent
-Skills format); installation uses each program's native mechanisms, and the skills can
-be used without installing the plugin.
+The repository is the **specialist** plugin: a full-cycle feature development framework
+for **Claude Code**, **pi agent**, **Codex CLI**, and **OpenCode** — from a raw task to
+spec-driven code and up-to-date documentation. Skills are written once and work in every
+host (the shared Agent Skills format); installation uses each host's native mechanisms,
+and the skills can be used without installing the plugin.
 
 ## Pipeline
 
@@ -66,18 +66,22 @@ traceability defect — spec-review and tech-writer check for it.
 ```
 .claude-plugin/plugin.json       Claude Code plugin manifest
 .claude-plugin/marketplace.json  marketplace wrapper (source: "./") — how /plugin install finds the plugin
+plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 package.json                     pi package manifest (pi.skills / pi.extensions)
-skills/                          pipeline skills (the same ones for both programs); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
-hooks/                           Claude Code hooks: spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit/edits), git-watch (a signal after tree-changing git operations), format-guard + lint-guard (formatter and linter after an edit), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — hooks/README.md
+skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
+hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit/edits), git-watch (a signal after tree-changing git operations), format-guard + lint-guard (formatter and linter after an edit), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — hooks/README.md
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, format-guard.ts, lint-guard.ts, plan-context.ts
+plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                            documentation: skills, hooks, installation; design notes; the skill template
 scripts/                         helper scripts (copy-skills.sh); skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
-## Hooks (Claude Code) and extensions (pi)
+## Hooks and extensions: one logic, four hosts
 
-One logic, two wrappers (`hooks/lib/*.mjs` + adapters). Details and the plan contract:
-[hooks/README.md](hooks/README.md) and [docs/hooks.md](docs/hooks.md); the extension
+One logic (`hooks/lib/*.mjs` cores), four wrappers: Claude Code adapters, Codex adapters
+(JSON output protocol, `apply_patch` support), pi extensions (`extensions/*.ts`), and the
+OpenCode plugin (`plugins/opencode/`). Details and the plan contract:
+[hooks/README.md](hooks/README.md) and [docs/hooks.md](docs/hooks.md); the pi extension
 API — [extensions/README.md](extensions/README.md).
 
 | Hook | When | What it does |
@@ -137,14 +141,44 @@ pi install git:github.com/buga-man/specialist.git
 Updating: `pi update`. Pinning a version — by tag: `git:...specialist.git@v<release-tag>`.
 After edits/extensions: `/reload` inside pi.
 
+### Codex CLI
+
+```bash
+codex marketplace add https://github.com/buga-man/specialist.git
+codex plugin add specialist@specialist
+```
+
+After installing, review and trust the hooks in the `/hooks` dialog (Codex runs
+untrusted hooks only after explicit trust). Without the plugin, the skills work on their
+own: `bash scripts/copy-skills.sh codex` (→ `~/.codex/skills`) or any target directory
+(e.g. `.codex/skills` inside a project).
+
+### OpenCode
+
+In the target project's `opencode.json`:
+
+```jsonc
+{
+  "skills":  ["<path to the specialist repository>/skills"],
+  "plugins": ["<path to the specialist repository>/plugins/opencode"]
+}
+```
+
+Both entries accept any path form (absolute, `~/`, `file://`). Without the plugin, the
+skills work on their own: `bash scripts/copy-skills.sh opencode` (→
+`~/.config/opencode/skills`); the compatibility sources `~/.claude/skills` and
+`~/.agents/skills` are picked up automatically.
+
 ### Skills only, without installing the plugin
 
 ```bash
 git clone https://github.com/buga-man/specialist.git
 cd specialist
-bash scripts/copy-skills.sh claude   # → ~/.claude/skills
+bash scripts/copy-skills.sh claude   # → ~/.claude/skills (read by Claude Code and OpenCode)
 bash scripts/copy-skills.sh pi       # → ~/.pi/agent/skills
-bash scripts/copy-skills.sh agents   # → ~/.agents/skills (cross-harness)
+bash scripts/copy-skills.sh agents   # → ~/.agents/skills (read by pi and OpenCode)
+bash scripts/copy-skills.sh codex    # → ~/.codex/skills
+bash scripts/copy-skills.sh opencode # → ~/.config/opencode/skills
 ```
 
 Existing skills are not overwritten without confirmation. The target can also be an
@@ -172,19 +206,28 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 
 - **Claude Code** → `hooks/hooks.json` (event → matcher → command); shared logic — in
   `hooks/lib/`, the contract and examples — `hooks/README.md`.
+- **Codex** → the adapter in `hooks/lib/` (a `-codex` twin when the output protocol
+  differs) + a matcher group in `hooks/hooks-codex.json`; the root `plugin.json` points
+  Codex at it.
 - **pi agent** → `extensions/<name>.ts`: `export default function (pi) { pi.on(...) }` —
   see `extensions/README.md`.
+- **OpenCode** → `plugins/opencode/index.ts` (V2 `Plugin.define` + a V1 `server()`
+  fallback) on the same cores.
 
 ## Versioning
 
-- The plugin version is semver, kept in sync in three places: `.claude-plugin/plugin.json`,
-  `package.json` (the pi package) and the `marketplace.json` entry. A new skill extending
-  the pipeline — minor; an edit of a skill's text — patch.
+- The plugin version is semver, kept in sync in four places: `.claude-plugin/plugin.json`,
+  `plugin.json` (the Codex manifest), `package.json` (the pi package) and the
+  `marketplace.json` entry. A new skill extending the pipeline — minor; an edit of a
+  skill's text — patch.
 - Stable points — git tags `v*` on the repository.
 
 ## Links
 
-- The Agent Skills format (shared by both programs): https://agentskills.io
+- The Agent Skills format (shared by every host): https://agentskills.io
+- The Agent Plugins manifest (Codex): https://agent-plugins.org
+- OpenCode documentation (skills / plugins): https://opencode.ai/docs
+- Codex documentation (skills / hooks): https://developers.openai.com/codex
 - pi documentation (skills / packages / extensions):
   https://github.com/earendil-works/pi/tree/main/packages/coding-agent/docs
 - Claude Code documentation (plugins): https://code.claude.com/docs/en/plugins

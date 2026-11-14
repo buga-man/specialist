@@ -5,10 +5,12 @@
 #   ./scripts/copy-skills.sh <target>
 #
 # Targets:
-#   claude   ~/.claude/skills     — personal Claude Code skills
+#   claude   ~/.claude/skills     — personal Claude Code skills (also read by OpenCode)
 #   pi       ~/.pi/agent/skills   — global pi agent skills
-#   agents   ~/.agents/skills     — cross-harness directory (read by pi)
-#   <path>   an arbitrary directory (e.g. .claude/skills inside a project)
+#   agents   ~/.agents/skills     — cross-harness directory (read by pi and OpenCode)
+#   codex    ~/.codex/skills      — personal Codex CLI skills
+#   opencode ~/.config/opencode/skills — global OpenCode skills
+#   <path>   an arbitrary directory (e.g. .claude/skills or .codex/skills inside a project)
 #
 # Only skills/*/ directories that contain a SKILL.md are copied.
 # Skills that already exist are not overwritten without confirmation.
@@ -24,9 +26,11 @@ usage() {
 
 DEST=""
 case "${1:-}" in
-  claude) DEST="$HOME/.claude/skills" ;;
-  pi)     DEST="$HOME/.pi/agent/skills" ;;
-  agents) DEST="$HOME/.agents/skills" ;;
+  claude)   DEST="$HOME/.claude/skills" ;;
+  pi)       DEST="$HOME/.pi/agent/skills" ;;
+  agents)   DEST="$HOME/.agents/skills" ;;
+  codex)    DEST="$HOME/.codex/skills" ;;
+  opencode) DEST="$HOME/.config/opencode/skills" ;;
   -h|--help|"") usage; exit 0 ;;
   *)      DEST="$1" ;;
 esac

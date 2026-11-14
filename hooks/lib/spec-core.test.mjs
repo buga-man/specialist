@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { activePlanInfo, decide, isAlwaysAllowed, readMode } from "./spec-core.mjs";
+import { activePlanInfo, applyPatchPaths, decide, editedFilePaths, isAlwaysAllowed, readMode } from "./spec-core.mjs";
 
 const dirs = [];
 process.on("exit", () => {
@@ -207,4 +207,63 @@ test("RU task headings are recognized; case-insensitive match on Windows", () =>
       "allow",
     );
   }
+});
+
+const PATCH = [
+  "*** Begin Patch",
+  "*** Update File: src/api/export.ts",
+  "@@",
+  "-old",
+  "+new",
+  "*** Add File: ./src/new.ts",
+  "+content",
+  "*** Delete File: src/old.ts",
+  "*** Update File: src/renamed.ts",
+  "*** Move to: src/moved.ts",
+  "*** End Patch",
+].join("\n");
+
+test("applyPatchPaths: Codex apply_patch payload yields deduplicated, normalized targets", () => {
+  assert.deepEqual(applyPatchPaths(PATCH), [
+    "src/api/export.ts",
+    "src/new.ts",
+    "src/old.ts",
+    "src/renamed.ts",
+    "src/moved.ts",
+  ]);
+});
+
+test("applyPatchPaths: object wrappers, a bare file_path, and unknown shapes", () => {
+  // Codex may wrap the patch text in an object field.
+  assert.deepEqual(applyPatchPaths({ input: PATCH }), applyPatchPaths(PATCH));
+  assert.deepEqual(applyPatchPaths({ patch: PATCH }), applyPatchPaths(PATCH));
+  // An explicit file_path wins (Claude Code-style payload reaching the same code path).
+  assert.deepEqual(applyPatchPaths({ file_path: "src/a.ts" }), ["src/a.ts"]);
+  // A patch without the Begin Patch marker is not a patch; garbage is not a patch.
+  assert.equal(applyPatchPaths("no markers here"), null);
+  assert.equal(applyPatchPaths({ nothing: true }), null);
+  assert.equal(applyPatchPaths(null), null);
+});
+
+test("editedFilePaths: explicit file, patch files (capped), unknown shape", () => {
+  assert.deepEqual(editedFilePaths({ file_path: "src/a.ts" }), ["src/a.ts"]);
+  assert.deepEqual(editedFilePaths({ notebook_path: "n.ipynb" }), ["n.ipynb"]);
+  const many = { input: "*** Begin Patch\n" + Array.from({ length: 9 }, (_, i) => `*** Update File: f${i}.ts`).join("\n") };
+  assert.equal(editedFilePaths(many).length, 5);
+  assert.equal(editedFilePaths(many, 9).length, 9);
+  assert.deepEqual(editedFilePaths({ nothing: true }), []);
+  assert.deepEqual(editedFilePaths(null), []);
+});
+
+test("decide: an apply_patch payload is checked file by file — one out-of-scope file blocks", () => {
+  const dir = project({
+    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+  });
+  const patch = "*** Begin Patch\n*** Update File: src/a.ts\n*** Add File: src/escape.ts\n*** End Patch";
+  assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "allow");
+  assert.equal(decide({ projectDir: dir, filePath: "src/escape.ts", mode: "soft" }).action, "block");
+  // The adapter path: every target of the patch is decided; docs targets stay allowed.
+  const targets = applyPatchPaths(patch) ?? [];
+  const verdicts = targets.map((p) => decide({ projectDir: dir, filePath: p, mode: "soft" }).action);
+  assert.deepEqual(verdicts, ["allow", "block"]);
 });

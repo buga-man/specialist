@@ -2,7 +2,8 @@
 
 This repository **is** the plugin: it lives in the git repository
 `github.com/buga-man/specialist` and installs through the standard mechanisms of
-**Claude Code** and **pi agent**. Skills are written once and work in both programs
+**Claude Code**, **pi agent**, **Codex CLI**, and **OpenCode**. Skills are written once
+and work in every host
 (the shared Agent Skills format); hooks (Claude Code) and extensions (pi) are a dual
 implementation of one logic ([more detail](hooks.md)).
 
@@ -13,8 +14,8 @@ implementation of one logic ([more detail](hooks.md)).
 | Component | Why | How to check |
 |---|---|---|
 | Access to github.com | installation via git (marketplace / `pi install` / clone) | `git ls-remote https://github.com/buga-man/specialist.git` |
-| **Node.js ≥ 18** | all Claude Code hooks run as `node <script>`; pi itself runs on Node | `node --version` |
-| Claude Code or pi agent | the host; skills and hooks work in both | — |
+| **Node.js ≥ 18** | every hook runs as `node <script>`; pi and OpenCode themselves run on Node | `node --version` |
+| Claude Code, pi agent, Codex CLI, or OpenCode | the host; the skills work in every one, hooks where the host has an interception point | — |
 
 Important: **the plugin itself carries no npm dependencies** — the hooks use only the
 Node standard library. Everything below is a dependency of *your projects*, not of the

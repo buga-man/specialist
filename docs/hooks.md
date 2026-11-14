@@ -2,9 +2,33 @@
 
 The pipeline's rules live in skills, but a skill is a request to the model. A hook is a
 barrier at the tool level: an edit outside the plan does not go through, a secret never
-reaches git, a broken formatter is fixed on the spot. One logic, two wrappers: the shared
-core in `hooks/lib/*.mjs`, the Claude Code adapter (stdin JSON, exit 2 = block) and the pi
-extension (`pi.on(...)`, TypeScript in `extensions/`).
+reaches git, a broken formatter is fixed on the spot. One logic, four wrappers: the shared
+core in `hooks/lib/*.mjs`, plus one adapter per host — the Claude Code hook (stdin JSON,
+exit 2 = block), the Codex hook (the same stdin; JSON output where Codex differs —
+`apply_patch` edits, `additionalContext` on PostToolUse/SessionStart, `{"decision":
+"block"}` on Stop; registered by `hooks/hooks-codex.json`), the pi extension
+(`pi.on(...)`, TypeScript in `extensions/`), and the OpenCode plugin
+(`plugins/opencode/`, blocking by throwing from `execute.before`).
+
+## Host support
+
+| Hook | Claude Code | Codex | pi | OpenCode |
+|---|---|---|---|---|
+| `spec-gate` | ✅ block | ✅ block (`apply_patch` payloads are checked file by file) | ✅ block | ✅ block |
+| `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block |
+| `vuln-guard` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan via `additionalContext` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan throws |
+| `format-guard` / `lint-guard` | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
+| `git-watch` | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | — | ✅ signal appended to the output |
+| `plan-context` | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
+| `codestyle-reminder` | ✅ session start | ✅ session start | — | — |
+| `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | — | — |
+| `skill-gate` | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
+
+Codex runs untrusted hooks only after explicit trust (`/hooks`), and its PostToolUse is
+record-only — report-only hooks there deliver findings as `additionalContext` instead of
+blocking. Where a host has no interception point, the discipline degrades to what the
+skills request (and, in pi, to the plan-context orientation); that is a documented
+boundary, not a silent gap.
 
 ## Overview
 

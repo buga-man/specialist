@@ -48,6 +48,46 @@ export function isAlwaysAllowed(relPath) {
   return false;
 }
 
+/** Extracts the target file paths of an `apply_patch`-style tool payload (Codex sends
+ *  edits this way: the tool_input carries the whole patch text rather than a file path).
+ *  Recognizes the line-oriented patch format — "*** Add File: <path>", "*** Update File:
+ *  <path>", "*** Delete File: <path>" and "*** Move to: <path>" renames — and returns a
+ *  deduplicated list of paths to check. Returns null when the payload is not recognizable
+ *  as a patch (unknown shape — the caller stays silent instead of guessing). */
+export function applyPatchPaths(toolInput) {
+  let text = null;
+  if (typeof toolInput === "string") {
+    text = toolInput;
+  } else if (toolInput && typeof toolInput === "object" && !Array.isArray(toolInput)) {
+    if (typeof toolInput.file_path === "string" && toolInput.file_path) return [toolInput.file_path];
+    const candidate = toolInput.input ?? toolInput.patch ?? toolInput.patch_text;
+    if (typeof candidate === "string") text = candidate;
+  }
+  if (text === null) return null;
+  if (!/^\*\*\* Begin Patch\b/m.test(text)) return null;
+  const paths = new Set();
+  for (const m of text.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
+    paths.add(m[1].trim().replace(/\\/g, "/").replace(/^\.\//, ""));
+  }
+  for (const m of text.matchAll(/^\*\*\* Move to: (.+)$/gm)) {
+    paths.add(m[1].trim().replace(/\\/g, "/").replace(/^\.\//, ""));
+  }
+  return [...paths];
+}
+
+/** The file paths an edit payload touches: the explicit `file_path` of Claude Code-style
+ *  tools, or every file of an apply_patch-style patch. Used by the PostToolUse adapters
+ *  (formatter, linter, semgrep scan) that need the target files regardless of the host's
+ *  edit shape. Unknown shapes yield an empty list; `cap` bounds the patch case. */
+export function editedFilePaths(toolInput, cap = 5) {
+  if (!toolInput || typeof toolInput !== "object") return [];
+  const filePath = toolInput.file_path ?? toolInput.notebook_path;
+  if (typeof filePath === "string" && filePath) return [filePath];
+  const patchPaths = applyPatchPaths(toolInput);
+  if (!patchPaths) return [];
+  return patchPaths.slice(0, cap);
+}
+
 /** Collect docs/plans/*.md and extract the file paths of all open (unticked) tasks.
  *  Also reports which plan files still have open work and the open tasks' titles —
  *  plan-context uses these to orient a fresh session; spec-gate ignores them. */

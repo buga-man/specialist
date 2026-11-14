@@ -1,7 +1,7 @@
 {
   "name": "specialist",
-  "description": "Full-cycle feature development skills for Claude Code and pi agent: business spec → system analysis → per-repository decomposition → work plan → spec-driven implementation → up-to-date documentation",
-  "version": "0.22.1",
+  "description": "Full-cycle feature development skills for Claude Code, pi agent, Codex CLI, and OpenCode: business spec → system analysis → per-repository decomposition → work plan → spec-driven implementation → up-to-date documentation",
+  "version": "0.23.0",
   "author": {
     "name": "Specialist"
   }
