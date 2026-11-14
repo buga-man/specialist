@@ -8,24 +8,14 @@
  * No semgrep on PATH / clean scan / broken scanner / any internal error → exit 0
  * silently (fail-safe: the hook never blocks legitimate work).
  */
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { checkGitCommit, readVulnMode, scanSingleFile } from "./vuln-core.mjs";
+import { readHookPayload, resolveProjectDir, run } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
   const tool = String(payload?.tool_name || "");
-  const projectDir = String(payload?.cwd || process.cwd());
-  const run = (cmd, args, opts) => {
-    const r = spawnSync(cmd, args, { ...opts, encoding: "utf8", windowsHide: true });
-    return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
-  };
+  const projectDir = resolveProjectDir(payload);
 
   if (/^bash$/i.test(tool)) {
     const command = String(payload?.tool_input?.command || "");

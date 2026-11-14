@@ -18,19 +18,22 @@ exit 2 = block), the Codex hook (the same stdin; JSON output where Codex differs
 | `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block |
 | `vuln-guard` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan via `additionalContext` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan throws |
 | `format-guard` / `lint-guard` | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
-| `git-watch` | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | — | ✅ signal appended to the output |
+| `git-watch` | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
 | `plan-context` | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
-| `codestyle-reminder` | ✅ session start | ✅ session start | — | — |
-| `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | — | — |
+| `codestyle-reminder` | ✅ session start | ✅ session start | ✅ session start (persistent message) | ✅ with the session orientation |
+| `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | ✅ settle-time follow-up (`agent_settled` → a continuation turn) | — (no turn-end interception point) |
 | `skill-gate` | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
 
 Codex runs untrusted hooks only after explicit trust (`/hooks`), and its PostToolUse is
 record-only — report-only hooks there deliver findings as `additionalContext` instead of
-blocking. Where a host has no interception point, the discipline degrades to what the
-skills request (and, in pi, to the plan-context orientation); that is a documented
-boundary, not a silent gap.
+blocking. Where a host has no interception point — `skill-gate` outside Claude Code,
+`kb-gate` on OpenCode — the discipline degrades to what the skills request; that is a
+documented boundary, not a silent gap.
 
 ## Overview
+
+The overview maps the Claude Code and pi wiring; the Host support table above covers all
+four hosts.
 
 | Hook | Claude Code | pi | What it does | Dependency | Project config |
 |---|---|---|---|---|---|
@@ -38,12 +41,12 @@ boundary, not a silent gap.
 | `skill-gate` | PreToolUse: Skill | — | in the `fast` profile, blocks autonomous runs of the pipeline's stage skills | Node | `.spec-gate` |
 | `secrets-guard` | PreToolUse: Bash | `tool_call` bash | secrets never reach git | Node, git | `.secrets-allow` |
 | `vuln-guard` | PreToolUse: Bash (commit) + PostToolUse (opt-in) | `tool_call` bash + `tool_result` edit/write | semgrep at the commit boundary | Node, git, **semgrep** | `.vuln-guard`, `.vuln-allow`, `semgrep.yml` |
-| `git-watch` | PostToolUse: Bash | — | after tree-changing git operations, a signal about stale derived artifacts | Node, git | — |
+| `git-watch` | PostToolUse: Bash | `tool_result` bash | after tree-changing git operations, a signal about stale derived artifacts | Node, git | — |
 | `format-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | formatter after an edit | Node + the project's prettier/ruff | — |
 | `lint-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | linter after an edit | Node + the project's eslint/ruff/ktlint | — |
-| `plan-context` | SessionStart (startup/resume/clear) | `before_agent_start` | orients a fresh session to the plan | Node | — |
-| `codestyle-reminder` | SessionStart (startup/resume/clear) | — | reminds about a stale CODESTYLE.md | Node, git | — |
-| `kb-gate` | Stop | — | the documentation index diverged from disk — blocked until rebuilt | Node | — |
+| `plan-context` | SessionStart (startup/resume/clear/compact) | `before_agent_start` | orients a fresh session to the plan | Node | — |
+| `codestyle-reminder` | SessionStart (startup/resume/clear/compact) | `session_start` | reminds about a stale CODESTYLE.md | Node, git | — |
+| `kb-gate` | Stop | `agent_settled` | the documentation index diverged from disk — blocked until rebuilt | Node | — |
 
 All hooks are **fail-safe**: a hook failure, garbage in the config, a missing dependency →
 the work is skipped, not blocked. Messages are in English (the model's language); plan and
@@ -59,11 +62,11 @@ discuss with the user).
 
 **The plan contract** (`docs/plans/*.md`, keywords in English and Russian):
 
-- a task = a `### Task ...` / `###  ...` section;
-- task files = paths in backticks on the `- Files:` / `- :` line (globs are supported:
+- a task = a `### Task ...` section;
+- task files = paths in backticks on the `- Files:` line (globs are supported:
   `src/**/*.css`); if the line is present but no paths could be parsed from it, the gate
   blocks with an explanation of the format instead of opening silently;
-- closure = an explicit `- Done: ...` / `- :` / `- :` line; `- [x]` checkboxes
+- closure = an explicit `- Done: ...` line; `- [x]` checkboxes
   are step progress and do **not** close a task. That is why the plan template contains no
   `- Done:` line — the executor adds it when closing a task.
 

@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: Turn a raw task description into a business specification before any planning or implementation. Use whenever a new task, feature request, or change arrives — however briefly it is stated — and when the user asks to brainstorm it, gather requirements, or prepare a spec. Research the request and the existing system, ask the user up to 10 clarifying questions, then produce a business spec with acceptance criteria and business cases. The spec contains no code — only business meaning, rationale, and verifiable criteria. Not for bug reports — root-cause owns those.
+description: Turn a raw task description into a business specification before any planning or implementation. Use whenever a new task, feature request, or change arrives — however briefly it is stated — and when the user asks to brainstorm it, gather requirements, or prepare a spec. Research the request and the existing system, ask the user up to 10 clarifying questions per round (two rounds at most), then produce a business spec with acceptance criteria and business cases. The spec contains no code — only business meaning, rationale, and verifiable criteria. Not for bug reports — root-cause owns those.
 ---
 
 # Business brainstorm
@@ -51,13 +51,11 @@ Stages 2 and 3 are independent research areas, and each splits further (a separa
 repo, several subsystems). When the surface is large, offer to dispatch read-only scout
 subagents and keep the main context for judgment, not for reading raw material:
 
-- **Ask before the first dispatch — always.** One explicit question to the user: may
-  subagent scouts be used here, and how many may run? Name the planned missions and your
-  recommended count in the same ask. The granted number is the hard budget for the whole
-  run; if you need more, come back and ask again.
+- **Ask first — always.** One explicit question: may subagent scouts be used, and how
+  many? Name the missions and the recommended count; the granted number is the hard
+  budget for the run — need more, ask again.
 - **Denied, or the host has no subagent mechanism** → run the same missions yourself,
-  sequentially, in narrow passes; the report contract below still applies to what you
-  collect.
+  sequentially, in narrow passes; the report contract still applies to what you collect.
 - **One mission per scout**: the documentation corpus, or one subsystem / flow of the code
   recon. Never a vague "look at the repo".
 - **Report contract**: citable facts, each with a `file:line` or document reference and
@@ -68,7 +66,7 @@ subagents and keep the main context for judgment, not for reading raw material:
 
 ## 4. Ask the human
 
-- Direct questions are a scarce resource: **maximum 10 total**, batched in one message, most critical first.
+- Direct questions are a scarce resource: **at most 10 per round**, batched in one message, most critical first.
 - Ask only questions whose answers would change the spec; each question must name the ambiguity it removes.
 - If you can responsibly assume, propose the assumption instead of asking: "I assume X — correct me if wrong."
 - Questions you did not ask become the spec's Open questions, each with your working assumption.
@@ -76,7 +74,7 @@ subagents and keep the main context for judgment, not for reading raw material:
 ## 5. Process the answers
 
 - Integrate the answers into scope and criteria.
-- If contradictions or new unknowns appeared, run one more short round under the same rules (the 10-question budget is total). Two rounds is the normal maximum; leftovers go to Open questions.
+- If contradictions or new unknowns appeared, run one more short round under the same rules. Two rounds is the normal maximum; leftovers go to Open questions.
 
 ## 6. Write the spec — only when everything forms one picture
 
@@ -111,10 +109,12 @@ outside the project must understand what and why from this section alone.
 ## 2. Scope
 - In scope: ...
 - Out of scope: ... (explicit, to prevent scope creep)
+- Constraints & dependencies: deadlines, compliance, other teams, budgets — the outer limits the work must respect.
 
 ## 3. Acceptance criteria
 Numbered, verifiable statements; a business person can check each one.
 Mark every criterion's source: [request], [docs], [answer #N].
+Mark each must (the feature fails without it) or should (valuable, negotiable) — plans and reviews lean on the difference.
 1. ...
 
 ## 4. Business cases
@@ -124,13 +124,17 @@ each as an actor → action → outcome sequence.
 ### Case: <name>
 1. ...
 
-## 5. Open questions
+## 5. Success metrics
+How the outcome is measured after release: metric, baseline, target, when measured.
+What nobody plans to measure is a wish, not a feature.
+
+## 6. Open questions
 | # | Question | Working assumption | Risk if the assumption is wrong |
 
-## 6. Decisions and rationale
+## 7. Decisions and rationale
 Key business decisions made during brainstorming and why alternatives were rejected.
 
-## 7. Amendments
+## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):
 - YYYY-MM-DD: <what and why> (approved by <user>, source: <task or ruling>)
 ```
@@ -139,6 +143,9 @@ Append-only log of approved changes to this spec (a spec may change — never si
 
 - **No code in the spec**: no file paths, APIs, data schemas, implementation details. Business language only — ideas, rationale, outcomes. Domain terms are fine; design is not.
 - **Nothing silently assumed**: anything unresolved is visible in Open questions.
-- **Frontmatter is part of the spec**: when sibling docs in the target repo carry YAML metadata, include it (copy the field set from the siblings; minimum `id`/`parent`/`children`/`status`/`last-updated`). Downstream skills append to this spec's `children` — if you can already see it stale, fix it.
+- **Frontmatter is part of the spec**: when sibling docs carry YAML metadata, include it
+  (copy their field set). Downstream skills append to this spec's `children` — a parent
+  with downstream docs and an empty `children` is a traceability defect; if you can already
+  see it stale, fix it.
 - **Every acceptance criterion is verifiable** by a business person, not only by a developer.
 - Write the spec in the team's working language, which may differ from the language of this skill.

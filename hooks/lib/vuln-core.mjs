@@ -86,7 +86,12 @@ export function registryPacks(files) {
   return [...packs];
 }
 
-/** Parse semgrep --json output into {rule, file, line, message} findings; garbage → []. */
+/** semgrep severity → our three tiers; unknown values read as low. */
+const SEVERITY = { CRITICAL: "high", HIGH: "high", ERROR: "high", MEDIUM: "medium", WARNING: "medium", LOW: "low", INFO: "low" };
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
+
+/** Parse semgrep --json output into {rule, file, line, message, severity} findings;
+ *  garbage → []. */
 export function parseSemgrepJson(text) {
   try {
     const data = JSON.parse(String(text));
@@ -96,6 +101,7 @@ export function parseSemgrepJson(text) {
       file: String(r?.path ?? "?"),
       line: Number(r?.start?.line ?? 0),
       message: String(r?.extra?.message ?? "").slice(0, MAX_MESSAGE),
+      severity: SEVERITY[String(r?.extra?.metadata?.severity ?? "").toUpperCase()] || "low",
     }));
   } catch {
     return []; // fail-safe: unparsable output is silence, not a block
@@ -105,9 +111,13 @@ export function parseSemgrepJson(text) {
 const clip = (s) => (s.length > MAX_MESSAGE ? s.slice(0, MAX_MESSAGE - 1) + "…" : s);
 
 function findingsToReason(findings, what, truncated) {
-  const rows = findings
+  // Highest severity first, so the actionable rows survive the MAX_FINDINGS_SHOWN cut.
+  const sorted = [...findings].sort(
+    (a, b) => (SEVERITY_RANK[a.severity] ?? 2) - (SEVERITY_RANK[b.severity] ?? 2),
+  );
+  const rows = sorted
     .slice(0, MAX_FINDINGS_SHOWN)
-    .map((f) => `  - ${f.file}:${f.line} — ${f.rule} — ${clip(f.message)}`)
+    .map((f) => `  - [${f.severity}] ${f.file}:${f.line} — ${f.rule} — ${clip(f.message)}`)
     .join("\n");
   const extra = truncated ? `\n(only the first ${MAX_FILES} staged files were scanned)` : "";
   return (
@@ -184,4 +194,30 @@ export async function scanSingleFile({ projectDir, filePath, run }) {
   const relNorm = rel.replace(/\\/g, "/");
   if (!relNorm || relNorm.startsWith("..") || isAbsolute(relNorm)) return null;
   return scanFiles({ projectDir, files: [relNorm], run, what: `the edited file ${relNorm}` });
+}
+
+/** Scan several edited files in one batch (a patch payload may touch many): the paths
+ *  are normalized like scanSingleFile's, deduplicated, and scanned in a single semgrep
+ *  invocation — one probe and one spawn for the whole patch instead of per file. */
+export async function scanEditedFiles({ projectDir, files, run }) {
+  const seen = new Set();
+  for (const filePath of files) {
+    let rel;
+    try {
+      rel = isAbsolute(filePath) ? relative(projectDir, filePath) : filePath;
+    } catch {
+      continue;
+    }
+    const relNorm = rel.replace(/\\/g, "/");
+    if (!relNorm || relNorm.startsWith("..") || isAbsolute(relNorm) || seen.has(relNorm)) continue;
+    seen.add(relNorm);
+  }
+  const rels = [...seen];
+  if (!rels.length) return null;
+  return scanFiles({
+    projectDir,
+    files: rels,
+    run,
+    what: rels.length === 1 ? `the edited file ${rels[0]}` : `the edited files (${rels.length})`,
+  });
 }

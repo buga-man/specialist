@@ -113,7 +113,7 @@ date: 2026-11-08
 
 ## <Scenario = business case>
 1. Step — the user's action.
-   ![Requests list filtered by date](assets/requests-list.png)
+   ![<what the screenshot shows>](docs/manual/assets/<meaningful-name>.png)  — or `**[screenshot: pending]**` until taken
 2. Next step. Expected result: ...
 ```
 
@@ -129,7 +129,8 @@ node <skill-dir>/scripts/build-manual.mjs docs/manual --no-pdf   # html only
 - The HTML is standalone — CSS and images inlined, one file, opens anywhere, can be
   emailed as is. The PDF is printed by headless Chrome/Edge (auto-detected, override
   with `MANUAL_BROWSER`). Exit code 2 means the HTML is built but the PDF was skipped
-  (no browser found) — report it, do not hide it.
+  (no browser found); exit code 3 means the browser was found but the PDF was not
+  created. Report both, do not hide them.
 - Verify the result before handing over: cover, TOC links, images, page breaks. Broken
   build output is not a deliverable.
 - Known limit: the PDF TOC has no page numbers (Chrome print); the HTML TOC carries links.

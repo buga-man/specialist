@@ -241,3 +241,62 @@ test("checkGitCommand: non-git and clean git — null", async () => {
     null,
   );
 });
+
+test("scanDiff: context lines advance the line counter (added lines keep their real numbers)", () => {
+  const diff = [
+    "diff --git a/f.py b/f.py",
+    "--- a/f.py",
+    "+++ b/f.py",
+    "@@ -1,2 +1,3 @@",
+    " import os",
+    "-old",
+    "+aws_key = AKIAIOSFODNN7EXAMPLE",
+  ].join("\n");
+  const findings = scanDiff(diff);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].line, 2); // 1 = the context line, 2 = the added line — the old code said 1
+  assert.equal(findings[0].tier, "definite");
+});
+
+test("scanDiff: a context line alone does not shift a later hunk's numbering", () => {
+  const diff = [
+    "diff --git a/f.py b/f.py",
+    "@@ -1 +1,2 @@",
+    " const a = 1;",
+    '+const b = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd"',
+  ].join("\n");
+  const findings = scanDiff(diff);
+  assert.equal(findings[0].line, 2);
+});
+
+test("DEFINITE: provider-specific key prefixes are definite-tier findings", () => {
+  const samples = [
+    ["sk-ant-api03-abcdefghijklmnopqrstuv0123456789", "Anthropic API key"],
+    ["sk-proj-abcdefghijklmnopqrstuvwxyz123456", "OpenAI project key"],
+    ["sk-None-abcdefghijklmnopqrstuvwxyz12345", "OpenAI legacy key"],
+    ["sk_live_abcdefghijklmnopqrst", "Stripe live key"],
+    ["whsec_abcdefghijklmnopqrstu", "Stripe webhook secret"],
+    ["glpat-abcdefghijklmnopqrst", "GitLab personal access token"],
+    ["ya29.abcdefghijklmnopqrstuvwxyz12", "Google OAuth access token"],
+    ["SG.abcdefghijklmnopqrst.abcdefghijklmnopqrstuvwxyz123456", "SendGrid API key"],
+  ];
+  for (const [value, label] of samples) {
+    const findings = scanForSecrets(`token = "${value}"`);
+    assert.equal(findings.length, 1, label);
+    assert.equal(findings[0].tier, "definite", label);
+    assert.equal(findings[0].label, label, label);
+  }
+});
+
+test("gitCommands: environment assignments before git stay part of the invocation", () => {
+  assert.deepEqual(gitCommands("GIT_AUTHOR_NAME=x git commit -m y"), [
+    { sub: "commit", rest: "-m y", dir: null },
+  ]);
+  assert.deepEqual(gitCommands("FOO='a b' git push origin main"), [
+    { sub: "push", rest: "origin main", dir: null },
+  ]);
+  assert.deepEqual(gitCommands("git -C /repo status && ENV=1 git add ."), [
+    { sub: "add", rest: ".", dir: null },
+  ]);
+  assert.deepEqual(gitCommands("echo git commit is not git"), []); // a plain word still needs the binary
+});

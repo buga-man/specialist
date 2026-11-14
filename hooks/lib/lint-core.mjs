@@ -20,7 +20,7 @@
  * `run()` is injected so both the Claude Code hook (child_process) and the pi extension
  * (pi.exec) can share this logic.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, isAbsolute, join, relative } from "node:path";
 
 const ESLINT_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte"]);
@@ -40,25 +40,56 @@ function fromCode(tool, r) {
   return null; // fatal/config error — fail-safe, skip
 }
 
-function projectDeclaresEslint(projectDir) {
-  try {
-    const pkg = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8"));
-    return Boolean(pkg?.dependencies?.eslint || pkg?.devDependencies?.eslint);
-  } catch {
-    return false;
+/** The stat key of the files that decide a declaration — the memo basis. One patch
+ *  payload lints several files; re-reading the manifests per file is waste, and the
+ *  stat keys keep a changed manifest honest (tests toggle them). */
+function statKey(projectDir, files) {
+  const keys = [];
+  for (const f of files) {
+    try {
+      const stat = statSync(join(projectDir, f));
+      keys.push(`${f}:${stat.mtimeMs}:${stat.size}`);
+    } catch {
+      keys.push(`${f}:none`);
+    }
   }
+  return keys.join("|");
 }
 
+let eslintMemo = null;
+function projectDeclaresEslint(projectDir) {
+  const key = statKey(projectDir, ["package.json"]);
+  if (eslintMemo?.key === key) return eslintMemo.value;
+  let value = false;
+  try {
+    const pkg = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8"));
+    value = Boolean(pkg?.dependencies?.eslint || pkg?.devDependencies?.eslint);
+  } catch {
+    value = false;
+  }
+  eslintMemo = { key, value };
+  return value;
+}
+
+const GRADLE_FILES = ["build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle"];
+let ktlintMemo = null;
 function projectDeclaresKtlint(projectDir) {
-  for (const f of ["build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle"]) {
+  const key = statKey(projectDir, GRADLE_FILES);
+  if (ktlintMemo?.key === key) return ktlintMemo.value;
+  let value = false;
+  for (const f of GRADLE_FILES) {
     try {
       const p = join(projectDir, f);
-      if (existsSync(p) && /ktlint/.test(readFileSync(p, "utf8"))) return true;
+      if (existsSync(p) && /ktlint/.test(readFileSync(p, "utf8"))) {
+        value = true;
+        break;
+      }
     } catch {
       /* keep looking */
     }
   }
-  return false;
+  ktlintMemo = { key, value };
+  return value;
 }
 
 /**

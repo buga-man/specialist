@@ -3,7 +3,7 @@
  *
  * Everything the pure core (codestyle-core.mjs) must not do: reading CODESTYLE.md
  * and asking git for the commits since the documented base. Shared by the
- * SessionStart hook (codestyle-reminder.mjs) and the CLI (scripts/codestyle.mjs),
+ * session-start reminder (hooks/lib/codestyle-reminder.mjs) and the CLI (scripts/codestyle.mjs),
  * so both see the same data — the same core/fs split the other skills follow.
  *
  * Fail-safe: a missing document reads as null, a git failure reads as null —
@@ -41,6 +41,14 @@ export function readCodestyleDoc(projectDir) {
  * an unknown base (rebase, shallow clone), any error.
  */
 export function gitCommitsSince(projectDir, base) {
+  // Fast path: base == HEAD (the usual case right after a rebuild). The full
+  // --name-only log would cost a spawn and megabytes of output to answer
+  // "nothing changed"; rev-list --count answers in bytes.
+  const count = spawnSync("git", ["rev-list", "--count", `${base}..HEAD`], {
+    cwd: projectDir,
+    encoding: "utf8",
+  });
+  if (count.status === 0 && count.stdout.trim() === "0") return "";
   const result = spawnSync(
     "git",
     ["log", "--pretty=format:%x1e%H", "--name-only", `${base}..HEAD`],

@@ -22,7 +22,7 @@
  * Exit codes: 0 — success; 1 — error (no map, directory not found); 2 — invocation error.
  * Dependencies: only Node (no npm packages).
  */
-import { readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import {
@@ -30,13 +30,14 @@ import {
   buildMaps,
   buildRecord,
   buildSections,
+  brokenLinks,
+  computeHash,
   cut,
   isExcluded,
   relatedOf,
   RELATION_FIELDS,
   resolveRefs,
   resolveTarget,
-  searchIndex,
   searchWithBody,
   selectPaths,
   shortestPath,
@@ -47,6 +48,7 @@ import {
   readConfig,
   readDoc,
   readIndex,
+  readIndexMeta,
   readSections,
   writeIndex,
   writeMaps,
@@ -105,27 +107,60 @@ function mtimeOf(projectDir, relPath) {
   }
 }
 
-/** Builds the index, the maps and the section statistics of a project in memory. */
+/** Builds the index, the maps and the section statistics of a project in memory.
+ *
+ *  Incremental by default: a document whose mtime and size still match the previous
+ *  index record is reused without re-reading the file (the sections artifact is reused
+ *  with it). A full re-extract happens when the corpus file set changed, the index
+ *  configuration changed (fingerprint mismatch), or a record predates the mtime/bytes
+ *  fields — those also change every derived value, so nothing may be trusted. */
 function buildIndex(projectDir) {
   const config = readConfig(projectDir);
   const files = selectPaths(listMarkdownFiles(projectDir), config);
   const knownPaths = new Set(files);
+  const fingerprint = computeHash(JSON.stringify(config));
+  const previousMeta = readIndexMeta(projectDir);
+  const previous = new Map((previousMeta?.records ?? []).map((record) => [record.path, record]));
+  const prevSections = new Map((readSections(projectDir)?.docs ?? []).map((entry) => [entry.path, entry]));
+  const reuseAllowed =
+    previousMeta?.config === fingerprint && previousMeta?.records?.length !== undefined;
+  const corpusChanged =
+    previous.size !== knownPaths.size || [...knownPaths].some((path) => !previous.has(path));
+  const reusable = reuseAllowed && !corpusChanged;
+
   const records = [];
   const sections = [];
   let sectionCount = 0;
+  let reused = 0;
 
   for (const path of files) {
-    const content = readDoc(projectDir, path);
+    const prev = reusable ? previous.get(path) : null;
+    const mtime = mtimeOf(projectDir, path);
     const excluded = isExcluded(path, config);
-    records.push(
-      buildRecord({
-        path,
-        content,
-        knownPaths,
-        mtime: mtimeOf(projectDir, path),
-        excluded,
-      }),
-    );
+    const prevExcludedShape = Boolean(prev) && !prev.gist && !prev.anchor && !(prev.links || []).length;
+    const stateMatches = Boolean(prev) && excluded === prevExcludedShape;
+
+    if (prev && stateMatches && prev.mtime === mtime && prev.bytes === sizeOf(projectDir, path)) {
+      records.push({ ...prev, refs: [] }); // refs are recomputed for every record below
+      if (config.bodySearch && !excluded) {
+        const sec = prevSections.get(path);
+        if (sec) {
+          sections.push(sec);
+          sectionCount += sec.sections.length;
+        } else {
+          const entry = buildSections(path, readDoc(projectDir, path));
+          if (entry) {
+            sections.push(entry);
+            sectionCount += entry.sections.length;
+          }
+        }
+      }
+      reused++;
+      continue;
+    }
+
+    const content = readDoc(projectDir, path);
+    records.push(buildRecord({ path, content, knownPaths, mtime, excluded }));
     if (config.bodySearch && !excluded) {
       const entry = buildSections(path, content);
       if (entry) {
@@ -139,7 +174,17 @@ function buildIndex(projectDir) {
   for (const record of records) record.refs = refs.refs[record.path] || [];
 
   const dirs = new Set(records.map((record) => dirOf(record.path))).size;
-  return { records, maps: buildMaps(records, config.gistMaxChars), refs, dirs, sections, sectionCount };
+  return { records, maps: buildMaps(records, config.gistMaxChars), refs, dirs, sections, sectionCount, reused };
+}
+
+/** The size of a file on disk — the second half of the stat gate (with mtime); a stat
+ *  is cheap, reading the content is what the gate exists to avoid. */
+function sizeOf(projectDir, path) {
+  try {
+    return statSync(join(projectDir, ...path.split("/"))).size;
+  } catch {
+    return -1;
+  }
 }
 
 /** Which kind of gist a document has. */
@@ -157,7 +202,7 @@ function gistKind(gist) {
 }
 
 /** The report of a build. */
-function buildReport({ records, refs, dirs, sectionCount }) {
+function buildReport({ records, refs, dirs, sectionCount, reused = 0 }) {
   const kinds = { usable: 0, empty: 0, boilerplate: 0, short: 0 };
   const ids = new Map();
   let withAnchor = 0;
@@ -170,14 +215,16 @@ function buildReport({ records, refs, dirs, sectionCount }) {
 
   const duplicated = [...ids.values()].filter((count) => count > 1).length;
 
-  return [
+  const lines = [
     `kb-index: ${records.length} documents, ${dirs} directories`,
     `gist: ${kinds.usable} usable, ${kinds.empty} empty, ${kinds.boilerplate} boilerplate, ${kinds.short} short`,
     `anchor: ${withAnchor} with anchor, ${records.length - withAnchor} without`,
     `id: ${ids.size} unique, ${duplicated} duplicated`,
     `refs: ${refs.resolved} resolved, ${refs.ambiguous} ambiguous, ${refs.freeText} free text`,
     `sections: ${sectionCount} (body search)`,
-  ].join("\n");
+  ];
+  if (reused > 0) lines.push(`incremental: ${reused} of ${records.length} documents reused from the previous index`);
+  return lines.join("\n");
 }
 
 /** The path of a map inside the index directory. */
@@ -201,8 +248,9 @@ function nearestMap(projectDir, dir) {
 }
 
 function cmdBuild(projectDir) {
+  const config = readConfig(projectDir);
   const built = buildIndex(projectDir);
-  writeIndex(projectDir, built.records);
+  writeIndex(projectDir, built.records, { config: computeHash(JSON.stringify(config)) });
   writeMaps(projectDir, built.maps);
   writeSections(projectDir, built.sections);
   out(`${buildReport(built)}\n`);
@@ -221,7 +269,10 @@ function cmdSearch(projectDir, query, limit) {
   for (const hit of hits.slice(0, limit)) {
     const anchor =
       hit.anchor && hit.anchor.heading ? `§${hit.anchor.heading}:${hit.anchor.line}` : "";
-    lines.push(`${hit.id}  ${hit.path}${anchor ? `  ${anchor}` : ""}`);
+    // The pipeline state rides on the face: "draft" before a read saves the agent
+    // a wasted read; docType says which kind of document answered.
+    const tags = [hit.status, hit.docType].filter(Boolean).join("/");
+    lines.push(`${hit.id}  ${hit.path}${tags ? `  [${tags}]` : ""}${anchor ? `  ${anchor}` : ""}`);
     if (hit.gist) lines.push(`       ${cut(hit.gist, 200)}`);
   }
   out(`${lines.join("\n")}\n`);
@@ -342,6 +393,49 @@ function cmdAudit(projectDir) {
     lines.push(`  ${path} — ${ref.key}: ${ref.value} → ${ref.candidates.join(", ")}`);
   }
 
+  // Dead cross-references: link targets that resolve to no known document AND do not
+  // exist on disk (a link to an image or a directory is not a dead document reference;
+  // a `<placeholder>` target is template prose, not a reference).
+  const known = new Set(records.map((record) => record.path));
+  const broken = [];
+  for (const record of records) {
+    for (const target of brokenLinks(readDoc(projectDir, record.path), record.path, known)) {
+      if (/[<>]/.test(target)) continue;
+      if (existsSync(join(projectDir, ...target.split("/")))) continue;
+      broken.push({ path: record.path, target });
+    }
+  }
+  lines.push(`broken links: ${broken.length}`);
+  for (const { path, target } of broken.slice(0, 20)) lines.push(`  ${path} → ${target}`);
+
+  // Orphans: nothing links to them and no ref resolves to them — isolated documents
+  // an agent searching the corpus will never reach through the graph.
+  const referenced = new Set();
+  for (const record of records) {
+    for (const link of record.links || []) referenced.add(link);
+    for (const ref of record.refs || []) if (ref.resolved) referenced.add(ref.resolved);
+  }
+  const orphans = records.filter((record) => !referenced.has(record.path));
+  lines.push(`orphan documents (nothing points at them): ${orphans.length}`);
+  for (const record of orphans.slice(0, 20)) lines.push(`  ${record.path}`);
+
+  // Pipeline-state health: a draft aging out, and content that changed after the
+  // frontmatter's last-updated — the spec pipeline keys on both.
+  const DRAFT_STALE_DAYS = 30;
+  const day = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const staleDrafts = records.filter(
+    (record) => record.status === "draft" && record.mtime > 0 && Date.now() - record.mtime > DRAFT_STALE_DAYS * 864e5,
+  );
+  lines.push(`drafts older than ${DRAFT_STALE_DAYS} days: ${staleDrafts.length}`);
+  for (const record of staleDrafts.slice(0, 20)) lines.push(`  ${record.path}`);
+  const drifted = records.filter((record) => {
+    if (!record.lastUpdated || !record.mtime) return false;
+    const updated = new Date(record.lastUpdated);
+    return !Number.isNaN(updated.getTime()) && day(record.mtime) > record.lastUpdated;
+  });
+  lines.push(`content changed after last-updated: ${drifted.length}`);
+  for (const record of drifted.slice(0, 20)) lines.push(`  ${record.path}`);
+
   const noGist = records.filter((record) => !record.gist);
   const noAnchor = records.filter((record) => !record.anchor);
   lines.push(`documents without gist: ${noGist.length}`);
@@ -433,4 +527,9 @@ function main(argv) {
   }
 }
 
-main(process.argv.slice(2));
+try {
+  main(process.argv.slice(2));
+} catch (error) {
+  note(`kb-index: ${error && error.message ? error.message : error}\n`);
+  process.exit(1);
+}

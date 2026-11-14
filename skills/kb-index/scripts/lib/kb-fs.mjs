@@ -12,7 +12,7 @@
  * null, and a project without git falls back to a walk of the file system.
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 
 export { computeHash } from "./kb-core.mjs";
@@ -39,7 +39,9 @@ export function listMarkdownFiles(projectDir) {
   return walkMarkdown(projectDir, projectDir);
 }
 
-/** The markdown files git knows about, or null when git cannot answer. */
+/** The markdown files git knows about, or null when git cannot answer.
+ *  `--cached` also lists files deleted from the worktree but still in the index —
+ *  they are filtered out here, so a deletion never indexes as an empty document. */
 function gitMarkdownFiles(projectDir) {
   if (!gitRoot(projectDir)) return null;
   const result = spawnSync(
@@ -54,13 +56,16 @@ function gitMarkdownFiles(projectDir) {
         .split("\0")
         .filter(Boolean)
         .map((path) => path.split("\\").join("/"))
-        .filter((path) => !path.split("/").some((segment) => SKIP_DIRS.has(segment))),
+        .filter((path) => !path.split("/").some((segment) => SKIP_DIRS.has(segment)))
+        .filter((path) => existsSync(join(projectDir, ...path.split("/")))),
     ),
   ].sort();
 }
 
-/** Every markdown file under a directory, skipping the service ones. */
-function walkMarkdown(root, current) {
+/** Every markdown file under a directory, skipping the service ones. Symlinks are
+ *  resolved: file symlinks ending in .md count, directory symlinks are walked —
+ *  with a seen-set so a cycle cannot recurse forever. */
+function walkMarkdown(root, current, seen = new Set()) {
   const files = [];
   let entries;
   try {
@@ -68,14 +73,32 @@ function walkMarkdown(root, current) {
   } catch {
     return files;
   }
+  const real = (() => {
+    try {
+      return realpathSync(current);
+    } catch {
+      return current;
+    }
+  })();
+  if (seen.has(real)) return files; // symlink cycle — already walked
+  seen.add(real);
   for (const entry of entries) {
     const path = join(current, entry.name);
-    if (entry.isDirectory()) {
+    let kind = entry.isDirectory() ? "dir" : entry.isFile() && entry.name.endsWith(".md") ? "file" : null;
+    if (!kind && entry.isSymbolicLink()) {
+      try {
+        const target = statSync(path); // follows the link
+        kind = target.isDirectory() ? "dir" : target.isFile() && entry.name.endsWith(".md") ? "file" : null;
+      } catch {
+        kind = null; // broken symlink — skip
+      }
+    }
+    if (kind === "dir") {
       if (SKIP_DIRS.has(entry.name)) continue;
-      files.push(...walkMarkdown(root, path));
+      files.push(...walkMarkdown(root, path, seen));
       continue;
     }
-    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    if (kind !== "file") continue;
     files.push(relative(root, path).split(sep).join("/"));
   }
   return files.sort();
@@ -92,11 +115,16 @@ export function readDoc(projectDir, relPath) {
 
 /** The records of the index, or null when there is no usable index. */
 export function readIndex(projectDir) {
+  return readIndexMeta(projectDir)?.records ?? null;
+}
+
+/** The whole index artifact (records plus the build metadata), or null. */
+export function readIndexMeta(projectDir) {
   try {
     const raw = readFileSync(join(indexDir(projectDir), "index.json"), "utf8");
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.records)) return null;
-    return parsed.records;
+    return parsed;
   } catch {
     return null;
   }
@@ -124,12 +152,16 @@ export function readConfig(projectDir) {
 
 /**
  * Writes the index. The file is the public contract of the skill: other hooks
- * read it, so its shape is versioned by the "schema" field.
+ * read it, so its shape is versioned by the "schema" field; build metadata
+ * (e.g. the configuration fingerprint for incremental rebuilds) rides along
+ * as extra top-level fields the contract readers ignore. Written compactly:
+ * the machine contract is read by hooks at every Stop, and on a corpus of
+ * thousands of documents the indentation doubles the file.
  */
-export function writeIndex(projectDir, records) {
+export function writeIndex(projectDir, records, meta = {}) {
   const dir = indexDir(projectDir);
   mkdirSync(dir, { recursive: true });
-  const text = `${JSON.stringify({ schema: 1, records }, null, 2)}\n`;
+  const text = `${JSON.stringify({ schema: 1, ...meta, records })}\n`;
   writeFileSync(join(dir, "index.json"), text, { encoding: "utf8" });
   // The index ignores itself: nothing of it ever reaches git.
   writeFileSync(join(dir, ".gitignore"), "*\n", { encoding: "utf8" });

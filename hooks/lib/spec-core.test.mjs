@@ -36,7 +36,7 @@ const PLAN = [
   "- [x] write tests", // progress checkbox — must not close the task
   "",
   "### Task 2: Wire route",
-  "- : `src/routes.ts`",
+  "- Files: `src/routes.ts`",
   "",
   "### Task 3: Styles",
   "- Files: `src/**/*.css`",
@@ -81,7 +81,7 @@ test("isAlwaysAllowed: docs and markdown always, code never, .spec-gate is not e
   assert.equal(isAlwaysAllowed(".spec-gate"), false);
 });
 
-test("activePlanInfo: open tasks, RU keywords, globs, ./ stripping", () => {
+test("activePlanInfo: open tasks, globs, ./ stripping", () => {
   const info = activePlanInfo(project({ "docs/plans/p.md": PLAN }));
   assert.equal(info.hasOpenTasks, true);
   assert.deepEqual(
@@ -97,8 +97,6 @@ test("closure: only explicit Done-markers close a task", () => {
     ).hasOpenTasks;
   assert.equal(open("- Done: abc123"), false);
   assert.equal(open("- done — verified"), false);
-  assert.equal(open("- : abc"), false);
-  assert.equal(open("- : abc"), false);
   assert.equal(open("- [x] Done: abc"), false);
   assert.equal(open("- [x] write tests"), true); // checkbox without a Done marker
   assert.equal(open("- [x] done with step 3"), true); // "done" without ":" is prose
@@ -194,9 +192,9 @@ test("decide: paths outside the project are not our concern", () => {
   assert.equal(decide({ ...outside, mode: "hard" }).action, "allow");
 });
 
-test("RU task headings are recognized; case-insensitive match on Windows", () => {
+test("task headings match case-insensitively; paths compare case-insensitively on Windows", () => {
   const dir = project({
-    "docs/plans/p.md": "###  1: X\n- : `src/api/export.ts`\n",
+    "docs/plans/p.md": "### TASK 1: X\n- Files: `src/api/export.ts`\n",
   });
   const info = activePlanInfo(dir);
   assert.equal(info.hasOpenTasks, true);
@@ -248,9 +246,13 @@ test("applyPatchPaths: object wrappers, a bare file_path, and unknown shapes", (
 test("editedFilePaths: explicit file, patch files (capped), unknown shape", () => {
   assert.deepEqual(editedFilePaths({ file_path: "src/a.ts" }), ["src/a.ts"]);
   assert.deepEqual(editedFilePaths({ notebook_path: "n.ipynb" }), ["n.ipynb"]);
-  const many = { input: "*** Begin Patch\n" + Array.from({ length: 9 }, (_, i) => `*** Update File: f${i}.ts`).join("\n") };
-  assert.equal(editedFilePaths(many).length, 5);
-  assert.equal(editedFilePaths(many, 9).length, 9);
+  // OpenCode's camelCase field, with the host's leading-@ marker stripped.
+  assert.deepEqual(editedFilePaths({ filePath: "@src/a.ts" }), ["src/a.ts"]);
+  const many = { input: "*** Begin Patch\n" + Array.from({ length: 25 }, (_, i) => `*** Update File: f${i}.ts`).join("\n") };
+  assert.equal(editedFilePaths(many).length, 20); // the default cap bounds absurd payloads
+  assert.equal(editedFilePaths(many, 25).length, 25);
+  const nine = { input: "*** Begin Patch\n" + Array.from({ length: 9 }, (_, i) => `*** Update File: f${i}.ts`).join("\n") };
+  assert.equal(editedFilePaths(nine).length, 9); // realistic patches are never truncated
   assert.deepEqual(editedFilePaths({ nothing: true }), []);
   assert.deepEqual(editedFilePaths(null), []);
 });
@@ -266,4 +268,28 @@ test("decide: an apply_patch payload is checked file by file — one out-of-scop
   const targets = applyPatchPaths(patch) ?? [];
   const verdicts = targets.map((p) => decide({ projectDir: dir, filePath: p, mode: "soft" }).action);
   assert.deepEqual(verdicts, ["allow", "block"]);
+});
+
+test("a fenced example inside a plan is prose, never the contract", () => {
+  // A plan that shows the closing contract as an example must not have that example
+  // read as a real closure (the fence spans the marker).
+  const dir = project({
+    "docs/plans/p.md": [
+      "### Task 1: X",
+      "- Files: `src/a.ts`",
+      "- Do:",
+      "  1. step",
+      "",
+      "Example of closing (do NOT write it yourself):",
+      "```markdown",
+      "- Done: abc123",
+      "```",
+      "",
+      "### Task 2: Y",
+      "- Files: `src/b.ts`",
+    ].join("\n"),
+  });
+  const info = activePlanInfo(dir);
+  assert.equal(info.hasOpenTasks, true);
+  assert.deepEqual([...info.openFiles].sort(), ["src/a.ts", "src/b.ts"]);
 });

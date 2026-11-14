@@ -164,11 +164,11 @@ The terms "directory" and "project" are concrete here: a directory is the file's
 
 The index is 350 KB for 1793 documents. It is scanned in full in 2–3 ms, so a separate search engine is unnecessary: a plain pass over the lines with substring checks.
 
-**Morphology.** In Russian, substring matching breaks on cases: «» does not find «». Full stemming does not work either — verified: a 4-char word prefix («» → «») loses the connection to «», and the result count drops from 37 to 8.
+**Morphology.** Substring matching breaks on inflected forms: "boxes" does not find "boxed". Full stemming does not work either — a bare word prefix loses real connections and collapses the result count (measured on the original corpus: recall fell from 37 to 8 for a related-word query).
 
-The rule: a query word counts as found if the field contains an **exact occurrence**, or a word starting with it minus the last character («» ⊃ «»). The second option is a fallback only; it does not replace the first.
+The rule: a query word counts as found if the field contains an **exact occurrence**, or a word starting with it minus the last character ("boxed" ⊃ "boxe"). The second option is a fallback only; it does not replace the first.
 
-Measured: «» — 8 results with an exact match, 35 with the extended one; «» — 59 → 78; "runbook", "reference", "audit", "template" — unchanged (the extended option adds no noise).
+Measured on the original corpus (heavily inflected language, where the fallback matters most): one query went from 8 exact-match results to 35 with the extended match, another from 59 to 78; "runbook", "reference", "audit", "template" — unchanged (the fallback adds no noise).
 
 **Ranking:** exact match on `id` → `title` → `anchor.heading` → `gist` → `path`. The query is split on whitespace, all words must be found (AND). On equal rank — more matches in `title`, then a shorter path.
 
@@ -238,18 +238,15 @@ Reconciling all 1796 files in Node — **114 ms** (read + sha1). That is cheaper
 
 Triggers: "find the document about …", "where is … documented", "what is there on …", "refresh the index", "rebuild the map".
 
-**The script path** — `${CLAUDE_PLUGIN_ROOT}/scripts/kb.mjs`. Substitution is textual and happens when the skill loads: the official Anthropic plugin `claude-security` uses `${CLAUDE_PLUGIN_ROOT}/scripts/…` right in the SKILL.md body, marked "substituted at invocation, use verbatim". In a Bash environment the variable does not exist — only the instruction text is substituted.
+**The script path** — skill scripts are referenced by relative `<skill-dir>` paths (the
+CLI is `<skill-dir>/scripts/kb.mjs`); host variables like `${CLAUDE_PLUGIN_ROOT}` are
+forbidden in SKILL.md bodies.
 
-A note: skill scripts are referenced by relative `<skill-dir>` paths; host variables like `${CLAUDE_PLUGIN_ROOT}` are forbidden in SKILL.md bodies.
-
-The workflow the skill prescribes:
-
-1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/kb.mjs" search "<query>"` — face matches, with paths and anchors. If the index is absent, the command builds it first.
-2. `node "${CLAUDE_PLUGIN_ROOT}/scripts/kb.mjs" map <directory>` — the full directory map, when the request is wider than one document.
-3. Reading a document — **from the anchor, with a bounded window**: `Read(path, offset=anchor.line, limit=…)`. The window length comes from `anchor.chars`; there is no need to read the whole document — the median body is 6902 chars, the anchor section 1220.
-4. After editing a document — `node "${CLAUDE_PLUGIN_ROOT}/scripts/kb.mjs" build`.
-
-The point of step 3: without an anchor the agent burns 3137 tokens of a median document for nothing; with an anchor it reads exactly the piece it needs.
+The workflow — search, the directory map, reading from the anchor with a bounded window
+(`anchor.chars`), a `build` after an edit — is prescribed with exact commands in
+`skills/kb-index/SKILL.md`; that file is the source of the prescribed workflow. The point
+of reading from the anchor: without it the agent burns 3137 tokens of a median document
+for nothing; with it, exactly the piece it needs.
 
 The skill covers the "gist" where the script could not cope (52 documents without a prose paragraph): the agent writes the first paragraph **into the document body** — exactly where a human looks for the introduction anyway. The plugin stores no texts of its own: the index is a derivative, the source of truth is the project's files. Editing the document body is the only way to improve the gist — and the same edit makes the document better.
 
@@ -348,7 +345,7 @@ A separate MCP server is unnecessary for this: a hook working in the project rea
 ## 14. Acceptance criteria
 
 1. `kb.mjs build` on the 1796-document corpus: the index and the maps built in < 3 s; a report printed at the end: how many documents got a gist (the reference **1645**), how many without a gist (**52**), how many with a short gist (**73**), how many with an anchor (**1690**), how many duplicate `id`s (**28**), how many ambiguous relations (**184**), how many unresolved (**0** — there are no unresolved ones; there are ambiguous ones and free text).
-2. `kb.mjs search "runbook"` returns ≤ 25 results, all relevant (body grep gives 93, 19% relevant). For "reference" — ≤ 40 (grep: 251). For «» — ≥ 30 (the extended morphology match; exact gives 8).
+2. `kb.mjs search "runbook"` returns ≤ 25 results, all relevant (body grep gives 93, 19% relevant). For "reference" — ≤ 40 (grep: 251). For an inflected-form query — ≥ 30 via the extended morphology match (the exact match alone gave 8).
 3. `kb.mjs map <directory>` shows the directory map; a directory with a single document has no map.
 4. A document edit → `Stop` detects the `hash` mismatch → blocks with rebuild instructions → after `build` the mismatch is gone. Both an out-of-agent edit (`git pull`) and a new uncommitted file are verified.
 5. `kb.mjs audit` finds the same 28 duplicate `id`s and 184 ambiguous relations — what a human would miss.
@@ -372,7 +369,7 @@ A separate MCP server is unnecessary for this: a hook working in the project rea
 2. `kb.mjs build|search|map|audit` — the CLI, verified on a live corpus; the quality report is printed and compared against the §14 reference.
 3. `kb-gate.mjs` + a `Stop` section in `hooks/hooks.json` — the gate.
 4. `skills/kb-index/SKILL.md` — the skill.
-5. Registration: `kb-core.test.mjs` into the root `package.json`'s `test` script, the plugin version in `.claude-plugin/plugin.json`, `package.json`, and `.claude-plugin/marketplace.json` — in sync, per repository convention. In `package.json` → `pi.skills` the path already points at `./skills`; a new skill is picked up automatically.
+5. Registration: `kb-core.test.mjs` into the root `package.json`'s `test` script, the plugin version in `.claude-plugin/plugin.json`, `plugin.json`, `package.json`, and `.claude-plugin/marketplace.json` — in sync, per repository convention. In `package.json` → `pi.skills` the path already points at `./skills`; a new skill is picked up automatically.
 
 Every step leaves a working result: after step 2 the index can already be built by hand and its quality checked, before any hooks are wired.
 

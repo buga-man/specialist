@@ -1,6 +1,6 @@
 ---
 name: codestyle
-description: Extract the repository's real code conventions into CODESTYLE.md — evidence-based rules a fresh-context agent can mimic. Two modes generate (full rebuild from code configs → git log → sampled files → verified rules) and verify (cheap staleness pass against recent commits). Use when the user asks to write, rebuild or refresh repo conventions ("codestyle", "code style document"), or when the SessionStart reminder says CODESTYLE.md may be stale. Not a linter — what lint configs already catch is referenced, never re-described; not a review skill.
+description: Extract the repository's real code conventions into CODESTYLE.md — evidence-based rules a fresh-context agent can mimic. Two modes generate (full rebuild from code configs → git log → sampled files → verified rules) and verify (cheap staleness pass against recent commits). Use when the user asks to write, rebuild or refresh repo conventions ("codestyle", "code style document"), or when the plugin's session-start reminder says CODESTYLE.md may be stale. Not a linter — what lint configs already catch is referenced, never re-described; not a review skill.
 ---
 
 # Codestyle
@@ -31,7 +31,7 @@ own. The document describes how this repo *writes* — never how it *should*.
 ## Artifact
 
 `CODESTYLE.md` in the repository root, committed, in the language of the repo's docs.
-Frontmatter is the machine anchor for freshness (the SessionStart reminder and the
+Frontmatter is the machine anchor for freshness (the session-start reminder and the
 verify mode read it):
 
 ```markdown
@@ -82,7 +82,7 @@ Run when the document is absent or the user asks to rebuild. In order:
 
 ## Mode: verify
 
-The cheap pass — normally as a reaction to the SessionStart reminder:
+The cheap pass — normally as a reaction to the session-start reminder:
 
 1. Read the verdict; the CLI is the single source of truth on staleness:
 

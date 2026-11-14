@@ -2,45 +2,30 @@
 /**
  * Codex PostToolUse hook (Edit/Write/apply_patch): the lint-guard twin for Codex.
  * Runs the project's linter with --fix on every file the edit payload touches; the
- * remaining violations come back as `additionalContext` JSON on stdout (Codex PostToolUse
- * is record-only — it cannot block retroactively).
+ * remaining violations come back as ONE `additionalContext` JSON line on stdout (Codex
+ * PostToolUse is record-only — it cannot block retroactively, and multiple stdout
+ * JSON lines are not reliably parsed, so all findings are aggregated into one envelope).
  * No project linter / non-code file / linter trouble / any internal error → silent exit 0.
  */
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { editedFilePaths } from "./spec-core.mjs";
 import { lintFile } from "./lint-core.mjs";
+import { editedFilePaths } from "./spec-core.mjs";
+import { codexContext, readHookPayload, resolveProjectDir, run } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
-  const projectDir = String(payload?.cwd || process.cwd());
-  const filePaths = editedFilePaths(payload?.tool_input || {});
-  for (const rel of filePaths) {
-    const filePath = resolve(projectDir, rel);
-    const result = await lintFile({ projectDir, filePath, run });
+  const projectDir = resolveProjectDir(payload);
+  const cwd = String(payload?.cwd || process.cwd()); // patch paths are relative to the session cwd
+  const failures = [];
+  for (const rel of editedFilePaths(payload?.tool_input || {})) {
+    const result = await lintFile({ projectDir, filePath: resolve(cwd, rel), run });
     if (result && !result.ok) {
-      console.log(postContext(`lint-guard (${result.tool}) reports violations in ${rel} — fix the errors:\n${result.output}`));
+      failures.push(`lint-guard (${result.tool}) reports violations in ${rel} — fix the errors:\n${result.output}`);
     }
   }
+  if (failures.length) console.log(codexContext("PostToolUse", failures.join("\n\n")));
 } catch {
   /* fail-safe: never break the workflow on hook errors */
 }
 process.exit(0);
-
-function run(cmd, args, opts) {
-  const r = spawnSync(cmd, args, { ...opts, encoding: "utf8", windowsHide: true });
-  return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
-}
-
-function postContext(text) {
-  return JSON.stringify({
-    hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: text },
-  });
-}

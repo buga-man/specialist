@@ -87,7 +87,15 @@ export function buildPlanContext(projectDir) {
         : "spec-gate (soft): while the plan is open, code edits must stay within the open tasks' " +
           'file lists ("- Files:"). Docs (*.md, docs/**) stay editable.';
 
+    // Surfaced here because its only other symptom is every code edit blocking with
+    // a "no backticked paths" reason — hard to diagnose from the block message alone.
+    const unparsed = info.unparsedFiles
+      ? 'spec-gate: an open task\'s "- Files:" line has no backticked paths — its scope is ' +
+        "unparsable, so code edits block until the line names its files.\n"
+      : "";
+
     const text =
+      unparsed +
       `plan-context: ${n} open task(s) in docs/plans/${plans}:${titles.length ? `\n  - ${titles.join("\n  - ")}${more}` : ""}\n` +
       `${gate}\n` +
       'Close a task with an explicit "- Done: <commit>" line in the plan — "- [x]" checkboxes are progress, not closure.';

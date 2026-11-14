@@ -11,24 +11,18 @@
  * stdin → payload = {}; any internal error → exit 0 (the hook never blocks
  * legitimate work).
  */
-import { readFileSync } from "node:fs";
 import { readMode } from "./spec-core.mjs";
 import { decide } from "./skill-gate-core.mjs";
+import { readHookPayload, resolveProjectDir } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  payload = {};
-}
+const payload = readHookPayload();
 
 try {
   if (payload?.tool_name !== "Skill") process.exit(0);
   const skill = String(payload?.tool_input?.skill ?? payload?.tool_input?.command ?? "");
   if (!skill) process.exit(0); // unknown input shape — fail open
 
-  const projectDir = String(payload?.cwd || process.cwd());
-  const verdict = decide({ mode: readMode(projectDir), skill });
+  const verdict = decide({ mode: readMode(resolveProjectDir(payload)), skill });
   if (verdict.action === "block") {
     console.error(verdict.reason);
     process.exit(2);

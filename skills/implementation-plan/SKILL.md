@@ -43,6 +43,7 @@ in a head do not.
 - Save as `docs/plans/YYYY-MM-DD-<topic>-<repo>.md` next to the specs; cross-link all three.
 - Per task, use the format below. Steps are single, concrete actions. Verify holds exact commands and their exact expected results. Commit holds the message; one task = one commit.
 - List every file the task will touch on the Files line, in backticks, on one line — the spec-gate hook enforces exactly that scope during implementation. Globs are allowed when a task genuinely spans many files (`src/**/*.css`); prefer exact paths.
+- Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves). The spec-gate hook ignores every line it does not parse — these three are for the executor and the reviewer.
 - Leave closure to the executor: a task is closed by a `- Done: <commit hash>` line in its section. Checkbox ticks (`- [x]`) are progress notes — the gate ignores them for closure. **Never put a `- Done:` line in the plan you write** — the gate reads any Done marker as closure, so a template line would close every task before work starts.
 - When two tasks share an interface, name it in both (what one produces, the other consumes).
 - Small implementation choices are made by repo conventions: `CODESTYLE.md` in the repo root when present; when it is absent, note in the plan that conventions are not formalized. When neither applies, pick the simplest and say so inside the task.
@@ -90,6 +91,9 @@ API behavior, security rules.
   1. <single action>
   2. <single action>
 - Interfaces: consumes <…> · produces <…>   (only when coupled to another task)
+- Risk: <what makes this task risky>   (optional)
+- Revert: <the one-line undo>   (optional)
+- Criteria: <business criteria this task serves>   (optional)
 - Verify: <exact command> → <expected result>
 - Commit: <message>
 <!-- Do not write a "- Done:" line here: the executor adds it when the task closes,
@@ -104,7 +108,10 @@ API behavior, security rules.
 - **Every Verify is runnable**: exact command, exact expected result — the executor compares output, not impressions.
 - **No placeholders**: "implement the feature" is an anti-pattern; every step is one concrete action.
 - **Traceability both ways**: change → tasks and task → change; unmapped work on either side is a defect.
-- **Metadata is two-way**: when sibling docs in the target repo carry YAML frontmatter, the plan gets it too (copy the field set from the siblings); creating it is **two edits** — set its `parent` (the repo spec) and append the plan's `id` to that spec's `children`. Bump `last-updated` on every later edit.
-- **Machine-readable markers**: `### Task`/`### `, `- Files:`/`- :`, `- Done:`/`- :`/`- :` — the spec-gate hook parses these (English and Russian); prose around them is the team's language.
+- **Metadata is two-way**: when sibling docs carry YAML frontmatter, the plan gets it too
+  (copy their field set); creating it is **two edits** — set its `parent` (the repo spec)
+  and append the plan's `id` to that spec's `children`; a parent with downstream docs and
+  an empty `children` is a traceability defect.
+- **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language).
 - **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later; do not inflate it into a full spec chain.
 - Write the plan in the team's working language, which may differ from the language of this skill.

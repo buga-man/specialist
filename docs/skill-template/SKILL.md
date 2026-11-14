@@ -1,6 +1,6 @@
 ---
 name: template-skill
-description: "One or two sentences: what the skill does and when to apply it. This field is the main autoload trigger: the model in both programs decides from it whether to read the skill. The limit is 1024 characters."
+description: "One or two sentences: what the skill does and when to apply it. This field is the main autoload trigger: the model in the host program decides from it whether to read the skill. The limit is 1024 characters."
 ---
 
 # Skill title
@@ -27,10 +27,11 @@ Checklist for adding a new skill:
    (kebab-case, lowercase letters/digits/hyphens, up to 64 characters).
 2. Delete this HTML comment and replace the content with the real one.
 3. The skill must be portable: no machine-specific paths or settings.
-   Host-specifics go to hooks/ (Claude Code) or extensions/ (pi agent).
+   Host-specifics go to hooks/ (Claude Code: hooks.json; Codex: hooks-codex.json),
+   extensions/ (pi agent), plugins/opencode/ (OpenCode).
    Skill scripts live in the skill's directory (skills/<name>/scripts/), and paths to them
    in SKILL.md are relative to the skill directory (<skill-dir>); host variables
    (${CLAUDE_PLUGIN_ROOT} and the like) are forbidden in SKILL.md.
-4. Test in both programs (Claude Code and pi), bump the versions
-   in .claude-plugin/plugin.json, .claude-plugin/marketplace.json, and package.json in sync.
+4. Test in the hosts you target, bump the versions in .claude-plugin/plugin.json,
+   plugin.json, package.json, and .claude-plugin/marketplace.json in sync.
 -->

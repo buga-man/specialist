@@ -94,6 +94,7 @@ test("parseSemgrepJson: results are mapped, garbage — an empty list", () => {
       file: "src/app.py",
       line: 10,
       message: "Possible SQL injection vector through string-based query construction.",
+      severity: "low", // no metadata.severity in the fixture — the floor applies
     },
   ]);
   assert.deepEqual(parseSemgrepJson("not json"), []);

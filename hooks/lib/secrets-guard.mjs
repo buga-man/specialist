@@ -9,28 +9,17 @@
  * Non-git commands, allowlisted findings (.secrets-allow in the project root) and any
  * internal error → exit 0 (fail-safe: the hook never blocks legitimate work).
  */
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { checkGitCommand } from "./secrets-core.mjs";
+import { readHookPayload, resolveProjectDir, run } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
   const tool = String(payload?.tool_name || "");
   if (/^bash$/i.test(tool)) {
     const command = String(payload?.tool_input?.command || "");
     if (command) {
-      const projectDir = String(payload?.cwd || process.cwd());
-      const run = (cmd, args, opts) => {
-        const r = spawnSync(cmd, args, { ...opts, encoding: "utf8", windowsHide: true });
-        return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
-      };
-      const result = await checkGitCommand({ projectDir, command, run });
+      const result = await checkGitCommand({ projectDir: resolveProjectDir(payload), command, run });
       if (result) {
         console.error(result.reason);
         process.exit(2);

@@ -7,16 +7,20 @@
  *   - `tool.execute.before` / `execute.before`
  *       bash          → secrets-guard (git boundary) + vuln-guard (commit scan);
  *                       a violation throws, which is OpenCode's way to block a tool call.
- *       edit / write  → spec-gate: the plan scope (docs/plans/) is enforced on
- *                       `args.filePath`.
+ *       edit / write  → spec-gate: the plan scope (docs/plans/) is enforced on the
+ *                       payload's target files.
  *   - `tool.execute.after` / `execute.after`
+ *       failed calls  → skipped: a failed edit or a failed git command changed nothing,
+ *                       so post-edit guards and staleness signals would only mislead.
  *       bash          → git-watch: after a tree-changing git operation, a staleness
  *                       signal for the derived artifacts is appended to the tool output.
  *       edit / write  → format-guard + lint-guard (project tools), vuln-guard edit scan
  *                       under `.vuln-guard = always`; failures surface as tool errors.
  *   - `context` (V2) / `chat.message` (V1)
  *                     → plan-context: a fresh session starts oriented (open plan, open
- *                       tasks, spec-gate mode); injected once per session.
+ *                       tasks, spec-gate mode) and hears about a stale CODESTYLE.md;
+ *                       injected once per session, re-injected after a compaction wiped
+ *                       the context (V2 `compaction` hook).
  *
  * Fail-safe by construction: guard failures (broken configs, missing tools) never block
  * legitimate work — only explicit violations throw.
@@ -24,14 +28,15 @@
 import { Plugin } from "@opencode/plugin";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { applyPatchPaths, decide, readMode } from "../../hooks/lib/spec-core.mjs";
+import { decide, editedFilePaths, readMode } from "../../hooks/lib/spec-core.mjs";
 import { checkGitCommand } from "../../hooks/lib/secrets-core.mjs";
-import { checkGitCommit, readVulnMode, scanSingleFile } from "../../hooks/lib/vuln-core.mjs";
+import { checkGitCommit, readVulnMode, scanEditedFiles } from "../../hooks/lib/vuln-core.mjs";
 import { formatFile } from "../../hooks/lib/format-core.mjs";
 import { lintFile } from "../../hooks/lib/lint-core.mjs";
 import { buildPlanContext } from "../../hooks/lib/plan-context-core.mjs";
 import { treeChangingCommands } from "../../hooks/lib/git-watch-core.mjs";
-import { touchedProjectDirs, watchSignal } from "../../hooks/lib/git-watch-host.mjs";
+import { codestyleState, touchedProjectDirs, watchSignal } from "../../hooks/lib/git-watch-host.mjs";
+import { reminderLine } from "../../skills/codestyle/scripts/lib/codestyle-core.mjs";
 
 /** Child-process runner matching the contract every core expects. */
 const run = (cmd: string, args: string[], opts: Record<string, unknown>) => {
@@ -39,24 +44,31 @@ const run = (cmd: string, args: string[], opts: Record<string, unknown>) => {
   return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 };
 
-/** The target file of an edit-style tool call (`filePath` in OpenCode, `file_path`
- *  elsewhere; models sometimes prefix an `@`). Empty string when absent. */
-function filePathOf(args: any): string {
-  const p = String(args?.filePath ?? args?.file_path ?? "");
-  return p.startsWith("@") ? p.slice(1) : p;
+/** The shapes the guards actually read from a tool payload. */
+interface EditInput {
+  command?: string;
+  filePath?: string;
+  file_path?: string;
+  patchText?: string;
+  patch?: string;
+  [key: string]: unknown;
+}
+interface AfterEvent {
+  tool?: string;
+  input?: EditInput;
+  status?: string;
+  [key: string]: unknown;
 }
 
-/** Everything an edit-style payload touches: the explicit file, or every file of an
- *  apply_patch-style patch (a defensive extra for hosts that send patches here). */
-function editedFiles(args: any): string[] {
-  const fp = filePathOf(args);
-  if (fp) return [fp];
-  return applyPatchPaths(args?.patchText ?? args?.patch ?? args) ?? [];
+/** Everything an edit-style payload touches, through the shared core helper (the
+ *  camelCase `filePath`, the leading `@`, and patch payloads are all handled there). */
+function editedFiles(args: EditInput | undefined): string[] {
+  return editedFilePaths(args ?? {});
 }
 
 /** Before a tool call: the blocking guards. Throws the violation reason — OpenCode
  *  surfaces a thrown hook error as the tool failure the agent must react to. */
-async function guardBefore(projectDir: string, tool: string, args: any): Promise<void> {
+async function guardBefore(projectDir: string, tool: string, args: EditInput | undefined): Promise<void> {
   let blockReason: string | null = null;
   try {
     if (tool === "bash") {
@@ -70,8 +82,9 @@ async function guardBefore(projectDir: string, tool: string, args: any): Promise
         }
       }
     } else if (tool === "edit" || tool === "write" || tool === "patch") {
+      const mode = readMode(projectDir);
       for (const fp of editedFiles(args)) {
-        const verdict = decide({ projectDir, filePath: resolve(projectDir, fp), mode: readMode(projectDir) });
+        const verdict = decide({ projectDir, filePath: resolve(projectDir, fp), mode });
         if (verdict.action === "block") {
           blockReason = verdict.reason;
           break;
@@ -84,27 +97,34 @@ async function guardBefore(projectDir: string, tool: string, args: any): Promise
   if (blockReason) throw new Error(blockReason);
 }
 
-/** After an edit-style tool call: format, lint, and (opt-in) the semgrep edit scan.
- *  Failures throw — the agent repairs the file immediately. */
-async function afterEdit(projectDir: string, tool: string, args: any): Promise<void> {
+/** After an edit-style tool call: format, lint, and (opt-in) the semgrep edit scan —
+ *  one semgrep invocation for the whole payload. Every check runs even when the
+ *  previous one failed (no short-circuit), mirroring the three independent
+ *  registrations on Claude Code and Codex. Failures throw — the agent repairs the
+ *  file immediately. */
+async function afterEdit(projectDir: string, args: EditInput | undefined): Promise<void> {
   const failure: string[] = [];
   try {
-    for (const fp of editedFiles(args)) {
-      const abs = resolve(projectDir, fp);
-      const formatted = await formatFile({ projectDir, filePath: abs, run });
-      if (formatted && !formatted.ok) {
-        failure.push(`format-guard (${formatted.tool}) could not format ${fp} — fix the errors:\n${formatted.output}`);
-        continue;
+    const files = editedFiles(args);
+    for (const fp of files) {
+      const result = await formatFile({ projectDir, filePath: resolve(projectDir, fp), run });
+      if (result && !result.ok) {
+        failure.push(`format-guard (${result.tool}) could not format ${fp} — fix the errors:\n${result.output}`);
       }
-      const linted = await lintFile({ projectDir, filePath: abs, run });
+    }
+    for (const fp of files) {
+      const linted = await lintFile({ projectDir, filePath: resolve(projectDir, fp), run });
       if (linted && !linted.ok) {
         failure.push(`lint-guard (${linted.tool}) reports violations in ${fp} — fix the errors:\n${linted.output}`);
-        continue;
       }
-      if (readVulnMode(projectDir) === "always") {
-        const scanned = await scanSingleFile({ projectDir, filePath: abs, run });
-        if (scanned) failure.push(scanned.reason);
-      }
+    }
+    if (readVulnMode(projectDir) === "always") {
+      const scanned = await scanEditedFiles({
+        projectDir,
+        files: files.map((fp) => resolve(projectDir, fp)),
+        run,
+      });
+      if (scanned) failure.push(scanned.reason);
     }
   } catch {
     /* fail-safe: a broken formatter/linter must never break the workflow */
@@ -115,7 +135,7 @@ async function afterEdit(projectDir: string, tool: string, args: any): Promise<v
 /** After a bash tool call: the git-watch signal for derived artifacts (stale kb-index,
  *  stale CODESTYLE.md). The signal is appended to the tool output — defensive about the
  *  result shape, which differs between the V1 and V2 plugin APIs. */
-async function watchAfterBash(projectDir: string, args: any, container: any): Promise<void> {
+async function watchAfterBash(projectDir: string, args: EditInput | undefined, container: any): Promise<void> {
   const command = String(args?.command || "");
   const commands = treeChangingCommands(command);
   if (!commands.length) return;
@@ -134,19 +154,26 @@ function appendSignal(container: any, text: string): void {
   else if (Array.isArray(container.parts)) container.parts.push({ type: "text", text });
   else if (typeof container.content === "string") container.content += `\n\n${text}`;
   else if (Array.isArray(container.content)) container.content.push({ type: "text", text });
-  else container.metadata = { ...(container.metadata ?? {}), specialist: text };
-  console.error(text);
+  else console.error(text); // unknown shape — the log is the last honest channel
 }
 
-/** The plan-context orientation, injected once per session. */
+/** The plan-context orientation plus the codestyle reminder, injected once per session. */
 const oriented = new Set<string>();
 function orientationOnce(key: unknown, push: (text: string) => void, projectDir: string): void {
   const keyText = String(key ?? "session");
   if (oriented.has(keyText)) return;
-  const text = buildPlanContext(projectDir);
-  if (!text) return; // no plan (yet) — check again on the next run
+  const parts: string[] = [];
+  const plan = buildPlanContext(projectDir);
+  if (plan) parts.push(plan);
+  try {
+    const verdict = codestyleState(projectDir);
+    if (verdict) parts.push(reminderLine(verdict));
+  } catch {
+    /* fail-safe: a broken reminder must never break the orientation */
+  }
+  if (!parts.length) return; // nothing to say (yet) — check again on the next run
   oriented.add(keyText);
-  push(text);
+  push(parts.join("\n\n"));
 }
 
 const projectDirOf = (ctx: any): string =>
@@ -159,23 +186,38 @@ const definition = Plugin.define({
     const projectDir = projectDirOf(ctx);
 
     await ctx.session.hook("context", (event: any) => {
-      orientationOnce(event?.sessionID ?? event?.messageID, (text) => {
-        event.system.push({ type: "text", text });
-      }, projectDir);
+      try {
+        orientationOnce(event?.sessionID ?? event?.messageID, (text) => {
+          event.system.push({ type: "text", text });
+        }, projectDir);
+      } catch {
+        /* fail-safe: orientation is a nice-to-have, never a burden */
+      }
     });
+
+    // A compaction wipes the context — the orientation must come back afterwards.
+    try {
+      await ctx.session.hook("compaction", (event: any) => {
+        oriented.delete(String(event?.sessionID ?? ""));
+      });
+    } catch {
+      /* a host without the compaction hook simply keeps the inject-once behavior */
+    }
 
     await ctx.tool.hook("execute.before", async (event: any) => {
       await guardBefore(projectDir, String(event?.tool ?? ""), event?.input);
     });
 
     await ctx.tool.hook("execute.after", async (event: any) => {
-      const tool = String(event?.tool ?? "");
+      const e = event as AfterEvent;
+      if (e?.status && e.status !== "completed") return; // a failed call changed nothing
+      const tool = String(e?.tool ?? "");
       if (tool === "bash") {
-        await watchAfterBash(projectDir, event?.input, event);
+        await watchAfterBash(projectDir, e?.input, event);
         return;
       }
       if (tool === "edit" || tool === "write" || tool === "patch") {
-        await afterEdit(projectDir, tool, event?.input);
+        await afterEdit(projectDir, e?.input);
       }
     });
   },
@@ -200,7 +242,7 @@ async function server(ctx: any) {
         return;
       }
       if (tool === "edit" || tool === "write" || tool === "patch") {
-        await afterEdit(projectDir, tool, output?.args);
+        await afterEdit(projectDir, output?.args);
       }
     },
   };

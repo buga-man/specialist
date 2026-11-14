@@ -4,8 +4,8 @@ This repository **is** the plugin: it lives in the git repository
 `github.com/buga-man/specialist` and installs through the standard mechanisms of
 **Claude Code**, **pi agent**, **Codex CLI**, and **OpenCode**. Skills are written once
 and work in every host
-(the shared Agent Skills format); hooks (Claude Code) and extensions (pi) are a dual
-implementation of one logic ([more detail](hooks.md)).
+(the shared Agent Skills format); hooks and extensions are four wrappers of one logic —
+Claude Code, Codex, OpenCode, pi ([more detail](hooks.md)).
 
 ## What is needed for full operation
 
@@ -45,7 +45,7 @@ does not run someone else's formatter where the project did not choose it.
 | Skill | Needed | Comment |
 |---|---|---|
 | `tech-writer` (manual build) | Node + **Chrome or Edge** (headless PDF printing); for screenshots — the host's browser automation and a live dev stand | HTML is built without a browser; the browser is needed only for the PDF. Chrome/Edge is present on any Windows machine; on Linux/macOS it installs the standard way |
-| `stand-acceptance` | the docker compose stand of the specific project, chrome-devtools MCP | A team-and-project skill (a deliberate exception to portability) |
+| `stand-acceptance` | the docker compose stand of the specific project; the host's browser automation for the UI checks | A team-and-project skill (a deliberate exception to portability) |
 | the other 10 skills | only the agent itself and the repository | — |
 
 ## Installing into Claude Code
@@ -88,7 +88,7 @@ cd specialist
 pi install .
 ```
 
-Updates: `pi update`. Pinning a version — by tag: `git:...skills.git@v<release-tag>`.
+Updates: `pi update`. Pinning a version — by tag: `git:...specialist.git@v<release-tag>`.
 After editing or adding extensions: `/reload` inside pi.
 
 ## Skills only, without installing the plugin

@@ -34,15 +34,19 @@ export function treeChangingCommands(command) {
 }
 
 /** The one-line signal for the agent, or null when both artifacts are fine.
- *  `index` — { changed, added, missing } counts or null (no index / in sync);
+ *  `index` — { changed, added, missing } path arrays or null (no index / in sync);
  *  `codestyle` — a stale freshness verdict or null; kbCli and projectDir go into the
  *  rebuild command verbatim. */
 export function signalMessage({ index, codestyle, kbCli, projectDir }) {
   const parts = [];
   if (index) {
+    const detail = (paths) =>
+      Array.isArray(paths) && paths.length
+        ? `${paths.length} (${paths.slice(0, 3).join(", ")}${paths.length > 3 ? `, +${paths.length - 3} more` : ""})`
+        : "0";
     parts.push(
-      `the documentation index is stale (${index.changed} changed, ${index.added} added, ${index.missing} removed) — ` +
-        `rebuild it now, it is derived data: node "${kbCli}" build --project "${projectDir}"`,
+      `the documentation index is stale (${detail(index.changed)} changed, ${detail(index.added)} added, ` +
+        `${detail(index.missing)} removed) — rebuild it now, it is derived data: node "${kbCli}" build --project "${projectDir}"`,
     );
   }
   if (codestyle) {

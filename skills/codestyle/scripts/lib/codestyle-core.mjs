@@ -1,5 +1,5 @@
 /**
- * codestyle-core.mjs — shared logic for the codestyle skill and its SessionStart
+ * codestyle-core.mjs — shared logic for the codestyle skill and its session-start
  * reminder hook.
  *
  * Used by the Claude Code hook adapter (codestyle-reminder.mjs, host-side) and the CLI

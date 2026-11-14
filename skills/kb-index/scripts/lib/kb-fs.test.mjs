@@ -38,28 +38,28 @@ test("file list: without git — a filesystem walk, service directories are skip
   assert.deepEqual(listMarkdownFiles(dir), ["a.md", "docs/b.md"]);
 });
 
-test("file list: Cyrillic and spaces in names", () => {
-  const dir = project({ "docs/  2026 .md": "# x", "r&d/a.md": "# y" });
-  assert.deepEqual(listMarkdownFiles(dir), ["docs/  2026 .md", "r&d/a.md"]);
+test("file list: non-ASCII and spaces in names", () => {
+  const dir = project({ "docs/Café notes 2026.md": "# x", "r&d/a.md": "# y" });
+  assert.deepEqual(listMarkdownFiles(dir), ["docs/Café notes 2026.md", "r&d/a.md"]);
 });
 
-test("file list: the git branch preserves Cyrillic and spaces", () => {
-  const dir = project({ "docs/  2026 .md": "# x", "r&d/a.md": "# y", "skip.txt": "t" });
+test("file list: the git branch preserves non-ASCII and spaces", () => {
+  const dir = project({ "docs/Café notes 2026.md": "# x", "r&d/a.md": "# y", "skip.txt": "t" });
   execFileSync("git", ["init", "-q"], { cwd: dir });
   execFileSync("git", ["add", "-A"], { cwd: dir });
-  assert.deepEqual(listMarkdownFiles(dir), ["docs/  2026 .md", "r&d/a.md"]);
+  assert.deepEqual(listMarkdownFiles(dir), ["docs/Café notes 2026.md", "r&d/a.md"]);
 });
 
 test("hash: same content — same hash, different content — different hash", () => {
-  assert.equal(computeHash(""), computeHash(""));
-  assert.notEqual(computeHash(""), computeHash("2"));
+  assert.equal(computeHash("text"), computeHash("text"));
+  assert.notEqual(computeHash("text"), computeHash("text2"));
   assert.match(computeHash("x"), /^[0-9a-f]{40}$/);
 });
 
 test("doc read: a missing file — an empty string", () => {
   const dir = project({ "a.md": "# a" });
   assert.equal(readDoc(dir, "a.md"), "# a");
-  assert.equal(readDoc(dir, ".md"), "");
+  assert.equal(readDoc(dir, "missing.md"), "");
 });
 
 test("index: a write/read round-trip, missing — null", () => {

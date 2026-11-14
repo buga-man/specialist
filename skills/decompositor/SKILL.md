@@ -53,10 +53,9 @@ inventory of the affected area, contract counterparts, the in-repo blast radius.
 area is large, offer to dispatch read-only scout subagents and keep the mapping (stage 4)
 in the main context:
 
-- **Ask before the first dispatch — always.** One explicit question to the user: may
-  subagent scouts be used here, and how many may run? Name the planned missions and your
-  recommended count in the same ask. The granted number is the hard budget for the run; if
-  you need more, come back and ask again.
+- **Ask first — always.** One explicit question: may subagent scouts be used, and how
+  many? Name the missions and the recommended count; the granted number is the hard
+  budget for the run — need more, ask again.
 - **Denied, or the host has no subagent mechanism** → run the same missions yourself,
   sequentially, in narrow passes.
 - **One mission per scout**: "find the counterpart of contract X", "inventory how `<area>`
@@ -78,7 +77,7 @@ in the main context:
 
 ## 5. Ask the human
 
-- Batch questions in one message, most critical first (≤10 per round); ask only what would change the spec.
+- Batch questions in one message, most critical first (≤10 per round; two rounds is the normal maximum); ask only what would change the spec.
 - Repo-level specifics (placement, conventions, edge cases) are fair game. 
 - **Hard rule**: if reality in this repo contradicts the system spec — a contract does not fit, an existing behavior must change, a cross-repo decision looks wrong — stop and raise it. This skill never revises contracts or cross-repo decisions locally; the system spec is updated first.
 
@@ -109,6 +108,8 @@ last-updated: YYYY-MM-DD
 ## 1. Role in the feature
 What this repo contributes and receives; existing modules and patterns
 this builds on (referenced, not guessed).
+Business criteria covered: which business-spec acceptance criteria this
+repo's changes serve — the semantic traceability spec-review verifies against.
 
 ## 2. Changes
 Per change: what and why (source: [system spec §N] / [found] / [answer #N]),
@@ -142,5 +143,8 @@ Append-only log of approved changes to this spec (a spec may change — never si
 - **Snippets are anchors, not implementations**: signatures, shapes, references to existing code to imitate. If you can paste in a finished function, you have gone too far.
 - **Stay inside the repo**: contracts, cross-repo behavior, and rollout belong to the system spec. Contradictions are raised, never resolved locally.
 - **Traceability**: every change cites its source (`[system spec §N]`, `[found]`, `[answer #N]`).
-- **Metadata is two-way**: when sibling docs in the target repo carry YAML frontmatter, the repo spec gets it too (copy the field set from the siblings; minimum `id`/`parent`/`children`/`status`/`last-updated`). Creating a repo spec is **two edits**: set its `parent` and append its `id` to the system spec's `children` — for a multi-page system spec, the package README's. A parent with downstream docs and an empty `children` is a traceability defect. Bump `last-updated` on every later edit.
+- **Metadata is two-way**: when sibling docs carry YAML frontmatter, the repo spec gets it
+  too (copy their field set). Creating it is **two edits** — set its `parent` and append
+  its `id` to the system spec's `children` (for a multi-page system spec, the package
+  README's); a parent with downstream docs and an empty `children` is a traceability defect.
 - Write the spec in the team's working language, which may differ from the language of this skill.

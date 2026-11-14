@@ -12,21 +12,16 @@
  * feeds it back to the agent), allow = exit 0 silently.
  * Any internal error → exit 0 (fail-safe: the hook never blocks legitimate work).
  */
-import { readFileSync } from "node:fs";
 import { applyPatchPaths, decide, readMode } from "./spec-core.mjs";
+import { readHookPayload, resolveProjectDir } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
   const tool = String(payload?.tool_name || "");
   if (/^(Edit|Write|MultiEdit|NotebookEdit|apply_patch)$/i.test(tool)) {
     const input = payload?.tool_input || {};
-    const projectDir = String(payload?.cwd || process.cwd());
+    const projectDir = resolveProjectDir(payload);
     const mode = readMode(projectDir);
     const filePath = String(input.file_path || input.notebook_path || "");
     if (filePath) {

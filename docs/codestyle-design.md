@@ -149,7 +149,7 @@ The core is pure functions without I/O, reused by the hook and the CLI, tested w
 2. **verify on a fresh document** — "everything confirmed", the time noticeably less than generate.
 3. **Hook:** `base` rewound by 30+ code commits → at `SessionStart` one reminder line appears in the context; a fresh document — silence; no document — silence; no git — exit 0.
 4. `node --test` green: frontmatter parsing, the "not markdown = code" filter, the commit counter, the verdict thresholds.
-5. Registration: `codestyle-core.test.mjs` into the root `package.json`'s `test` script; the plugin version in `.claude-plugin/plugin.json`, `package.json`, and `.claude-plugin/marketplace.json` in sync; `docs/hooks.md` and `docs/skills.md` updated — skipping is not allowed (they list all hooks and skills).
+5. Registration: `codestyle-core.test.mjs` into the root `package.json`'s `test` script; the plugin version in `.claude-plugin/plugin.json`, `plugin.json`, `package.json`, and `.claude-plugin/marketplace.json` in sync; `docs/hooks.md` and `docs/skills.md` updated — skipping is not allowed (they list all hooks and skills).
 6. Consumers updated (§7): `implementation-plan`, `spec-implementation`, `spec-review`; without the document their behavior does not change.
 
 ## 11. Developer decisions

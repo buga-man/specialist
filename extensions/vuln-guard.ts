@@ -12,39 +12,47 @@ import { checkGitCommit, readVulnMode, scanSingleFile } from "../hooks/lib/vuln-
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
-    if (!isToolCallEventType("bash", event)) return;
-    const command = String((event.input as { command?: string } | undefined)?.command || "");
-    if (!command) return;
-    const result = await checkGitCommit({
-      projectDir: ctx.cwd,
-      command,
-      run: (cmd, args, opts) => pi.exec(cmd, args, opts),
-    });
-    if (result) {
-      return { block: true, reason: result.reason };
+    try {
+      if (!isToolCallEventType("bash", event)) return;
+      const command = String((event.input as { command?: string } | undefined)?.command || "");
+      if (!command) return;
+      const result = await checkGitCommit({
+        projectDir: ctx.cwd,
+        command,
+        run: (cmd, args, opts) => pi.exec(cmd, args, opts),
+      });
+      if (result) {
+        return { block: true, reason: result.reason };
+      }
+    } catch {
+      /* fail-safe: never block on hook errors */
     }
   });
 
   pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName !== "edit" && event.toolName !== "write") return;
-    if (event.isError) return;
-    if (readVulnMode(ctx.cwd) !== "always") return;
-    let filePath = (event.input as { path?: string } | undefined)?.path ?? "";
-    if (!filePath) return;
-    if (filePath.startsWith("@")) filePath = filePath.slice(1);
-    const result = await scanSingleFile({
-      projectDir: ctx.cwd,
-      filePath: resolve(ctx.cwd, filePath),
-      run: (cmd, args, opts) => pi.exec(cmd, args, opts),
-    });
-    if (!result) return;
+    try {
+      if (event.toolName !== "edit" && event.toolName !== "write") return;
+      if (event.isError) return;
+      if (readVulnMode(ctx.cwd) !== "always") return;
+      let filePath = (event.input as { path?: string } | undefined)?.path ?? "";
+      if (!filePath) return;
+      if (filePath.startsWith("@")) filePath = filePath.slice(1);
+      const result = await scanSingleFile({
+        projectDir: ctx.cwd,
+        filePath: resolve(ctx.cwd, filePath),
+        run: (cmd, args, opts) => pi.exec(cmd, args, opts),
+      });
+      if (!result) return;
 
-    const text = (event.content ?? [])
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("\n");
-    return {
-      isError: true,
-      content: [{ type: "text", text: `${text}\n\n${result.reason}` }],
-    };
+      const text = (event.content ?? [])
+        .map((block) => (block.type === "text" ? block.text : ""))
+        .join("\n");
+      return {
+        isError: true,
+        content: [{ type: "text", text: `${text}\n\n${result.reason}` }],
+      };
+    } catch {
+      /* fail-safe: never block on hook errors */
+    }
   });
 }

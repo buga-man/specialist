@@ -79,3 +79,44 @@ test("host manifests: names are aligned and referenced paths exist", () => {
 
   assert.ok(existsSync(join(REPO_ROOT, "plugins/opencode/index.ts")), "OpenCode plugin entry");
 });
+
+test("timeouts: every registration in both manifests sets a numeric timeout — a hung tool must never stall a turn", () => {
+  for (const file of ["hooks/hooks.json", "hooks/hooks-codex.json"]) {
+    const manifest = readJSON(file);
+    const timeouts = [];
+    for (const [, groups] of Object.entries(manifest.hooks)) {
+      for (const group of groups) {
+        for (const handler of group.hooks ?? []) {
+          if (handler.type === "command") timeouts.push(handler.timeout);
+        }
+      }
+    }
+    assert.ok(timeouts.length > 0, `${file}: registrations present`);
+    for (const t of timeouts) {
+      assert.ok(Number.isFinite(t) && t >= 10 && t <= 600, `${file}: timeout ${t}`);
+    }
+  }
+});
+
+test("SessionStart matchers include the compaction re-orientation on both hosts", () => {
+  for (const file of ["hooks/hooks.json", "hooks/hooks-codex.json"]) {
+    const manifest = readJSON(file);
+    const matchers = (manifest.hooks.SessionStart ?? []).map((g) => g.matcher).join("|");
+    assert.match(matchers, /clear/, `${file}: clear`);
+    assert.match(matchers, /compact/, `${file}: compact`);
+  }
+});
+
+test("versions: the four manifests carry the same version (the version-sync rule, enforced)", () => {
+  const versions = {
+    "claude-plugin/plugin.json": readJSON(".claude-plugin/plugin.json").version,
+    "plugin.json (Codex)": readJSON("plugin.json").version,
+    "package.json (pi)": readJSON("package.json").version,
+    "marketplace.json metadata": readJSON(".claude-plugin/marketplace.json").metadata?.version,
+  };
+  for (const [place, version] of Object.entries(versions)) {
+    assert.ok(typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version), `${place}: ${version}`);
+  }
+  const unique = new Set(Object.values(versions));
+  assert.equal(unique.size, 1, `versions diverged: ${JSON.stringify(versions)}`);
+});

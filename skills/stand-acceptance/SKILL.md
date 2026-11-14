@@ -1,12 +1,12 @@
 ---
 name: stand-acceptance
-description: Feature acceptance on a project's local docker stand — dev login to the shell, token minting, API and UI checks in the browser, logs and DB, service rebuild after edits. Use when a feature needs live acceptance — e.g. a spec-review verdict «unverifiable — check on a live environment» — when checking how a change behaves in the running system, or when the user says "check on the stand", "accept on the stand". The content is written in the team's working language; the stand is a local docker compose of a concrete project. Container, service and DB names are placeholders `<project>`/`<service>`/`<db>`.
+description: Feature acceptance on a project's local docker stand — dev login to the shell, token minting, API and UI checks in the browser, logs and DB, service rebuild after edits. Use when a feature needs live acceptance — e.g. a spec-review verdict "unverifiable — check on a live environment" — when checking how a change behaves in the running system, or when the user says "check on the stand", "accept on the stand". The content is written in the team's working language; the stand is a local docker compose of a concrete project. Container, service and DB names are placeholders `<project>`/`<service>`/`<db>`.
 ---
 
 # Acceptance on the stand (docker compose, project `<project>`)
 
-Live acceptance of the implementation: the spec-review verdict «unverifiable —
-check on a live environment» is verified here. The stand is a local docker
+Live acceptance of the implementation: the spec-review verdict "unverifiable —
+check on a live environment" is verified here. The stand is a local docker
 compose; the credentials, paths and container/service/DB names of the concrete
 machine live in environment variables / personal settings — the plugin holds
 none of them (placeholders `<...>`).
@@ -29,7 +29,8 @@ print(t.create_access_token(user_id='<admin-user-id>', display_name='System Admi
 "
 ```
 
-In the browser (chrome-devtools → evaluate_script), a tab at `http://localhost:3000/login`:
+In the browser (the host's browser automation → evaluate script), a tab at
+`http://localhost:3000/login`:
 
 ```js
 const r = await fetch('/api/iam/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:'<dev-admin>',password:'<dev-admin-password>'}) });
@@ -70,14 +71,14 @@ asyncio.run(m())
 
 ## 3. Browser acceptance
 
-- `mcp__chrome_devtools_navigate_page` — open the page URL.
-- `evaluate_script` — capture the state: `document.querySelectorAll('table tbody tr').length`,
+- The host's browser automation (navigate) — open the page URL.
+- Evaluate script — capture the state: `document.querySelectorAll('table tbody tr').length`,
   selectors, `document.body.innerText`.
-- `list_network_requests` — what went to the API; `get_network_request` (reqid) — the
-  response body (matters when the UI shows something other than what the API returned).
+- List network requests — what went to the API; the response body of a request by its id
+  (matters when the UI shows something other than what the API returned).
 - The UI state often depends on query parameters (a date, an object id):
   `?<entity>_id=…&date=YYYY-MM-DD` — pick them to fit the scenario, otherwise the
-  default screen opens (e.g. the «approved» version instead of the working one).
+  default screen opens (e.g. the "approved" version instead of the working one).
 
 ## 4. Logs and DB
 
@@ -106,9 +107,8 @@ cmd.exe /c "cd /d <repo>\backend\services\<service> && .venv\Scripts\python.exe 
 - DB tests: `export <SERVICE>_TEST_DSN=postgresql+asyncpg://<db-user>:<password>@127.0.0.1:5432/<db>_test`
   (export in the shell, inherited by cmd); a trailing space in the value breaks the DSN.
 - The test DB may sit on an old revision → `alembic upgrade head` with `DATABASE_URL`
-  pointing at it; if the schema is «half-broken» — drop/create and migrate from scratch.
+  pointing at it; if the schema is "half-broken" — drop/create and migrate from scratch.
 
 ---
 
-Moved from a command skill (2026-11-06): personal paths and the names of services,
-containers, DBs and credentials replaced with `<placeholders>`; commands and nuances preserved.
+Moved from a command skill (2026-11-06): personal paths and names replaced with `<placeholders>`.

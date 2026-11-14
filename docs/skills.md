@@ -51,13 +51,14 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
 ## brainstorm — raw task → business spec
 
 **Why:** tasks arrive as three lines hiding half the requirements. The skill surfaces them:
-it studies the docs and the system, asks the user at most 10 questions (in one batch, only
-those whose answers change the spec), and turns it all into a business spec.
+it studies the docs and the system, asks the user at most 10 questions per round (two
+rounds at most, only those whose answers change the spec), and turns it all into a
+business spec.
 
 - **Input → output:** raw task → `docs/specs/YYYY-MM-DD-<topic>.md`
-- **In the spec:** business meaning without code (no paths, APIs, schemas), scope/non-scope,
-  verifiable acceptance criteria (each with a source `[request]/[docs]/[answer #N]`), business
-  cases "actor → action → outcome", open questions with working assumptions.
+- **In the spec:** business meaning without code (no paths, APIs, schemas), scope/non-scope
+  and constraints, must/should acceptance criteria (each with a source `[request]/[docs]/[answer #N]`),
+  business cases "actor → action → outcome", success metrics, open questions with working assumptions.
 - **When:** any new task/feature; phrases "gather requirements", "make a spec".
 - **Not for:** bugs — those belong to root-cause.
 
@@ -66,7 +67,7 @@ those whose answers change the spec), and turns it all into a business spec.
 **Why:** the main value is finding work the spec is silent about: a frontend for a
 "backend task", migrations, compatibility, permissions — and work the spec duplicates:
 what was ordered as "new" may already exist in a neighboring repo. Reconnaissance of all
-affected repositories, blast radius, contracts between repos, rollout order.
+affected repositories, blast radius, contracts between repos (each with its owning contract test), data migration and rollback, rollout order.
 
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
@@ -142,7 +143,7 @@ broken until proven otherwise".
 
 **Why:** closes the spec-review verdict "unverifiable — check on the live system". Shell
 login (token in localStorage + cookies), token minting in an IAM container, direct service
-calls, browser acceptance (chrome-devtools), logs and the DB, service rebuilds.
+calls, browser acceptance through the host's browser automation, logs and the DB, service rebuilds.
 
 - **Input → output:** an acceptance item → observed behavior on the live stand
 - **Key:** credentials and paths live in environment variables; the skill itself carries
@@ -157,9 +158,10 @@ calls, browser acceptance (chrome-devtools), logs and the DB, service rebuilds.
 **Why:** the documentation loop after merge. Mode 1 — **audit**: compares the code against
 the specs from the last sync point (the report `docs/audits/YYYY-MM-DD-doc-sync.md` stores
 the hash of the last checked commit — which is also the starting point of the next run) and
-finds four kinds of drift: undocumented (code without a spec), stale claim (a spec lies
+finds five kinds of drift: undocumented (code without a spec), stale claim (a spec lies
 about the code), orphan amendment (an amendment never reached the manual), unowned feature
-(a feature with no spec at all). Each finding comes with file:line evidence and ready
+(a feature with no spec at all), broken trace (`parent`/`children` metadata desynced along
+the chain). Each finding comes with file:line evidence and ready
 amendment text; it is applied only after approval. Mode 2 — **user manual**: a skeleton
 from the business specs (business cases → step-by-step how-tos), screenshots from the stand
 via browser automation, and building `md → standalone HTML + PDF` with the skill's script
@@ -210,7 +212,7 @@ not the whole file.
   statistics, no texts) + `.kbindex/maps/<directory>/INDEX.md`; the index is not versioned
   and ignores itself in git.
 - **How to search:** `kb.mjs search "<query>"` — two tiers: first by id, title, gist,
-  anchor, and path, with an inflection fallback (`«»` finds `«»`); then by body —
+  anchor, and path, with an inflection fallback (`boxes` finds `boxed`); then by body —
   BM25 over sections, for words absent from the face (an identifier inside someone else's
   text, a term from the middle of a section). The output includes the anchor line
   `§<heading>:<line>` (for a body hit — the best section); read from there;
@@ -225,9 +227,9 @@ not the whole file.
 - **When:** "where is X documented", "find the document about X", "what exists on X",
   "which documents relate to X", "refresh the index", "rebuild the map".
 - **Key rule:** the index is a derivative; the source of truth is the files. No gist →
-  add an intro paragraph to the document, not to the index; the Stop hook does not let a
-  turn finish with a stale index (pi agent has no hooks — run `build` by hand after editing
-  documentation).
+  add an intro paragraph to the document, not to the index; the plugin's gates (Stop in
+  Claude Code and Codex, a settle-time follow-up in pi) do not let a turn finish with a
+  stale index — in hosts without a gate, run `build` by hand after editing documentation.
 
 ## codestyle — repo conventions as a document
 

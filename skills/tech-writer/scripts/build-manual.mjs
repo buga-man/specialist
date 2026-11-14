@@ -12,7 +12,7 @@
  *            <out>/manual.pdf  — the HTML printed by a headless browser (Chrome/Edge).
  *
  * Exit codes: 0 — html and pdf built; 2 — html built, pdf skipped (no browser found);
- *             1 — build error.
+ *             3 — html built, pdf printing failed; 1 — build error.
  * Dependencies: only Node (no npm packages); for PDF — Chrome or Edge, the path can be
  *             set via the MANUAL_BROWSER variable.
  */
@@ -41,6 +41,8 @@ export function parseArgs(argv) {
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ESC[c]);
+const UNESC = { "&lt;": "<", "&gt;": ">", "&quot;": '"', "&amp;": "&" };
+const unesc = (s) => s.replace(/&(?:lt|gt|quot|amp);/g, (e) => UNESC[e]);
 
 /** Front matter of the `key: value` form between `---` lines. */
 export function parseFrontMatter(md) {
@@ -64,6 +66,8 @@ export function renderMarkdown(md, opts = {}) {
   const dir = opts.dir || ".";
   const images = opts.images || { found: [], missing: [] };
 
+  // src/alt arrive raw (unescaped here at the call sites) so that file
+  // resolution and the found/missing arrays hold the real paths.
   function imageTag(src, alt) {
     if (/^(https?:|data:)/.test(src)) return `<img src="${esc(src)}" alt="${esc(alt)}">`;
     const abs = resolve(dir, src);
@@ -81,10 +85,12 @@ export function renderMarkdown(md, opts = {}) {
     let s = esc(text);
     const codes = [];
     s = s.replace(/`([^`]+)`/g, (_, c) => (codes.push(c), `\x00${codes.length - 1}\x00`));
-    s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, src) => imageTag(src, alt));
-    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, href) => `<a href="${esc(href)}">${t}</a>`);
+    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => imageTag(unesc(src.trim()), unesc(alt)));
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, href) => `<a href="${esc(unesc(href.trim()))}">${t}</a>`);
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    // Emphasis needs a non-space right after the opening and before the closing
+    // asterisk, so that arithmetic like "2 * 3 * 4" stays literal.
+    s = s.replace(/\*(\S(?:[^*]*\S)?)\*/g, "<em>$1</em>");
     s = s.replace(/\x00(\d+)\x00/g, (_, n) => `<code>${codes[n]}</code>`);
     return s;
   }
@@ -238,7 +244,8 @@ a { color: #2f5496; text-decoration: none; }
 .missing-img { display: block; border: 2px dashed #c00; color: #c00; padding: 10pt; margin: 8pt 0; background: #fff5f5; }
 `;
 
-/** Assembles the full HTML: cover + table of contents + content. */
+/** Assembles the full HTML: cover + table of contents + content.
+ *  Returns { html, missing } — missing lists image files that were not found (raw paths). */
 export function buildHtml(bodyMd, { title, version, date, dir }) {
   const images = { found: [], missing: [] };
   const content = renderMarkdown(bodyMd, { dir, images });
@@ -248,6 +255,7 @@ export function buildHtml(bodyMd, { title, version, date, dir }) {
     const entry = `<li class="t${m[1]}"><a href="#${m[2]}">${m[3].replace(/<[^>]+>/g, "")}</a></li>`;
     if (m[1] === "1") toc.push(entry);
     else if (toc.length) toc[toc.length - 1] = toc[toc.length - 1].replace(/<\/li>$/, `<ul>${entry}</ul></li>`);
+    else toc.push(entry); // an h2 before the first h1 — a top-level entry of its own
   }
   const tocHtml = toc.length ? `<nav class="toc"><h1 id="h-toc">Contents</h1><ul>${toc.join("")}</ul></nav>` : "";
 
@@ -256,7 +264,7 @@ export function buildHtml(bodyMd, { title, version, date, dir }) {
 
   const missingNote = images.missing.length ? `\n<!-- missing image files: ${images.missing.join(", ")} -->` : "";
 
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -271,6 +279,7 @@ ${content}
 </main>
 ${missingNote}</body>
 </html>`;
+  return { html, missing: images.missing };
 }
 
 // ---------- PDF (headless Chrome/Edge) ----------
@@ -327,14 +336,13 @@ function main() {
   const outDir = resolve(args.out || manualDir);
   mkdirSync(outDir, { recursive: true });
 
-  const warnings = [];
-  const html = buildHtml(body, { title, version, date, dir: manualDir });
+  const { html, missing } = buildHtml(body, { title, version, date, dir: manualDir });
   const htmlPath = join(outDir, "manual.html");
   writeFileSync(htmlPath, html);
   console.log(`OK       html → ${htmlPath}`);
 
   // Missing images are already visible as placeholders in the HTML; repeat them to the console.
-  for (const m of html.matchAll(/Missing file: ([^<]+)/g)) warnings.push(`missing image file: ${m[1].trim()}`);
+  const warnings = missing.map((src) => `missing image file: ${src}`);
 
   if (!args.pdf) process.exit(0);
 
@@ -352,7 +360,7 @@ function main() {
 
   if (res.error || !existsSync(pdfPath)) {
     console.error(`PDF printing error (${basename(browser)}): ${res.error?.message || res.stderr?.slice(0, 400) || "file not created"}`);
-    process.exit(2);
+    process.exit(3); // distinct from 2 = no browser found: here a browser ran and failed
   }
   console.log(`OK       pdf  → ${pdfPath} (via ${basename(browser)})`);
 

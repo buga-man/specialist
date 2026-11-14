@@ -12,7 +12,7 @@
  * `run(cmd, args, opts)` is injected so both the Claude Code hook (child_process)
  * and the pi extension (pi.exec) can share this logic.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, isAbsolute, join, relative } from "node:path";
 
 const PRETTIER_EXTS = new Set([
@@ -28,14 +28,29 @@ function clip(s) {
 }
 
 /** True when the project itself declares prettier (dependencies or devDependencies) —
- *  a prettier that merely landed in node_modules transitively is ignored. */
+ *  a prettier that merely landed in node_modules transitively is ignored. Memoized per
+ *  manifest stat: one patch payload formats several files, and re-reading package.json
+ *  per file is waste. The stat key keeps a changed manifest honest (tests toggle it). */
+let prettierMemo = null;
 function projectDeclaresPrettier(projectDir) {
+  const manifest = join(projectDir, "package.json");
+  let stat = null;
   try {
-    const pkg = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8"));
-    return Boolean(pkg?.dependencies?.prettier || pkg?.devDependencies?.prettier);
+    stat = statSync(manifest);
   } catch {
-    return false;
+    /* no manifest — value is false */
   }
+  const key = stat ? `${manifest}:${stat.mtimeMs}:${stat.size}` : `${manifest}:none`;
+  if (prettierMemo?.key === key) return prettierMemo.value;
+  let value = false;
+  try {
+    const pkg = JSON.parse(readFileSync(manifest, "utf8"));
+    value = Boolean(pkg?.dependencies?.prettier || pkg?.devDependencies?.prettier);
+  } catch {
+    value = false;
+  }
+  prettierMemo = { key, value };
+  return value;
 }
 
 /**

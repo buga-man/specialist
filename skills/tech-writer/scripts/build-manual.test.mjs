@@ -4,10 +4,14 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { buildHtml, findBrowser, parseFrontMatter, parseArgs, renderMarkdown } from "./build-manual.mjs";
+
+const scriptPath = fileURLToPath(new URL("./build-manual.mjs", import.meta.url));
 
 const dirs = [];
 process.on("exit", () => {
@@ -111,7 +115,7 @@ test("renderMarkdown: an image and text inside a step do not break the list numb
 test("buildHtml: a cover with metadata, a TOC with links, inline css", () => {
   const dir = manual();
   const md = "# Chapter one\n\ntext\n\n## Steps\n\n1. do it\n\n# Chapter two\n\ntext";
-  const html = buildHtml(md, { title: "User Guide", version: "v0.1.0", date: "2026-11-08", dir });
+  const { html } = buildHtml(md, { title: "User Guide", version: "v0.1.0", date: "2026-11-08", dir });
   assert.match(html, /<div class="title">User Guide<\/div>/);
   assert.match(html, /version v0\.1\.0 · 2026-11-08/);
   assert.match(html, /@page \{ size: A4/);
@@ -123,4 +127,54 @@ test("buildHtml: a cover with metadata, a TOC with links, inline css", () => {
 test("findBrowser: returns null or an existing path, does not crash", () => {
   const b = findBrowser();
   assert.ok(b === null || (typeof b === "string" && b.length > 0));
+});
+
+test("renderMarkdown: arithmetic with spaced asterisks is not italicized, real emphasis still works", () => {
+  const html = renderMarkdown("2 * 3 * 4, and 10 * x * y, but *this* is emphasized");
+  assert.doesNotMatch(html, /<em> 3 <\/em>/);
+  assert.match(html, /2 \* 3 \* 4/);
+  assert.match(html, /10 \* x \* y/);
+  assert.match(html, /but <em>this<\/em> is emphasized/);
+});
+
+test("renderMarkdown: an image and a link target with spaces parse; a spaced image resolves", () => {
+  const dir = manual();
+  copyFileSync(join(dir, "assets", "p.png"), join(dir, "assets", "my shot 1.png"));
+  const images = { found: [], missing: [] };
+  const html = renderMarkdown("![Shot](assets/my shot 1.png) then [a link](docs/read me.md)", { dir, images });
+  assert.match(html, /<img src="data:image\/png;base64,iVBOR[^"]+" alt="Shot">/);
+  assert.match(html, /<a href="docs\/read me\.md">a link<\/a>/);
+  assert.deepEqual(images.found, ["assets/my shot 1.png"]);
+  assert.deepEqual(images.missing, []);
+});
+
+test("buildHtml: returns missing image files as raw paths, single-escaped in the HTML", () => {
+  const dir = manual();
+  const { html, missing } = buildHtml("![Ok](assets/p.png) then ![Gone](gone & away.png)", { title: "T", dir });
+  assert.deepEqual(missing, ["gone & away.png"]);
+  assert.match(html, /data:image\/png;base64/); // the existing image is inlined
+  assert.match(html, /Missing file: gone &amp; away\.png/); // escaped exactly once
+  assert.doesNotMatch(html, /&amp;amp;/); // no double escaping
+});
+
+test("buildHtml: an h2 before the first h1 becomes a top-level TOC entry", () => {
+  const md = "## Intro\n\ntext\n\n# Chapter one\n\n## Steps\n\n1. do it";
+  const { html } = buildHtml(md, { title: "T", dir: "." });
+  assert.match(
+    html,
+    /<ul><li class="t2"><a href="#h-1">Intro<\/a><\/li><li class="t1"><a href="#h-2">Chapter one<\/a><ul><li class="t2"><a href="#h-3">Steps<\/a><\/li><\/ul><\/li><\/ul>/,
+  );
+});
+
+test("main: a browser that does not produce a PDF exits with code 3, not 2", () => {
+  const dir = manual({ "manual.md": "# Chapter\n\ntext" });
+  const fakeBrowser = join(dir, "fake-browser");
+  writeFileSync(fakeBrowser, "this file exists but is not a browser");
+  const res = spawnSync(process.execPath, [scriptPath, dir, "--out", join(dir, "out")], {
+    encoding: "utf8",
+    env: { ...process.env, MANUAL_BROWSER: fakeBrowser },
+    timeout: 60000,
+  });
+  assert.equal(res.status, 3);
+  assert.match(res.stderr, /PDF printing error/);
 });

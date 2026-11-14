@@ -253,3 +253,23 @@ test("path: both arguments point at one document", () => {
   assert.equal(r.status, 2);
   assert.match(r.stderr, /same document/);
 });
+
+test("build: the second build reuses unchanged documents (incremental)", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC, "docs/req/REQ-002.md": DOC });
+  const first = kb(dir, "build");
+  assert.doesNotMatch(first, /incremental:/); // no previous index — nothing to reuse
+  const second = kb(dir, "build");
+  assert.match(second, /incremental: 2 of 2 documents reused/);
+  writeFileSync(join(dir, "docs", "req", "REQ-002.md"), `${DOC}\nchanged`);
+  const third = kb(dir, "build");
+  assert.match(third, /incremental: 1 of 2 documents reused/);
+  const fourth = kb(dir, "build");
+  assert.match(fourth, /incremental: 2 of 2 documents reused/); // the rebuild refreshed the record
+});
+
+test("search: the face carries the pipeline status tag", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC }); // DOC has "status: draft"
+  kb(dir, "build");
+  const out = kb(dir, "search", "complaints");
+  assert.match(out, /\[draft\]/);
+});

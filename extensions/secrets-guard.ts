@@ -11,16 +11,20 @@ import { checkGitCommand } from "../hooks/lib/secrets-core.mjs";
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
-    if (!isToolCallEventType("bash", event)) return;
-    const command = String((event.input as { command?: string } | undefined)?.command || "");
-    if (!command) return;
-    const result = await checkGitCommand({
-      projectDir: ctx.cwd,
-      command,
-      run: (cmd, args, opts) => pi.exec(cmd, args, opts),
-    });
-    if (result) {
-      return { block: true, reason: result.reason };
+    try {
+      if (!isToolCallEventType("bash", event)) return;
+      const command = String((event.input as { command?: string } | undefined)?.command || "");
+      if (!command) return;
+      const result = await checkGitCommand({
+        projectDir: ctx.cwd,
+        command,
+        run: (cmd, args, opts) => pi.exec(cmd, args, opts),
+      });
+      if (result) {
+        return { block: true, reason: result.reason };
+      }
+    } catch {
+      /* fail-safe: never block on hook errors */
     }
   });
 }

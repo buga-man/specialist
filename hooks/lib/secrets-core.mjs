@@ -28,7 +28,15 @@ export const DEFINITE = [
   { label: "Private key block", re: /-----BEGIN [A-Z0-9 ]*PRIVATE KEY( BLOCK)?-----/ },
   { label: "GitHub token", re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/ },
   { label: "Google API key", re: /\bAIza[0-9A-Za-z_-]{35}\b/ },
+  { label: "Google OAuth access token", re: /\bya29\.[A-Za-z0-9_-]{20,}\b/ },
   { label: "Slack token", re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/ },
+  { label: "Anthropic API key", re: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/ },
+  { label: "OpenAI project key", re: /\bsk-proj-[A-Za-z0-9_-]{20,}\b/ },
+  { label: "OpenAI legacy key", re: /\bsk-None-[A-Za-z0-9_-]{20,}\b/ },
+  { label: "Stripe live key", re: /\b[sr]k_live_[A-Za-z0-9]{16,}\b/ },
+  { label: "Stripe webhook secret", re: /\bwhsec_[A-Za-z0-9]{16,}\b/ },
+  { label: "GitLab personal access token", re: /\bglpat-[A-Za-z0-9_-]{16,}\b/ },
+  { label: "SendGrid API key", re: /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\b/ },
 ];
 
 /** High-signal shapes a legitimate fixture can also produce — blocked with the
@@ -37,6 +45,12 @@ export const LIKELY = [
   { label: "JWT (three dot-separated base64 segments)", re: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\b/ },
   { label: "URL with embedded credentials (user:pass@host)", re: /\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:[^\s/@]{6,}@/i },
   { label: 'Quoted credential assignment (password/token = "…")', re: /\b(?:passw(?:or)?d|passwd|pwd|secret|api_?key|token|auth)\b\s*[:=]\s*["'][^"']{8,}["']/i },
+];
+
+/** The scan list with the tier precomputed — allocated once, not per diff line. */
+const PATTERNS = [
+  ...DEFINITE.map((p) => ({ ...p, tier: "definite" })),
+  ...LIKELY.map((p) => ({ ...p, tier: "likely" })),
 ];
 
 /** File names that should not enter git regardless of content. */
@@ -98,11 +112,11 @@ export function scanForSecrets(text, allowlist = []) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
-    for (const { label, re } of [...DEFINITE, ...LIKELY]) {
+    for (const { label, re, tier } of PATTERNS) {
       const m = re.exec(line);
       if (!m) continue;
       if (allowlisted(line, allowlist) || allowlisted(m[0], allowlist)) continue;
-      findings.push({ line: i + 1, tier: DEFINITE.some((d) => d.label === label) ? "definite" : "likely", label });
+      findings.push({ line: i + 1, tier, label });
       break; // one finding per line — the most certain pattern wins by order
     }
     if (findings.length >= MAX_FINDINGS) break;
@@ -111,10 +125,12 @@ export function scanForSecrets(text, allowlist = []) {
 }
 
 /** Extract git invocations with the given subcommands (default: add|commit|push) from
- *  a (possibly compound) shell command. Shared with git-watch. */
+ *  a (possibly compound) shell command. Shared with git-watch. Environment assignments
+ *  before `git` (`GIT_AUTHOR_NAME=x git commit …`) are part of the invocation. */
 export function gitCommands(command, ops = "add|commit|push") {
   const out = [];
-  const re = new RegExp(`^\\s*git((?:\\s+(?:-[A-Za-z]\\s+\\S+|--\\S+(?:=\\S+)?))*)\\s+(${ops})\\b(.*)$`);
+  const envPrefix = `(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\\S+)\\s+)*`;
+  const re = new RegExp(`^\\s*${envPrefix}git((?:\\s+(?:-[A-Za-z]\\s+\\S+|--\\S+(?:=\\S+)?))*)\\s+(${ops})\\b(.*)$`);
   for (const seg of String(command).split(/&&|\|\||;|\||\n/)) {
     const m = re.exec(seg);
     if (!m) continue;
@@ -156,16 +172,19 @@ export function scanDiff(diffText, allowlist = []) {
     if (!file || !ln) continue;
     if (line.startsWith("+")) {
       if (line.startsWith("+++")) continue;
-      for (const { label, re } of [...DEFINITE, ...LIKELY]) {
+      for (const { label, re, tier } of PATTERNS) {
         const m = re.exec(line.slice(1));
         if (!m) continue;
         if (allowlisted(line, allowlist) || allowlisted(m[0], allowlist)) continue;
-        findings.push({ file, line: ln, tier: DEFINITE.some((d) => d.label === label) ? "definite" : "likely", label });
+        findings.push({ file, line: ln, tier, label });
         break;
       }
       if (findings.length >= MAX_FINDINGS) break;
       ln++;
+      continue;
     }
+    if (line.startsWith(" ")) ln++; // a context line also occupies a line on the "+" side
+    // "-", "\", and the header lines advance nothing.
   }
   return findings;
 }

@@ -345,9 +345,12 @@ function slugOf(p) {
  * @param {Set<string>} knownPaths — every path of the corpus.
  * @returns {string[]} sorted paths, without duplicates.
  */
-export function extractLinks(body, fromPath, knownPaths) {
+/** Collect the markdown-style link targets of a body: the ones resolving inside the
+ *  corpus and the ones pointing outside it (dead cross-references). */
+function linkTargets(body, fromPath, knownPaths) {
   const dir = dirOf(fromPath);
-  const found = new Set();
+  const resolved = new Set();
+  const broken = new Set();
   const text = String(body ?? "");
   const pattern = /\[[^\]]*\]\(([^)]+)\)/g;
 
@@ -357,13 +360,24 @@ export function extractLinks(body, fromPath, knownPaths) {
     if (target.startsWith("<") && target.endsWith(">")) target = target.slice(1, -1).trim();
     target = target.split("#")[0].trim();
     if (target && !/^[a-z][a-z0-9+.-]*:/i.test(target)) {
-      const resolved = posix.join(dir, target.startsWith("/") ? target.slice(1) : target);
-      if (knownPaths && knownPaths.has(resolved)) found.add(resolved);
+      const path = posix.join(dir, target.startsWith("/") ? target.slice(1) : target);
+      if (knownPaths && knownPaths.has(path)) resolved.add(path);
+      else broken.add(path);
     }
     match = pattern.exec(text);
   }
 
-  return [...found].sort();
+  return { resolved: [...resolved].sort(), broken: [...broken].sort() };
+}
+
+export function extractLinks(body, fromPath, knownPaths) {
+  return linkTargets(body, fromPath, knownPaths).resolved;
+}
+
+/** The link targets of a body that resolve to no known document — dead cross-references,
+ *  the corpus-health signal the build and audit reports surface. */
+export function brokenLinks(body, fromPath, knownPaths) {
+  return linkTargets(body, fromPath, knownPaths).broken;
 }
 
 /** The frontmatter fields that hold relations between documents. */
@@ -526,6 +540,9 @@ export function resolveRefs(records, keys) {
         const tokens = value.match(/[A-Za-z0-9][A-Za-z0-9._-]*/g) || [];
 
         for (const token of tokens) {
+          // Free-text noise is not a slug: bare numbers ("72") and very short tokens
+          // ("us", "br") resolve by accident into real documents and pollute the graph.
+          if (/^\d+$/.test(token) || token.length < 3) continue;
           const hits = new Set([...(byId.get(token) || []), ...(bySlug.get(token) || [])]);
           const candidates = [...hits];
           if (candidates.length === 0) {
@@ -750,6 +767,8 @@ export function searchIndex(records, query) {
       path: record.path,
       id: record.id,
       title: record.title,
+      status: record.status,
+      docType: record.docType,
       gist: record.gist,
       anchor: record.anchor,
       score,
@@ -978,6 +997,8 @@ export function searchWithBody(records, stats, query) {
       path: doc.record.path,
       id: doc.record.id,
       title: doc.record.title,
+      status: doc.record.status,
+      docType: doc.record.docType,
       gist: doc.record.gist,
       anchor: { heading: best.heading, line: best.line },
       score: best.score,

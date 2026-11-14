@@ -56,10 +56,9 @@ Repo recon splits naturally by repository: one read-only scout per repo, identic
 shape. When the change touches several repos — or one repo with a wide blast radius —
 offer to dispatch scout subagents and keep the analysis (stage 4) in the main context:
 
-- **Ask before the first dispatch — always.** One explicit question to the user: may
-  subagent scouts be used here, and how many may run? Name the repos (or the split of one
-  wide repo) and your recommended count in the same ask. The granted number is the hard
-  budget for the run; if you need more, come back and ask again.
+- **Ask first — always.** One explicit question: may subagent scouts be used, and how
+  many? Name the repos (or the split of one wide repo) and the recommended count; the
+  granted number is the hard budget for the run — need more, ask again.
 - **Denied, or the host has no subagent mechanism** → recon the repos yourself,
   sequentially; the missions and the report contract stay the same.
 - **One mission per scout**: for its repo — what exists today in the affected area, where
@@ -70,8 +69,7 @@ offer to dispatch scout subagents and keep the analysis (stage 4) in the main co
   unmentioned work as their own lists; uncertainties separately. The tags survive into the
   spec — traceability does not break on delegation.
 - Stage 4 stays yours: scouts supply material, not conclusions. Verify a scout's
-  load-bearing claim in the main context before it drives a decision. Scouts read — never
-  edit.
+  load-bearing claim in the main context before it drives a decision. Scouts read — never edit.
 
 ## 4. Critical analysis
 
@@ -83,7 +81,7 @@ offer to dispatch scout subagents and keep the analysis (stage 4) in the main co
 
 ## 5. Ask the human
 
-- Questions are welcome here — batch them in one message, most critical first (≤10 per round).
+- Questions are welcome here — batch them in one message, most critical first (≤10 per round; two rounds is the normal maximum, leftovers go to Open questions).
 - Ask only what would change the result; for the rest, propose an assumption to confirm.
 - **Hard rule**: if a change alters existing behavior, breaks a contract, or requires a
   non-trivial architectural decision, stop and discuss it with the user. Present the
@@ -126,19 +124,25 @@ A diagram of interactions, before → after where helpful.
 Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning, not code:
 - <contract>: parties, purpose, key semantics, error behavior
 - Compatibility: what breaks for existing consumers, migration notes
+- Verified by: the repository that owns the contract test — a contract nobody tests is a wish, not a contract
 
-## 4. Impact and risks
+## 4. Data migration and rollback
+- Migration per repo: what changes for stored data, in which order, over which compatibility window.
+- Rollback: what reverts what (flag / revert / migration-down) and what is irreversible — irreversibility is part of the approval discussion, never a footnote.
+
+## 5. Impact and risks
 - Behavior changes visible to users or consumers — each listed explicitly with its approved decision
 - Blast radius: what else depends on the changed pieces
-- Rollout and migration order across repositories
+- Observability and operations: what must be visible when this misbehaves — logs, metrics, alerts
+- Security and permissions: what the change grants, exposes, or tightens
 
-## 5. Open questions
+## 6. Open questions
 | # | Question | Working assumption | Risk if wrong |
 
-## 6. Decisions and rationale
+## 7. Decisions and rationale
 Architectural decisions — each discussed with the user — and the alternatives rejected.
 
-## 7. Amendments
+## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):
 - YYYY-MM-DD: <what and why> (approved by <user>, source: <task or ruling>)
 ```
@@ -148,6 +152,9 @@ Append-only log of approved changes to this spec (a spec may change — never si
 - **No code**: contracts, boundaries, and data semantics — not implementations. Contract-level field lists are fine when they carry meaning.
 - **Architecture and behavior changes are always explicit**: discussed with the user and listed in Impact, never slipped into a changes list.
 - **Traceability**: every change cites its source (`[spec]`, `[found]`, `[answer]`); a change with no source is a new decision — surface it as such.
-- **Metadata is two-way**: when sibling docs in the target repo carry YAML frontmatter, the new spec gets it too (copy the field set from the siblings; minimum `id`/`parent`/`children`/`status`/`last-updated`). Creating the spec is **two edits**: set its `parent` and append its `id` to the business spec's `children` — a parent with downstream docs and an empty `children` is a traceability defect. If the system spec is a package of pages, the package README aggregates `children` (its pages + repo specs) while each page's `parent` points at the package. Bump `last-updated` on every later edit.
+- **Metadata is two-way**: when sibling docs carry YAML frontmatter, the new spec gets it
+  too (copy their field set). Creating it is **two edits** — set its `parent` (the business
+  spec) and append its `id` to that spec's `children`; a parent with downstream docs and
+  an empty `children` is a traceability defect.
 - **Cross-repo order matters**: state rollout and migration dependencies explicitly.
 - Write the spec in the team's working language, which may differ from the language of this skill.

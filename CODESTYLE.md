@@ -86,8 +86,8 @@ appears, its aspect moves out of the document into that table.
   `feat(kb-index): CLI build|search|map|audit|clean`;
   types: feat / fix / docs / chore. Merge commits are in English, as git writes them.
 - A new skill or hook — a minor version bump; an edit of a skill's text — a patch. The
-  version changes synchronously in three files: `.claude-plugin/plugin.json`,
-  `.claude-plugin/marketplace.json`, and `package.json` (README → "Versioning").
+  version changes synchronously in four files: `.claude-plugin/plugin.json`, `plugin.json`,
+  `package.json`, and `.claude-plugin/marketplace.json` (README → "Versioning").
 
 ## 9. Anti-patterns
 

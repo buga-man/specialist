@@ -2,43 +2,27 @@
 /**
  * Codex PostToolUse hook (Edit/Write/apply_patch): the edit-scan side of vuln-guard for
  * Codex. With the project's .vuln-guard mode set to "always", every file the edit
- * payload touches is scanned with semgrep; findings are delivered as `additionalContext`
- * JSON on stdout (record-only — Codex PostToolUse cannot block retroactively).
+ * payload touches is scanned with semgrep — the whole patch in ONE invocation (one
+ * probe, one spawn). Findings are delivered as ONE `additionalContext` JSON line on
+ * stdout (record-only — Codex PostToolUse cannot block retroactively, and multiple
+ * stdout JSON lines are not reliably parsed).
  * Mode other than "always" / no semgrep / clean scan / broken scanner → silent exit 0.
  */
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { editedFilePaths } from "./spec-core.mjs";
-import { readVulnMode, scanSingleFile } from "./vuln-core.mjs";
+import { readVulnMode, scanEditedFiles } from "./vuln-core.mjs";
+import { codexContext, readHookPayload, resolveProjectDir, run } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
-  const projectDir = String(payload?.cwd || process.cwd());
+  const projectDir = resolveProjectDir(payload);
   if (readVulnMode(projectDir) !== "always") process.exit(0);
-  const filePaths = editedFilePaths(payload?.tool_input || {});
-  for (const rel of filePaths) {
-    const result = await scanSingleFile({ projectDir, filePath: resolve(projectDir, rel), run });
-    if (result) {
-      console.log(
-        JSON.stringify({
-          hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: result.reason },
-        }),
-      );
-    }
-  }
+  const cwd = String(payload?.cwd || process.cwd()); // patch paths are relative to the session cwd
+  const files = editedFilePaths(payload?.tool_input || {}).map((rel) => resolve(cwd, rel));
+  const result = await scanEditedFiles({ projectDir, files, run });
+  if (result) console.log(codexContext("PostToolUse", result.reason));
 } catch {
   /* fail-safe: never break the workflow on hook errors */
 }
 process.exit(0);
-
-function run(cmd, args, opts) {
-  const r = spawnSync(cmd, args, { ...opts, encoding: "utf8", windowsHide: true });
-  return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
-}

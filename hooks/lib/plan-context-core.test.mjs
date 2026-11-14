@@ -34,7 +34,7 @@ const PLAN = [
   "- Done: abc1234",
   "",
   "### Task 2: Wire route",
-  "- : `src/routes.ts`",
+  "- Files: `src/routes.ts`",
   "",
   "### Task 3: Styles",
   "- Files: `src/**/*.css`",
@@ -154,4 +154,23 @@ test("fast + onboarding: the profile and onboarding in one block without a plan"
   assert.ok(text.includes("SDD profile `fast`"));
   assert.ok(text.includes("Onboarding:"));
   assert.ok(text.indexOf("SDD profile") < text.indexOf("Onboarding:"));
+});
+
+test("buildPlanContext: an unparsable Files line is named before it blocks every code edit", () => {
+  const dir = project({
+    "docs/plans/p.md": "### Task 1: X\n- Files: src/a.ts\n", // no backticks — scope unparsable
+  });
+  const text = buildPlanContext(dir);
+  assert.ok(text, "the malformed open task still orients the session");
+  assert.match(text, /no backticked paths/);
+  assert.match(text, /code edits block/);
+});
+
+test("buildPlanContext: a well-formed plan does not carry the unparsed warning", () => {
+  const dir = project({
+    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.ok(text);
+  assert.doesNotMatch(text, /no backticked paths/);
 });

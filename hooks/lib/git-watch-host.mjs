@@ -2,21 +2,14 @@
  * git-watch-host.mjs — the host-side helpers shared by the git-watch adapters (Claude
  * Code, Codex, OpenCode). Everything that touches the file system and git to answer one
  * question: "did the derived support artifacts go stale?" The pure decision logic lives
- * in git-watch-core.mjs; the per-host wrappers only translate the verdict into their
- * host's output protocol.
+ * in git-watch-core.mjs, the index reconcile in kb-gate-core.mjs; the per-host wrappers
+ * only translate the verdict into their host's output protocol.
  */
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { signalMessage } from "./git-watch-core.mjs";
-import { compareIndex, selectPaths } from "../../skills/kb-index/scripts/lib/kb-core.mjs";
-import {
-  computeHash,
-  gitRoot,
-  listMarkdownFiles,
-  readConfig,
-  readDoc,
-  readIndex,
-} from "../../skills/kb-index/scripts/lib/kb-fs.mjs";
+import { indexStaleness } from "./kb-gate-core.mjs";
+import { KB_CLI, PLUGIN_ROOT } from "./hook-kit.mjs";
+import { gitRoot } from "../../skills/kb-index/scripts/lib/kb-fs.mjs";
 import {
   countCodeCommits,
   freshness,
@@ -26,11 +19,7 @@ import {
 } from "../../skills/codestyle/scripts/lib/codestyle-core.mjs";
 import { gitCommitsSince, readCodestyleDoc } from "../../skills/codestyle/scripts/lib/codestyle-fs.mjs";
 
-/** The root of the plugin: the repository root (hooks/lib sits two levels below it). */
-export const PLUGIN_ROOT = fileURLToPath(new URL("../../", import.meta.url));
-
-/** The path of the kb.mjs CLI, for the rebuild command in the signal. */
-export const KB_CLI = join(PLUGIN_ROOT, "skills", "kb-index", "scripts", "kb.mjs");
+export { KB_CLI, PLUGIN_ROOT };
 
 /** The project directories the git operations touched: the `git -C <dir>` targets when
  *  given, else CLAUDE_PROJECT_DIR (Claude Code), else the git root of the session cwd,
@@ -43,18 +32,10 @@ export function touchedProjectDirs(commands, cwd) {
   ];
 }
 
-/** { changed, added, missing } counts when the index diverged from the disk, else null. */
+/** The index staleness (diverging paths by kind), or null when there is no index or
+ *  it matches the disk. */
 export function indexState(projectDir) {
-  const index = readIndex(projectDir);
-  if (!index) return null;
-  const config = readConfig(projectDir);
-  const disk = selectPaths(listMarkdownFiles(projectDir), config).map((path) => ({
-    path,
-    hash: computeHash(readDoc(projectDir, path)),
-  }));
-  const { changed, added, missing } = compareIndex(index, disk);
-  if (!changed.length && !added.length && !missing.length) return null;
-  return { changed: changed.length, added: added.length, missing: missing.length };
+  return indexStaleness(projectDir);
 }
 
 /** The freshness verdict when CODESTYLE.md is stale, else null (no honest data — no signal). */

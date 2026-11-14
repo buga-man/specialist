@@ -79,10 +79,10 @@ section texts. A miss usually means the wording differs:
 node "<skill-dir>/scripts/kb.mjs" build
 ```
 
-The index is not versioned and lives in `.kbindex/` of the project. In Claude
-Code the Stop hook blocks the end of the turn until the index is rebuilt. In
-other agents (pi and alike) no hook fires — run `build` by hand after editing
-documentation.
+The index is not versioned and lives in `.kbindex/` of the project. The plugin's
+gates keep it in sync: in Claude Code and Codex the Stop hook blocks the end of the
+turn until the index is rebuilt; in pi a settle-time follow-up demands the same. In
+hosts without a gate, run `build` by hand after editing documentation.
 
 ## When a document has no gist
 

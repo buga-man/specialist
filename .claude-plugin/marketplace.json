@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Plugin marketplace (skills, hooks, extensions)",
-    "version": "0.22.1"
+    "version": "0.24.0"
   },
   "plugins": [
     {

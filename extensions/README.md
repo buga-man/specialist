@@ -12,7 +12,7 @@ When this repository is installed as a pi package (`pi install ...`), all
   tasks (`docs/plans/`); modes via the `.spec-gate` file at the project root
   (`hard`/`soft`/`fast`/`off`: for files `fast` acts as `soft`, the process profile is
   delivered by plan-context). The logic is shared with the Claude Code hook:
-  `../hooks/lib/spec-core.mjs`; the plan contract — in `../hooks/README.md`.
+  `../hooks/lib/spec-core.mjs`; the plan contract — in `../docs/hooks.md`.
 - **secrets-guard.ts** — blocks `bash` running `git add` of sensitive files, `git commit`
   with secrets in the staged diff, and `git push` with secrets in the outgoing diff;
   exceptions — regexes in `.secrets-allow` at the project root. Logic:
@@ -28,7 +28,19 @@ When this repository is installed as a pi package (`pi install ...`), all
   remaining violations mark the result as an error. Logic: `../hooks/lib/lint-core.mjs`.
 - **plan-context.ts** — on the session's first turn injects one persistent message with
   orientation: the active plan, open tasks, the spec-gate mode. Silent when there is no
-  plan or the mode is `off`. Logic: `../hooks/lib/plan-context-core.mjs`.
+  plan or the mode is `off`. After a `session_compact` the flag resets, so the
+  orientation returns once the context was wiped. Logic:
+  `../hooks/lib/plan-context-core.mjs`.
+- **git-watch.ts** — after a successful `bash` that ran a tree-changing git operation,
+  appends the staleness signal (stale `.kbindex` index, stale CODESTYLE.md) to the tool
+  result. Logic: `../hooks/lib/git-watch-core.mjs` + `git-watch-host.mjs`.
+- **codestyle-reminder.ts** — on `session_start` stores one persistent line when
+  CODESTYLE.md may be stale (the same verdict and line the Claude Code hook injects).
+  Logic: `../hooks/lib/git-watch-host.mjs` + `codestyle-core.mjs`.
+- **kb-gate.ts** — on `agent_settled`: when the documentation index diverged from the
+  disk, pushes the rebuild command as a follow-up message that starts a continuation
+  turn — the pi analog of the Claude Code Stop block (one continuation per settle, no
+  loop; aborted runs are never continued). Logic: `../hooks/lib/kb-gate-core.mjs`.
 
 After installing/editing extensions: `/reload`.
 
@@ -57,6 +69,8 @@ After installing/editing extensions: `/reload`.
 - `tool_result` — post-process a tool result
 - `input` — intercept and transform user input
 - `session_start` — session initialization
+- `agent_settled` — the run settled (notification-only; a `triggerTurn` follow-up starts the next turn)
+- `session_compact` — the context was compacted (plan-context re-orients after it)
 
 The full list of events and the extension API:
 https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md

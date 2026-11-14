@@ -2,72 +2,44 @@
 /**
  * Codex Stop hook: the kb-gate twin for Codex. Keeps the documentation index in sync
  * with the disk: when a document changed, was added or removed after the last build,
- * the end of the turn is blocked with a rebuild command. Codex Stop reads the block
- * decision from stdout JSON ({"decision": "block", "reason": "…"}) — Claude Code uses
- * exit 2 with stderr, hence this dedicated adapter.
+ * the end of the turn is blocked with a rebuild command (naming the worst offenders).
+ * Codex Stop reads the block decision from stdout JSON ({"decision": "block",
+ * "reason": "…"}) — Claude Code uses exit 2 with stderr, hence this dedicated adapter.
+ * The reconcile itself is kb-gate-core.mjs, shared with the Claude Code gate.
  *
  * Protocol: hook JSON on stdin; block = the JSON above on stdout; allow = exit 0
  * silently. Fail-safe: any internal error → exit 0. A project without an index is left
  * alone — nothing is created there.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { compareIndex, selectPaths } from "../../skills/kb-index/scripts/lib/kb-core.mjs";
-import {
-  computeHash,
-  gitRoot,
-  listMarkdownFiles,
-  readConfig,
-  readDoc,
-  readIndex,
-} from "../../skills/kb-index/scripts/lib/kb-fs.mjs";
+import { codexContext, KB_CLI, readHookPayload, resolveProjectDir } from "./hook-kit.mjs";
+import { indexStaleness, stalenessDetail } from "./kb-gate-core.mjs";
 
-/** The plugin root: the repository root (hooks/lib sits two levels below it). */
-const PLUGIN_ROOT = fileURLToPath(new URL("../../", import.meta.url));
-
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  process.exit(0);
-}
+const payload = readHookPayload();
 
 try {
+  if (payload?.hook_event_name && payload.hook_event_name !== "Stop") process.exit(0);
   if (payload?.stop_hook_active === true) {
     console.log(
-      JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: "Stop",
-          additionalContext: "kb-index: already continuing after a block — the index check is skipped.",
-        },
-      }),
+      codexContext("Stop", "kb-index: already continuing after a block — the index check is skipped."),
     );
     process.exit(0);
   }
 
-  const cwd = String(payload?.cwd || process.cwd());
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || gitRoot(cwd) || cwd;
+  const projectDir = resolveProjectDir(payload);
+  const staleness = indexStaleness(projectDir);
+  if (!staleness) process.exit(0);
 
-  const index = readIndex(projectDir);
-  if (!index) process.exit(0);
-
-  const config = readConfig(projectDir);
-  const disk = selectPaths(listMarkdownFiles(projectDir), config).map((path) => ({
-    path,
-    hash: computeHash(readDoc(projectDir, path)),
-  }));
-
-  const { changed, added, missing } = compareIndex(index, disk);
-  if (!changed.length && !added.length && !missing.length) process.exit(0);
-
-  const cli = join(PLUGIN_ROOT, "skills", "kb-index", "scripts", "kb.mjs");
+  const parts = [
+    staleness.changed.length ? `changed: ${stalenessDetail(staleness.changed)}` : null,
+    staleness.added.length ? `added: ${stalenessDetail(staleness.added)}` : null,
+    staleness.missing.length ? `removed: ${stalenessDetail(staleness.missing)}` : null,
+  ].filter(Boolean);
   console.log(
     JSON.stringify({
       decision: "block",
       reason:
-        `kb-index: documentation index is stale (${changed.length} changed, ${added.length} added, ` +
-        `${missing.length} removed). Rebuild it: node "${cli}" build --project "${projectDir}"`,
+        `kb-index: documentation index is stale (${parts.join("; ")}). ` +
+        `Rebuild it: node "${KB_CLI}" build --project "${projectDir}"`,
     }),
   );
 } catch {

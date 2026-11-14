@@ -1,5 +1,5 @@
 {
-  "description": "specialist hooks: spec-gate (edits outside the plan — blocked), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit and, optionally, on edits), format-guard (a formatter after an edit), lint-guard (a linter after an edit), git-watch (after tree-changing git operations, signals about stale derived artifacts), plan-context (plan context at session start), codestyle-reminder (a stale CODESTYLE.md reminder, never blocks), kb-gate (the documentation index diverged from disk — blocked), skill-gate (blocks pipeline stage skills under the fast profile)",
+  "description": "specialist hooks: spec-gate (edits outside the plan — blocked), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit and, optionally, on edits), format-guard (a formatter after an edit), lint-guard (a linter after an edit), git-watch (after tree-changing git operations, signals about stale derived artifacts), plan-context (plan context at session start), codestyle-reminder (a stale CODESTYLE.md reminder, never blocks), kb-gate (the documentation index diverged from disk — blocked), skill-gate (blocks pipeline stage skills under the fast profile). Timeouts mirror hooks-codex.json: a hung formatter/linter/semgrep must never stall a turn (the command-hook default is much higher).",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +7,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/spec-gate.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/spec-gate.mjs\"",
+            "timeout": 30
           }
         ]
       },
@@ -16,7 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/skill-gate.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/skill-gate.mjs\"",
+            "timeout": 30
           }
         ]
       },
@@ -25,11 +27,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/secrets-guard.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/secrets-guard.mjs\"",
+            "timeout": 30
           },
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/vuln-guard.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/vuln-guard.mjs\"",
+            "timeout": 120
           }
         ]
       }
@@ -40,7 +44,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/git-watch.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/git-watch.mjs\"",
+            "timeout": 120
           }
         ]
       },
@@ -49,30 +54,35 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/format-guard.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/format-guard.mjs\"",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/lint-guard.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/lint-guard.mjs\"",
+            "timeout": 60
           },
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/vuln-guard.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/vuln-guard.mjs\"",
+            "timeout": 120
           }
         ]
       }
     ],
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear",
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/plan-context.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/plan-context.mjs\"",
+            "timeout": 30
           },
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/codestyle-reminder.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/codestyle-reminder.mjs\"",
+            "timeout": 30
           }
         ]
       }
@@ -82,7 +92,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/kb-gate.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/kb-gate.mjs\"",
+            "timeout": 120
           }
         ]
       }

@@ -4,13 +4,13 @@
  * Used by the Claude Code hook (hooks/lib/spec-gate.mjs) and the pi extension
  * (extensions/spec-gate.ts). The contract it enforces:
  *
- *   - An active plan lives in docs/plans/*.md; a task is a "### Task ..." section
- *     (Russian "###  ..." headings are recognized as well).
- *   - A task is closed by an explicit "- Done: ..." line ("- :" / "- :"
- *     work too). Checkbox lines ("- [x] ...") are progress notes and never close a task.
- *   - A task's editable files are the backticked paths on its "- Files:" line
- *     ("- :" recognized too); glob patterns (e.g. "*.css" under a tree) are honored.
+ *   - An active plan lives in docs/plans/*.md; a task is a "### Task ..." section.
+ *   - A task is closed by an explicit "- Done: ..." line. Checkbox lines ("- [x] ...")
+ *     are progress notes and never close a task.
+ *   - A task's editable files are the backticked paths on its "- Files:" line;
+ *     glob patterns (e.g. "*.css" under a tree) are honored.
  *   - Edits to files outside the open tasks' file lists are a scope violation.
+ *   - The markers are English-only; the prose around them is the team's language.
  *
  * The .spec-gate mode file is not exempt from the gate: with an open plan the agent
  * cannot change the gate mode without a plan task.
@@ -60,7 +60,7 @@ export function applyPatchPaths(toolInput) {
     text = toolInput;
   } else if (toolInput && typeof toolInput === "object" && !Array.isArray(toolInput)) {
     if (typeof toolInput.file_path === "string" && toolInput.file_path) return [toolInput.file_path];
-    const candidate = toolInput.input ?? toolInput.patch ?? toolInput.patch_text;
+    const candidate = toolInput.input ?? toolInput.patch ?? toolInput.patch_text ?? toolInput.patchText;
     if (typeof candidate === "string") text = candidate;
   }
   if (text === null) return null;
@@ -76,16 +76,19 @@ export function applyPatchPaths(toolInput) {
 }
 
 /** The file paths an edit payload touches: the explicit `file_path` of Claude Code-style
- *  tools, or every file of an apply_patch-style patch. Used by the PostToolUse adapters
- *  (formatter, linter, semgrep scan) that need the target files regardless of the host's
- *  edit shape. Unknown shapes yield an empty list; `cap` bounds the patch case. */
-export function editedFilePaths(toolInput, cap = 5) {
-  if (!toolInput || typeof toolInput !== "object") return [];
-  const filePath = toolInput.file_path ?? toolInput.notebook_path;
-  if (typeof filePath === "string" && filePath) return [filePath];
+ *  tools (OpenCode calls it `filePath` and may prefix a `@` — both handled), or every
+ *  file of an apply_patch-style patch. Used by the PostToolUse adapters (formatter,
+ *  linter, semgrep scan) that need the target files regardless of the host's edit shape.
+ *  Unknown shapes yield an empty list; `cap` bounds the patch case (a silently truncated
+ *  scan is worse on huge patches than no cap — the cap only guards absurd payloads). */
+export function editedFilePaths(toolInput, cap = 20) {
+  if (toolInput && typeof toolInput === "object" && !Array.isArray(toolInput)) {
+    const filePath = toolInput.file_path ?? toolInput.notebook_path ?? toolInput.filePath;
+    if (typeof filePath === "string" && filePath) return [filePath.replace(/^@/, "")];
+  }
   const patchPaths = applyPatchPaths(toolInput);
   if (!patchPaths) return [];
-  return patchPaths.slice(0, cap);
+  return patchPaths.slice(0, cap).map((p) => p.replace(/^@/, ""));
 }
 
 /** Collect docs/plans/*.md and extract the file paths of all open (unticked) tasks.
@@ -124,6 +127,7 @@ export function activePlanInfo(projectDir) {
     let taskHasFilesLine = false;
     let taskFiles = [];
     let taskTitle = "";
+    let inFence = false; // a fenced example inside a plan is prose, never contract
     const flush = () => {
       if (inTask && taskOpen) {
         result.hasOpenTasks = true;
@@ -141,7 +145,12 @@ export function activePlanInfo(projectDir) {
     };
     for (const raw of text.split(/\r?\n/)) {
       const line = raw.trimEnd();
-      if (/^#{2,4}\s+(?:task\b|)/i.test(line)) {
+      if (/^\s*(?:```|~~~)/.test(line)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      if (/^#{2,4}\s+task\b/i.test(line)) {
         flush();
         inTask = true;
         taskOpen = true;
@@ -157,11 +166,11 @@ export function activePlanInfo(projectDir) {
       const bullet = line.trim().toLowerCase().replace(/^[-*+]+\s*/, "");
       // Closure is the explicit marker ("- Done: <commit>"); "- [x]" checkboxes are
       // progress notes and never close a task.
-      if (/^(?:done||)\s*[:—]/.test(bullet.replace(/^\[x\]\s*/i, ""))) {
+      if (/^done\s*[:—]/.test(bullet.replace(/^\[x\]\s*/i, ""))) {
         taskOpen = false; // files of a closed task are no longer editable
         continue;
       }
-      if (/^(?:files|?)\s*:/i.test(bullet)) {
+      if (/^files\s*:/i.test(bullet)) {
         taskHasFilesLine = true;
         for (const m of line.matchAll(/`([^`]+)`/g)) {
           taskFiles.push(m[1].trim().replace(/\\/g, "/").replace(/^\.\//, ""));

@@ -16,17 +16,11 @@
  * Git run by the user outside the agent is invisible here — the next SessionStart /
  * Stop checks cover it (documented boundary).
  */
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { treeChangingCommands } from "./git-watch-core.mjs";
 import { touchedProjectDirs, watchSignal } from "./git-watch-host.mjs";
+import { readHookPayload } from "./hook-kit.mjs";
 
-let payload;
-try {
-  payload = JSON.parse(readFileSync(0, "utf8"));
-} catch {
-  payload = {};
-}
+const payload = readHookPayload();
 
 try {
   if (payload?.tool_name !== "Bash") process.exit(0);

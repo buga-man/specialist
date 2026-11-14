@@ -58,13 +58,14 @@ const DIR = "C:/proj";
 
 test("signalMessage: both artifacts — both parts, the rebuild and the question to the user", () => {
   const msg = signalMessage({
-    index: { changed: 2, added: 1, missing: 0 },
+    index: { changed: ["docs/a.md", "docs/b.md"], added: ["docs/new.md"], missing: [] },
     codestyle: { doc: "ok", stale: true, codeCommits: 34, days: 41, base: "a1b2c3d4e5f60718", generated: "2026-10-01" },
     kbCli: KB,
     projectDir: DIR,
   });
   assert.ok(msg.startsWith("git-watch: the tree changed under you"));
-  assert.ok(msg.includes("(2 changed, 1 added, 0 removed)"));
+  assert.ok(msg.includes("2 (docs/a.md, docs/b.md) changed"));
+  assert.ok(msg.includes("1 (docs/new.md) added"));
   assert.ok(msg.includes(`node "${KB}" build --project "${DIR}"`));
   assert.ok(msg.includes("rebuild it now, it is derived data"));
   assert.ok(msg.includes("(34 code commits, 41 days since base a1b2c3d)"));
@@ -72,7 +73,7 @@ test("signalMessage: both artifacts — both parts, the rebuild and the question
 });
 
 test("signalMessage: only one artifact — only its part", () => {
-  const onlyIndex = signalMessage({ index: { changed: 0, added: 3, missing: 1 }, codestyle: null, kbCli: KB, projectDir: DIR });
+  const onlyIndex = signalMessage({ index: { changed: [], added: ["docs/x.md", "docs/y.md", "docs/z.md", "docs/w.md"], missing: ["docs/gone.md"] }, codestyle: null, kbCli: KB, projectDir: DIR });
   assert.ok(onlyIndex.includes("rebuild it now"));
   assert.ok(!onlyIndex.includes("CODESTYLE.md"));
   const onlyStyle = signalMessage({ index: null, codestyle: { doc: "ok", stale: true, codeCommits: 30, days: null, base: "a1b2c3d4e5f60718", generated: "2026-10-01" }, kbCli: KB, projectDir: DIR });

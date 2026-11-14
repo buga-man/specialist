@@ -38,7 +38,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `root-cause` | bug report → root cause (reproduction required, red test, minimal fix, full suite) |
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + a manual `md → standalone html + pdf` with screenshots from the stand |
-| `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the Stop hook does not release a turn with a stale index |
+| `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
 
@@ -69,7 +69,7 @@ traceability defect — spec-review and tech-writer check for it.
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 package.json                     pi package manifest (pi.skills / pi.extensions)
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
-hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit/edits), git-watch (a signal after tree-changing git operations), format-guard + lint-guard (formatter and linter after an edit), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — hooks/README.md
+hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit/edits), git-watch (a signal after tree-changing git operations), format-guard + lint-guard (formatter and linter after an edit), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, format-guard.ts, lint-guard.ts, plan-context.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                            documentation: skills, hooks, installation; design notes; the skill template
@@ -81,7 +81,7 @@ scripts/                         helper scripts (copy-skills.sh); skill CLIs liv
 One logic (`hooks/lib/*.mjs` cores), four wrappers: Claude Code adapters, Codex adapters
 (JSON output protocol, `apply_patch` support), pi extensions (`extensions/*.ts`), and the
 OpenCode plugin (`plugins/opencode/`). Details and the plan contract:
-[hooks/README.md](hooks/README.md) and [docs/hooks.md](docs/hooks.md); the pi extension
+[docs/hooks.md](docs/hooks.md); the pi extension
 API — [extensions/README.md](extensions/README.md).
 
 | Hook | When | What it does |
@@ -98,8 +98,8 @@ API — [extensions/README.md](extensions/README.md).
 | `kb-gate` | Stop | reconciles the documentation index (`.kbindex/index.json`) with the disk by hashes: a document changed, appeared, or disappeared — the end of the turn is blocked with a rebuild command; without an index, at `stop_hook_active`, and on any error — silent |
 
 All are fail-safe: a hook failure never blocks work. `docs/**` and `*.md` are always
-editable under spec-gate. The plan contract — `hooks/README.md`: sections
-`### Task`/`### `, task files from `- Files:`/`- :` (globs are supported; a
+editable under spec-gate. The plan contract — `docs/hooks.md`: sections
+`### Task`, task files from `- Files:` (globs are supported; a
 line whose paths cannot be parsed — a block with an explanation, not a silent opening),
 task closure — an explicit `- Done:` line (checkboxes `- [x]` are progress, not closure;
 the plan template contains no `- Done:` line). The `.spec-gate` mode file is also under
@@ -192,20 +192,20 @@ In this mode hooks and extensions are **not** installed — skills only.
    `description` — up to 1024 characters, the main autoload trigger ("what it does and
    when to apply it").
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
-   Host-specifics: Claude Code hooks → `hooks/`, pi extensions → `extensions/`.
+   Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in
    SKILL.md are relative (`<skill-dir>`); `${CLAUDE_PLUGIN_ROOT}` and other host
    variables are forbidden in SKILL.md.
    Command-and-project skills (like `stand-acceptance`, tied to a specific project's
    stand) are allowed — with an explicit scope in the description.
-4. Test in both programs, bump the plugin version, and commit.
+4. Test in the hosts you target, bump the plugin version, and commit.
 
 Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 
 ## How to add a hook
 
 - **Claude Code** → `hooks/hooks.json` (event → matcher → command); shared logic — in
-  `hooks/lib/`, the contract and examples — `hooks/README.md`.
+  `hooks/lib/`, the contract and examples — `docs/hooks.md`.
 - **Codex** → the adapter in `hooks/lib/` (a `-codex` twin when the output protocol
   differs) + a matcher group in `hooks/hooks-codex.json`; the root `plugin.json` points
   Codex at it.
