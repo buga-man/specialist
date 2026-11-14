@@ -47,6 +47,31 @@ Move through the stages in order. Never ask the human what you can find out in t
 - For each repo: what exists today in the affected area, where the change lands, and its
   **blast radius** — who else consumes the modules, endpoints, and schemas being touched.
   Follow dependencies in both directions: upstream callers and downstream dependencies.
+- More than one repo — or one repo with a wide blast radius — splits into per-repo scout
+  missions (see Scouts).
+
+## Scouts — parallel repo recon (stage 3)
+
+Repo recon splits naturally by repository: one read-only scout per repo, identical mission
+shape. When the change touches several repos — or one repo with a wide blast radius —
+offer to dispatch scout subagents and keep the analysis (stage 4) in the main context:
+
+- **Ask before the first dispatch — always.** One explicit question to the user: may
+  subagent scouts be used here, and how many may run? Name the repos (or the split of one
+  wide repo) and your recommended count in the same ask. The granted number is the hard
+  budget for the run; if you need more, come back and ask again.
+- **Denied, or the host has no subagent mechanism** → recon the repos yourself,
+  sequentially; the missions and the report contract stay the same.
+- **One mission per scout**: for its repo — what exists today in the affected area, where
+  the change lands, the blast radius (upstream callers, downstream dependencies), and the
+  work the spec never mentioned (frontend, migrations, compatibility). An existing
+  service, endpoint, or job that could replace a "new build" is called out explicitly.
+- **Report contract**: findings tagged `[found]` with `file:line`; reuse candidates and
+  unmentioned work as their own lists; uncertainties separately. The tags survive into the
+  spec — traceability does not break on delegation.
+- Stage 4 stays yours: scouts supply material, not conclusions. Verify a scout's
+  load-bearing claim in the main context before it drives a decision. Scouts read — never
+  edit.
 
 ## 4. Critical analysis
 

@@ -36,6 +36,10 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
   in the code, or observed behavior. "Looks fine" is not a verdict.
 - **The reviewer does not fix, the writer does not edit silently** — role independence
   matters more than speed.
+- **Scouts by explicit permission.** The recon-heavy skills (brainstorm, system-thinking,
+  decompositor) may parallelize research with read-only subagent scouts — but only after
+  asking the user: may scouts be used here, and how many. The granted count is the hard
+  budget; without subagents (denied or unsupported) the same missions run sequentially.
 - **Slug navigation.** All artifacts of a feature carry its slug: `docs/specs/YYYY-MM-DD-<topic>*`
   (business spec, `-implementation`, `-<repo>`, `-<repo>-review`) and
   `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`. The whole chain is one glob:

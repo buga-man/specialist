@@ -37,11 +37,34 @@ Move through the stages in order. Never ask the human what you can find out your
 
 - Documentation may live in a separate docs repo or be scattered across code repos. Locate it first; ask for links only if you cannot find them.
 - Collect: what the system already does in the affected area, where the new logic will fit, how similar features are described and accepted (terms, conventions, existing criteria).
+- A large or scattered corpus makes this stage a scout candidate (see Scouts).
 
 ## 3. Recon the system
 
 - Explore the code just enough to map existing capabilities and integration points for the new logic: subsystems, their responsibilities, the flows the change touches. This is reconnaissance, not design: findings feed the business description — the technical mapping (contracts, blast radius, change placement) is system-thinking's job, not yours.
 - Record findings as citable facts: "the system already does X in subsystem Y".
+- Several subsystems to map split cleanly into scout missions (see Scouts).
+
+## Scouts — parallel recon by subagents (stages 2–3)
+
+Stages 2 and 3 are independent research areas, and each splits further (a separate docs
+repo, several subsystems). When the surface is large, offer to dispatch read-only scout
+subagents and keep the main context for judgment, not for reading raw material:
+
+- **Ask before the first dispatch — always.** One explicit question to the user: may
+  subagent scouts be used here, and how many may run? Name the planned missions and your
+  recommended count in the same ask. The granted number is the hard budget for the whole
+  run; if you need more, come back and ask again.
+- **Denied, or the host has no subagent mechanism** → run the same missions yourself,
+  sequentially, in narrow passes; the report contract below still applies to what you
+  collect.
+- **One mission per scout**: the documentation corpus, or one subsystem / flow of the code
+  recon. Never a vague "look at the repo".
+- **Report contract**: citable facts, each with a `file:line` or document reference and
+  ready to become a spec source; uncertainties and gaps as a separate list. No prose
+  retelling.
+- Scout findings are hypotheses until verified: before a fact becomes an acceptance
+  criterion or feeds a question, check it in the main context. Scouts read — never edit.
 
 ## 4. Ask the human
 

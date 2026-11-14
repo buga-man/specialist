@@ -44,6 +44,29 @@ implementation.
   change becomes "extend/reuse X" with its path; not found → the spec records `searched: <what, where>`.
 - Take every contract from the system spec that touches this repo and find its counterpart in the code (endpoint, consumer, schema).
 - Map the in-repo blast radius: callers, configs, and tests the change touches.
+- A wide area splits into scout missions (see Scouts).
+
+## Scouts — parallel deep recon (stages 2–3)
+
+The deep recon splits into independent areas: the repo's docs and conventions, the
+inventory of the affected area, contract counterparts, the in-repo blast radius. When the
+area is large, offer to dispatch read-only scout subagents and keep the mapping (stage 4)
+in the main context:
+
+- **Ask before the first dispatch — always.** One explicit question to the user: may
+  subagent scouts be used here, and how many may run? Name the planned missions and your
+  recommended count in the same ask. The granted number is the hard budget for the run; if
+  you need more, come back and ask again.
+- **Denied, or the host has no subagent mechanism** → run the same missions yourself,
+  sequentially, in narrow passes.
+- **One mission per scout**: "find the counterpart of contract X", "inventory how `<area>`
+  is structured", "who consumes module Y". The `searched:` evidence for anything declared
+  new is collected with the same rigor whether by you or by a scout.
+- **Report contract**: citable facts with `file:line`; reuse/extend candidates explicit;
+  uncertainties as their own list. No prose retelling.
+- Scout findings are hypotheses until verified: every change still cites its source, and a
+  scout's word counts as `[found]` only after your check in the main context. Scouts read —
+  never edit.
 
 ## 4. Map the changes
 
