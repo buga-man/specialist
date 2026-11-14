@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+
+# local artifacts of sessions and installation testing
+.zcode/
+.pi/
+.claude/settings.local.json

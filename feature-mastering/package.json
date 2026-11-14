@@ -1,0 +1,17 @@
+{
+  "name": "feature-mastering",
+  "version": "0.21.0",
+  "description": "Full-cycle feature development skills for Claude Code and pi agent",
+  "keywords": [
+    "pi-package"
+  ],
+  "private": true,
+  "pi": {
+    "skills": [
+      "./skills"
+    ],
+    "extensions": [
+      "./extensions"
+    ]
+  }
+}

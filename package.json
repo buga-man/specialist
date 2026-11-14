@@ -1,0 +1,20 @@
+{
+  "name": "specialist-skills",
+  "version": "0.21.0",
+  "description": "Plugin bundle for pi agent (aggregates the skills/extensions of all repository plugins)",
+  "keywords": [
+    "pi-package"
+  ],
+  "private": true,
+  "scripts": {
+    "test": "node --test feature-mastering/hooks/lib/spec-core.test.mjs feature-mastering/hooks/lib/format-core.test.mjs feature-mastering/hooks/lib/secrets-core.test.mjs feature-mastering/hooks/lib/lint-core.test.mjs feature-mastering/hooks/lib/plan-context-core.test.mjs feature-mastering/hooks/lib/vuln-core.test.mjs feature-mastering/hooks/lib/kb-gate.test.mjs feature-mastering/hooks/lib/codestyle-reminder.test.mjs feature-mastering/hooks/lib/skill-gate-core.test.mjs feature-mastering/hooks/lib/skill-gate.test.mjs feature-mastering/hooks/lib/git-watch-core.test.mjs feature-mastering/hooks/lib/git-watch.test.mjs feature-mastering/skills/kb-index/scripts/lib/kb-core.test.mjs feature-mastering/skills/kb-index/scripts/lib/kb-fs.test.mjs feature-mastering/skills/kb-index/scripts/kb.mjs.test.mjs feature-mastering/skills/codestyle/scripts/lib/codestyle-core.test.mjs feature-mastering/skills/tech-writer/scripts/build-manual.test.mjs"
+  },
+  "pi": {
+    "skills": [
+      "./feature-mastering/skills"
+    ],
+    "extensions": [
+      "./feature-mastering/extensions"
+    ]
+  }
+}
