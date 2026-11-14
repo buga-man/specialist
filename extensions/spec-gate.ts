@@ -15,6 +15,7 @@
 import { isToolCallEventType, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { resolve } from "node:path";
 import { decide, readMode } from "../hooks/lib/spec-core.mjs";
+import { gitRoot } from "../skills/kb-index/scripts/lib/kb-fs.mjs";
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
@@ -25,10 +26,14 @@ export default function (pi: ExtensionAPI) {
       if (!filePath) return;
       if (filePath.startsWith("@")) filePath = filePath.slice(1); // models sometimes add it; built-ins strip it
       if (!filePath) return;
+      // The session cwd may be a subdirectory, the plan lives at the repository root —
+      // the same resolution as kb-gate.ts / codestyle-reminder.ts (no host-declared
+      // project variable on pi). A relative edit path stays relative to the session cwd.
+      const projectDir = gitRoot(ctx.cwd) || ctx.cwd;
       const result = decide({
-        projectDir: ctx.cwd,
+        projectDir,
         filePath: resolve(ctx.cwd, filePath),
-        mode: readMode(ctx.cwd),
+        mode: readMode(projectDir),
       });
       if (result.action === "block") {
         return { block: true, reason: result.reason };

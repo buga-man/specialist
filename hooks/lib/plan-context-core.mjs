@@ -93,9 +93,15 @@ export function buildPlanContext(projectDir) {
       ? 'spec-gate: an open task\'s "- Files:" line has no backticked paths — its scope is ' +
         "unparsable, so code edits block until the line names its files.\n"
       : "";
+    const unbalanced = info.unbalancedFence
+      ? "spec-gate: a plan in docs/plans/ ends inside a code fence (an unbalanced ``` marker) — " +
+        "every task after it is invisible to the gate, and edits of its files block as out of " +
+        "scope. Close the fence.\n"
+      : "";
 
     const text =
       unparsed +
+      unbalanced +
       `plan-context: ${n} open task(s) in docs/plans/${plans}:${titles.length ? `\n  - ${titles.join("\n  - ")}${more}` : ""}\n` +
       `${gate}\n` +
       'Close a task with an explicit "- Done: <commit>" line in the plan — "- [x]" checkboxes are progress, not closure.';

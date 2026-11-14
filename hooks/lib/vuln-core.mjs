@@ -170,14 +170,15 @@ async function commitFiles(projectDir, rest, run) {
 /**
  * Decide whether a shell command may run. Returns null (nothing to report) or
  * { reason }. Reacts to `git commit` only — the boundary where a vulnerability
- * becomes history.
+ * becomes history. `git -C <dir> commit` operates on <dir>, the same as secrets-guard.
  */
 export async function checkGitCommit({ projectDir, command, run }) {
   if (readVulnMode(projectDir) === "off") return null; // `.vuln-guard = off` disables the hook entirely
-  for (const { sub, rest } of gitCommands(command)) {
+  for (const { sub, rest, dir: cmdDir } of gitCommands(command)) {
     if (sub !== "commit") continue;
-    const files = await commitFiles(projectDir, rest, run);
-    const result = await scanFiles({ projectDir, files, run, what: "the staged changes" });
+    const dir = cmdDir || projectDir;
+    const files = await commitFiles(dir, rest, run);
+    const result = await scanFiles({ projectDir: dir, files, run, what: "the staged changes" });
     if (result) return result;
   }
   return null;

@@ -48,9 +48,25 @@ test("hooks-codex.json uses the Codex-specific adapters and never the Skill tool
   const commands = commandHandlers(codex).join("\n");
   assert.match(commands, /spec-gate\.mjs/);
   assert.match(commands, /secrets-guard\.mjs/);
+  assert.match(commands, /edit-guard-codex\.mjs/);
   assert.match(commands, /git-watch-codex\.mjs/);
   assert.match(commands, /kb-gate-codex\.mjs/);
   assert.doesNotMatch(commands, /skill-gate\.mjs/); // Codex has no Skill tool
+});
+
+test("post-edit guards: exactly one merged edit-guard command per host — no concurrent format/lint processes", () => {
+  const cases = [
+    ["hooks/hooks.json", "edit-guard.mjs"],
+    ["hooks/hooks-codex.json", "edit-guard-codex.mjs"],
+  ];
+  for (const [file, adapter] of cases) {
+    const manifest = readJSON(file);
+    const editGroups = (manifest.hooks.PostToolUse ?? []).filter((g) => /Edit/.test(g.matcher || ""));
+    assert.equal(editGroups.length, 1, `${file}: one edit matcher group`);
+    const commands = commandHandlers({ hooks: { PostToolUse: editGroups } });
+    assert.equal(commands.length, 1, `${file}: exactly one command hook on the edit event`);
+    assert.match(commands[0], new RegExp(adapter));
+  }
 });
 
 test("host manifests: names are aligned and referenced paths exist", () => {
@@ -107,12 +123,15 @@ test("SessionStart matchers include the compaction re-orientation on both hosts"
   }
 });
 
-test("versions: the four manifests carry the same version (the version-sync rule, enforced)", () => {
+test("versions: every manifest field carries the same version (the version-sync rule, enforced)", () => {
+  const marketplace = readJSON(".claude-plugin/marketplace.json");
   const versions = {
     "claude-plugin/plugin.json": readJSON(".claude-plugin/plugin.json").version,
     "plugin.json (Codex)": readJSON("plugin.json").version,
     "package.json (pi)": readJSON("package.json").version,
-    "marketplace.json metadata": readJSON(".claude-plugin/marketplace.json").metadata?.version,
+    "marketplace.json metadata": marketplace.metadata?.version,
+    "marketplace.json plugins[0]": marketplace.plugins?.[0]?.version,
+    "marketplace.json root": marketplace.version,
   };
   for (const [place, version] of Object.entries(versions)) {
     assert.ok(typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version), `${place}: ${version}`);

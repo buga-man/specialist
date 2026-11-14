@@ -102,6 +102,20 @@ test("python: falls back from python to py; missing ruff module → skip", async
     run: async () => ({ code: 1, stdout: "", stderr: "No module named ruff" }),
   });
   assert.equal(res2, null);
+
+  // ruff missing under `python` but present under `py -3` — the second interpreter gets its chance.
+  const seq2 = [];
+  const res3 = await formatFile({
+    projectDir: dir,
+    filePath: join(dir, "a.py"),
+    run: async (cmd) => {
+      seq2.push(cmd);
+      if (cmd === "python") return { code: 1, stdout: "", stderr: "No module named ruff" };
+      return ok;
+    },
+  });
+  assert.equal(res3?.tool, "ruff");
+  assert.deepEqual(seq2, ["python", "py"]);
 });
 
 test("non-code files are ignored", async () => {

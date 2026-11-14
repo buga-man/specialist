@@ -81,6 +81,19 @@ test("ruff: no module — null; violations (exit 1) — to the agent; clean (exi
     run: async () => ({ code: 1, stdout: "", stderr: "No module named ruff" }),
   });
   assert.equal(noRuff, null);
+  // ruff missing under `python` but present under `py -3` — the second interpreter gets its chance.
+  const seq = [];
+  const second = await lintFile({
+    projectDir: dir,
+    filePath: join(dir, "a.py"),
+    run: async (cmd) => {
+      seq.push(cmd);
+      if (cmd === "python") return { code: 1, stdout: "", stderr: "No module named ruff" };
+      return { code: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.deepEqual(second, { ok: true, tool: "ruff", output: "" });
+  assert.deepEqual(seq, ["python", "py"]);
   const dirty = await lintFile({
     projectDir: dir,
     filePath: join(dir, "a.py"),

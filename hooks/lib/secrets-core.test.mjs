@@ -14,6 +14,7 @@ import {
   readAllowlist,
   scanDiff,
   scanForSecrets,
+  unquoteGitPath,
 } from "./secrets-core.mjs";
 
 const dirs = [];
@@ -149,6 +150,50 @@ test("checkGitCommand: commit -a scans the whole delta diff; push without upstre
     run: async () => ({ code: 128, stdout: "", stderr: "no upstream" }),
   });
   assert.equal(r, null);
+});
+
+test("checkGitCommand: push without upstream falls back to the unpushed commits of the remote", async () => {
+  const dir = project({});
+  const calls = [];
+  const logDiff = `diff --git a/src/c.py b/src/c.py\n@@ -1,0 +2,1 @@\n+KEY = "${AWS}"`;
+  const r = await checkGitCommand({
+    projectDir: dir,
+    command: "git push -u origin feature/x",
+    run: async (cmd, args) => {
+      calls.push([cmd, args]);
+      if (args[0] === "diff") return { code: 128, stdout: "", stderr: "no upstream configured" };
+      return { code: 0, stdout: logDiff, stderr: "" };
+    },
+  });
+  assert.ok(r && r.reason.includes("outgoing commits"), "the first push of a branch is scanned too");
+  assert.ok(r.reason.includes("AWS access key ID"));
+  assert.deepEqual(calls[1], ["git", ["log", "--format=", "-p", "-U0", "HEAD", "--not", "--remotes=origin"]]);
+});
+
+test("checkGitCommand: push --dry-run publishes nothing and is not scanned", async () => {
+  const dir = project({});
+  const calls = [];
+  const r = await checkGitCommand({
+    projectDir: dir,
+    command: "git push --dry-run origin main",
+    run: async (cmd, args) => {
+      calls.push(args);
+      return { code: 0, stdout: `+KEY = "${AWS}"`, stderr: "" };
+    },
+  });
+  assert.equal(r, null);
+  assert.equal(calls.length, 0, "a rehearsal must not spawn a single git query");
+});
+
+test("unquoteGitPath: porcelain C-quoting does not hide a sensitive path", () => {
+  assert.equal(unquoteGitPath('"plain.md"'), "plain.md");
+  assert.equal(unquoteGitPath("plain.md"), "plain.md");
+  assert.equal(unquoteGitPath('"a\\tb.md"'), "a\tb.md");
+  assert.equal(unquoteGitPath('"d\\303\\266nem.md"'), "dönem.md");
+  assert.equal(unquoteGitPath('"say \\"hi\\".md"'), 'say "hi".md');
+  const status = '?? "d\\303\\266nem.env"\n';
+  const path = unquoteGitPath(status.trim().slice(3).trim());
+  assert.equal(path, "dönem.env");
 });
 
 test("regression: .env.example / .env.sample are committable, .env is not", () => {

@@ -18,14 +18,16 @@ When this repository is installed as a pi package (`pi install ...`), all
   exceptions — regexes in `.secrets-allow` at the project root. Logic:
   `../hooks/lib/secrets-core.mjs`.
 - **vuln-guard.ts** — blocks `bash` running `git commit` when semgrep finds
-  vulnerabilities in the staged files; with `.vuln-guard=always` it also scans every
-  edit. No semgrep on PATH — a no-op. Logic: `../hooks/lib/vuln-core.mjs`.
-- **format-guard.ts** — after a successful `edit`/`write` runs the project's formatter
-  (prettier / ruff) and auto-fixes; unfixable errors mark the tool result as an error so
-  that the agent fixes the file immediately.
-- **lint-guard.ts** — after a successful `edit`/`write` runs the project's linter
-  (eslint / ruff check / ktlint — if the project declares them) with `--fix`; the
-  remaining violations mark the result as an error. Logic: `../hooks/lib/lint-core.mjs`.
+  vulnerabilities in the staged files. No semgrep on PATH — a no-op. The opt-in per-edit
+  scan (`.vuln-guard=always`) lives in edit-guard.ts. Logic: `../hooks/lib/vuln-core.mjs`.
+- **edit-guard.ts** — after a successful `edit`/`write`, in one handler and one
+  deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:`
+  scope line or of the guard allowlists is called out), the project's formatter
+  (prettier / ruff), the project's linter (eslint / ruff check / ktlint — if the project
+  declares them), each `--fix`-ing what it can, and — under `.vuln-guard=always` — a
+  semgrep scan. Failures mark the tool result as an error so that the agent fixes the
+  file immediately; notes alone are appended to the result text. Logic:
+  `../hooks/lib/format-core.mjs`, `lint-core.mjs`, `vuln-core.mjs`, `spec-core.mjs`.
 - **plan-context.ts** — on the session's first turn injects one persistent message with
   orientation: the active plan, open tasks, the spec-gate mode. Silent when there is no
   plan or the mode is `off`. After a `session_compact` the flag resets, so the

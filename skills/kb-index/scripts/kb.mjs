@@ -174,7 +174,16 @@ function buildIndex(projectDir) {
   for (const record of records) record.refs = refs.refs[record.path] || [];
 
   const dirs = new Set(records.map((record) => dirOf(record.path))).size;
-  return { records, maps: buildMaps(records, config.gistMaxChars), refs, dirs, sections, sectionCount, reused };
+  return {
+    records,
+    maps: buildMaps(records, config.gistMaxChars),
+    refs,
+    dirs,
+    sections,
+    sectionCount,
+    reused,
+    configFingerprint: fingerprint,
+  };
 }
 
 /** The size of a file on disk — the second half of the stat gate (with mtime); a stat
@@ -248,9 +257,8 @@ function nearestMap(projectDir, dir) {
 }
 
 function cmdBuild(projectDir) {
-  const config = readConfig(projectDir);
   const built = buildIndex(projectDir);
-  writeIndex(projectDir, built.records, { config: computeHash(JSON.stringify(config)) });
+  writeIndex(projectDir, built.records, { config: built.configFingerprint });
   writeMaps(projectDir, built.maps);
   writeSections(projectDir, built.sections);
   out(`${buildReport(built)}\n`);
@@ -291,12 +299,14 @@ function cmdMap(projectDir, dir) {
   out(found.content);
 }
 
-/** Builds the index when it is absent; returns the records. */
+/** Builds the index when it is absent; returns the records. The same config fingerprint
+ *  cmdBuild writes rides along: without it an auto-built index would cost the next
+ *  explicit build its incremental reuse. */
 function recordsOf(projectDir) {
   let records = readIndex(projectDir);
   if (!records) {
     const built = buildIndex(projectDir);
-    writeIndex(projectDir, built.records);
+    writeIndex(projectDir, built.records, { config: built.configFingerprint });
     writeMaps(projectDir, built.maps);
     writeSections(projectDir, built.sections);
     records = built.records;

@@ -14,13 +14,17 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { buildPlanContext } from "../hooks/lib/plan-context-core.mjs";
+import { gitRoot } from "../skills/kb-index/scripts/lib/kb-fs.mjs";
 
 export default function (pi: ExtensionAPI) {
   let injected = false;
   pi.on("before_agent_start", async (event, ctx) => {
     try {
       if (injected || event.messageType !== "user") return;
-      const text = buildPlanContext(ctx.cwd);
+      // The git root of the session cwd, else the cwd — the plan lives at the root, and
+      // a session opened in a subdirectory must still be oriented (the same resolution
+      // as spec-gate.ts and kb-gate.ts).
+      const text = buildPlanContext(gitRoot(ctx.cwd) || ctx.cwd);
       if (!text) return; // no plan (yet) — stay quiet and check again on the next run
       injected = true; // one persistent message per session, never repeated
       return { message: { customType: "plan-context", content: text, display: true } };

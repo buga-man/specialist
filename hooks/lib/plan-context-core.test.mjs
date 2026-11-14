@@ -174,3 +174,14 @@ test("buildPlanContext: a well-formed plan does not carry the unparsed warning",
   assert.ok(text);
   assert.doesNotMatch(text, /no backticked paths/);
 });
+
+test("buildPlanContext: a plan ending inside a code fence is named before its tasks vanish", () => {
+  const dir = project({
+    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n\n```markdown\nan example that never closes\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.ok(text, "the open task still orients the session");
+  assert.match(text, /unbalanced/);
+  assert.match(text, /invisible to the gate/);
+  assert.doesNotMatch(text, /no backticked paths/);
+});

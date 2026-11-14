@@ -16,13 +16,17 @@ exit 2 = block), the Codex hook (the same stdin; JSON output where Codex differs
 |---|---|---|---|---|
 | `spec-gate` | ✅ block | ✅ block (`apply_patch` payloads are checked file by file) | ✅ block | ✅ block |
 | `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block |
-| `vuln-guard` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan via `additionalContext` | ✅ commit blocks; edit scan opt-in | ✅ commit blocks; edit scan throws |
-| `format-guard` / `lint-guard` | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
+| `vuln-guard` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
+| `edit-guard` | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
 | `git-watch` | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
 | `plan-context` | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
 | `codestyle-reminder` | ✅ session start | ✅ session start | ✅ session start (persistent message) | ✅ with the session orientation |
 | `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | ✅ settle-time follow-up (`agent_settled` → a continuation turn) | — (no turn-end interception point) |
 | `skill-gate` | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
+
+`edit-guard` bundles what follows an edit: the formatter, the linter, the opt-in
+semgrep scan (`.vuln-guard = always`), and the boundary-visibility notes. The edit-scan
+column moved there from `vuln-guard`, whose own registration is the commit boundary.
 
 Codex runs untrusted hooks only after explicit trust (`/hooks`), and its PostToolUse is
 record-only — report-only hooks there deliver findings as `additionalContext` instead of
@@ -40,10 +44,9 @@ four hosts.
 | `spec-gate` | PreToolUse: Edit/Write/MultiEdit/NotebookEdit | `tool_call` edit/write | edit outside the plan — blocked | Node | `.spec-gate` |
 | `skill-gate` | PreToolUse: Skill | — | in the `fast` profile, blocks autonomous runs of the pipeline's stage skills | Node | `.spec-gate` |
 | `secrets-guard` | PreToolUse: Bash | `tool_call` bash | secrets never reach git | Node, git | `.secrets-allow` |
-| `vuln-guard` | PreToolUse: Bash (commit) + PostToolUse (opt-in) | `tool_call` bash + `tool_result` edit/write | semgrep at the commit boundary | Node, git, **semgrep** | `.vuln-guard`, `.vuln-allow`, `semgrep.yml` |
+| `vuln-guard` | PreToolUse: Bash (commit) | `tool_call` bash | semgrep at the commit boundary | Node, git, **semgrep** | `.vuln-guard`, `.vuln-allow`, `semgrep.yml` |
 | `git-watch` | PostToolUse: Bash | `tool_result` bash | after tree-changing git operations, a signal about stale derived artifacts | Node, git | — |
-| `format-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | formatter after an edit | Node + the project's prettier/ruff | — |
-| `lint-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | linter after an edit | Node + the project's eslint/ruff/ktlint | — |
+| `edit-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order | Node + the project's prettier/eslint/ruff/ktlint | — |
 | `plan-context` | SessionStart (startup/resume/clear/compact) | `before_agent_start` | orients a fresh session to the plan | Node | — |
 | `codestyle-reminder` | SessionStart (startup/resume/clear/compact) | `session_start` | reminds about a stale CODESTYLE.md | Node, git | — |
 | `kb-gate` | Stop | `agent_settled` | the documentation index diverged from disk — blocked until rebuilt | Node | — |
@@ -118,7 +121,12 @@ becomes git history:
   listing collapses into one line. `.env.example` / `.env.sample` / `.env.template` are
   committable templates without values; they are not blocked;
 - `git commit` — a scan of the staged diff (for `-a`/`-am` — the whole delta diff);
-- `git push` — a scan of the outgoing diff `@{upstream}..HEAD` (upstream undefined — silent);
+- `git push` — a scan of the outgoing diff `@{upstream}..HEAD`; without an upstream (the
+  first push of a branch) — of the commits on HEAD that no remote-tracking ref of the
+  pushed remote holds (`git log -p HEAD --not --remotes=<remote>`). A repository whose
+  remote holds nothing yet (a first push) scans the whole history — that push publishes
+  all of it. `--dry-run` is not scanned (a rehearsal publishes nothing); `git push --all`
+  covers only the current branch — a documented residual;
 - `git -C <directory>` — the specified directory is checked, not the session's cwd.
 
 **Two tiers of patterns**, both blocking: *definite* (AWS keys, private keys,
@@ -131,10 +139,11 @@ Non-git commands and git errors — pass through.
 
 ## vuln-guard — semgrep at the commit boundary
 
-By default — `git commit` only: a scan of the staged files (for `-a`/`-am` — the delta,
-capped at 50 files) by the semgrep engine; findings block the commit with a report
-"rule — file:line — message". Scanning every edit is opt-in: `.vuln-guard` = `always`
-(a synonym of `edit`); `off` — the hook is disabled entirely, the commit scan too.
+`git commit` (including `git -C <dir> commit` — that repository is scanned): a scan of the
+staged files (for `-a`/`-am` — the delta, capped at 50 files) by the semgrep engine;
+findings block the commit with a report "rule — file:line — message". Scanning every edit
+is opt-in — `.vuln-guard` = `always` (a synonym of `edit`) — and runs inside edit-guard
+(the post-edit adapter above); `off` — the hook is disabled entirely, the commit scan too.
 
 - **Rules:** the project's `semgrep.yml`/`.semgrep.yml` is the recommended path (picked up
   automatically); without them — `p/security-audit` plus the registry's language packs
@@ -171,30 +180,36 @@ the agent, is invisible until the next SessionStart/Stop check — a documented 
 like spec-gate's Bash boundary. With neither artifact present, on non-git commands, and on
 any error — silence (fail-safe).
 
-## format-guard — formatter after an edit
+## edit-guard — everything that follows an edit, in one order
 
-`PostToolUse`: runs the **project's** formatter on the changed file, auto-fixing what it
-can; unfixable errors (for example, syntax) → exit 2 with the output — the agent fixes the
-file on the spot, not on CI.
+`PostToolUse` on Edit/Write/MultiEdit (Codex: `apply_patch` too), one adapter per host and
+one deterministic order inside it. Three separate registrations on one event gave no
+ordering promise — `prettier --write` racing `eslint --fix` on the same file is a
+corrupted fix at best, and format-then-lint is the order the fixes compose in — so the
+three became one process:
 
-- web files (ts/tsx/js/jsx/mjs/cjs/vue/svelte/css/scss/less/html/json/jsonc/yaml/yml)
-  → `prettier` from the project's node_modules — only if prettier is declared in its
-  package.json (a transitive copy is ignored); if not — silent;
-- `.py` → `ruff format` (no ruff — silent).
+1. **Boundary-visibility notes.** The gates are discipline, not walls, and their own
+   boundaries may legitimately be edited — but never silently. An Edit that touches a
+   `- Files:` scope line of a plan in `docs/plans/`, or the `.secrets-allow` /
+   `.vuln-allow` allowlists, produces a note naming what changed and pointing at the git
+   diff where the change is reviewable. A whole-file Write of a plan is the normal
+   creation flow and is not noted.
+2. **format-guard** — the **project's** formatter on the changed file, auto-fixing what it
+   can; unfixable errors (for example, syntax) are handed to the agent. Web files
+   (ts/tsx/js/jsx/mjs/cjs/vue/svelte/css/scss/less/html/json/jsonc/yaml/yml) → `prettier`
+   from the project's node_modules — only if prettier is declared in its package.json (a
+   transitive copy is ignored); `.py` → `ruff format` (no ruff — silent).
+3. **lint-guard** — the project's linter: eslint (web files, declared in package.json +
+   the binary in node_modules), `ruff check --fix` (`.py`), `ktlint --format`
+   (`.kt/.kts`, declared in Gradle + the binary on PATH; a 1–3 s JVM startup per edit is
+   a deliberate cost of declaring it). Exit-code map: 0 — clean; 1 — violations handed to
+   the agent; anything else — silence: a broken linter never blocks an edit.
+4. **vuln-guard edit scan** (opt-in, `.vuln-guard = always`) — one semgrep invocation over
+   every file the payload touches.
 
-## lint-guard — linter after an edit
-
-The younger sibling of format-guard: `--fix` auto-fixes, and the remaining violations are
-handed to the agent.
-
-- eslint — web files, when declared in the project's package.json + the binary in
-  node_modules;
-- `ruff check --fix` — `.py`;
-- `ktlint --format` — `.kt/.kts`, only if ktlint is mentioned in the project's Gradle files
-  and the binary is available; a 1–3 s JVM startup per edit is a deliberate cost, opted in
-  by the mere fact of declaring it.
-- **Exit-code map:** 0 — clean; 1 — violations handed to the agent; anything else (a broken
-  config, no interpreter) — silence: a broken linter never blocks an edit.
+Every check runs even when a previous one failed — the findings arrive together.
+No project tools for the file's stack / no findings / any internal error → silence
+(fail-safe).
 
 ## plan-context — a fresh session starts in the know
 
@@ -282,6 +297,10 @@ echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"cwd":"<rep
 echo '{"tool_name":"Bash","tool_input":{"command":"git add .env"},"cwd":"."}' \
   | node "<plugin>/hooks/lib/secrets-guard.mjs"; echo "exit=$?"
 
+# edit-guard: an edit widening a plan's - Files: scope → exit 2 with the boundary note
+echo '{"tool_name":"Edit","tool_input":{"file_path":"docs/plans/p.md","old_string":"- Files: \`src/a.ts\`","new_string":"- Files: \`src/a.ts\`, \`src/b.ts\`"},"cwd":"."}' \
+  | node "<plugin>/hooks/lib/edit-guard.mjs"; echo "exit=$?"
+
 # plan-context: the orientation block on stdout
 echo '{"cwd":"<project with an open plan>"}' | node "<plugin>/hooks/lib/plan-context.mjs"
 
@@ -293,13 +312,30 @@ Tests of all cores: `npm test` at the repository root.
 
 ## Deliberate boundaries of the hook system as a whole
 
+- **The gates are discipline, not walls.** Every hook here catches the *accidental* —
+  scope creep, a leaked key, a broken format. A determined agent can always walk around
+  them: edit the plan to widen its own file list, add a line to `.secrets-allow` /
+  `.vuln-allow`, rewrite code through `sed -i`. The system's answer is visibility, not
+  prohibition: boundary edits produce notes (edit-guard), plan and allowlist changes land
+  in the git diff a reviewer reads, and spec-review audits the diff against the specs.
+  Treat the hooks as a process guardrail, not as a security boundary against the agent
+  itself.
 - **No hook checks semantics against the spec** — that is `spec-review`'s job. Hooks catch
   mechanics (plan boundaries, secrets, lint, format), not meaning.
 - **spec-gate does not intercept Bash** — an agent editing code through `sed -i` bypasses
   the gate; this is a documented limitation, not a hole: the discipline in the executor's
   reports and spec-review surfaces such bypasses anyway.
+- **Command parsing is best-effort** — the guards recognize `git` invocations in compound
+  shell commands, but `git push` behind a pipe (`echo x | git push`), `bash -c "git push"`
+  or a git alias is not seen. The dominant shapes (direct and `&&`/`;`-chained commands)
+  are covered; exotic ones are a residual risk.
 - **secrets/vuln-guard scan only the git boundary** — a file written into the repo and
   committed by someone else's tool, bypassing the agent, is not seen by the hooks (an
-  ordinary pre-commit framework will cover the residual risk).
+  ordinary pre-commit framework will cover the residual risk). The first semgrep registry
+  fetch needs the network; offline it degrades to silence.
+- **Allowlist regexes are the project's own** — a pathological pattern in
+  `.secrets-allow`/`.vuln-allow` (catastrophic backtracking) can hang the hook until its
+  registration timeout kills it; the fail-safe direction is "allow", and the timeout is
+  the backstop. Keep the patterns simple.
 - **Security scanning of code semantics** — vuln-guard on top of semgrep; heavier SAST/SCA
   (dependencies, container images) is CI's territory, not hooks'.

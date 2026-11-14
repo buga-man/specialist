@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { activePlanInfo, applyPatchPaths, decide, editedFilePaths, isAlwaysAllowed, readMode } from "./spec-core.mjs";
+import { activePlanInfo, applyPatchPaths, decide, editedFilePaths, isAlwaysAllowed, readMode, scopeChangeNotes } from "./spec-core.mjs";
 
 const dirs = [];
 process.on("exit", () => {
@@ -291,7 +291,84 @@ test("a fenced example inside a plan is prose, never the contract", () => {
   });
   const info = activePlanInfo(dir);
   assert.equal(info.hasOpenTasks, true);
+  assert.equal(info.unbalancedFence, false);
   assert.deepEqual([...info.openFiles].sort(), ["src/a.ts", "src/b.ts"]);
+});
+
+test("unbalancedFence: EOF inside a fence flags the plan — the swallowed tail is diagnosable", () => {
+  const dir = project({
+    "docs/plans/p.md": [
+      "### Task 1: X",
+      "- Files: `src/a.ts`",
+      "",
+      "```markdown",
+      "an example that never closes",
+    ].join("\n"),
+  });
+  const info = activePlanInfo(dir);
+  assert.equal(info.hasOpenTasks, true);
+  assert.equal(info.unbalancedFence, true);
+  // The gate itself stays fail-open (documented); the flag is for plan-context's warning.
+  assert.equal(decide({ projectDir: dir, filePath: "src/other.ts", mode: "soft" }).action, "block");
+
+  const balanced = project({ "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n```md\nx\n```\n" });
+  assert.equal(activePlanInfo(balanced).unbalancedFence, false);
+});
+
+test("path comparison follows the filesystem: case-insensitive on Windows and macOS, sensitive on Linux", () => {
+  const dir = project({ "docs/plans/p.md": "### Task 1: X\n- Files: `src/API/export.ts`\n" });
+  const verdict = decide({ projectDir: dir, filePath: "src/api/export.ts", mode: "soft" });
+  if (process.platform === "win32" || process.platform === "darwin") {
+    assert.equal(verdict.action, "allow", "case-insensitive fs: the same file, no false block");
+  } else {
+    assert.equal(verdict.action, "block", "case-sensitive fs: those are two different files");
+  }
+});
+
+test("scopeChangeNotes: an edit to a plan's - Files: line, and to an allowlist, is called out", () => {
+  // An Edit touching a "- Files:" line of a plan — the shape a quiet scope expansion takes.
+  const planNote = scopeChangeNotes({
+    file_path: "docs/plans/2026-11-14-topic-repo.md",
+    old_string: "- Files: `src/a.ts`",
+    new_string: "- Files: `src/a.ts`, `src/b.ts`",
+  });
+  assert.equal(planNote.length, 1);
+  assert.match(planNote[0], /- Files:/);
+  assert.match(planNote[0], /docs\/plans/);
+
+  // A MultiEdit payload reads the delta from its edits array.
+  const multi = scopeChangeNotes({
+    file_path: "/proj/docs/plans/p.md",
+    edits: [{ old_string: "prose", new_string: "more prose" }, { old_string: "- Files:", new_string: "- Files:" }],
+  });
+  assert.equal(multi.length, 1);
+
+  // An edit of a plan that does not touch a scope line is the normal flow — no note.
+  assert.deepEqual(
+    scopeChangeNotes({ file_path: "docs/plans/p.md", old_string: "1. step", new_string: "1. step done" }),
+    [],
+  );
+  // A whole-file Write of a plan is how plans are created (the fast lane) — no note.
+  assert.deepEqual(scopeChangeNotes({ file_path: "docs/plans/p.md", content: "# plan\n- Files: `src/a.ts`\n" }), []);
+  // A note fires once even when the delta touches several plan files (dedup).
+  const patch = "*** Begin Patch\n*** Update File: docs/plans/a.md\n*** Update File: docs/plans/b.md\n*** End Patch";
+  const dedup = scopeChangeNotes({ input: patch, new_string: "- Files: `src/a.ts`" });
+  assert.equal(dedup.length, 1);
+
+  // The allowlists: any touch is a boundary change worth a note.
+  const allowlistCases = [
+    ["(root)/.secrets-allow", "secrets-guard"],
+    ["conf/.vuln-allow", "vuln-guard"],
+  ];
+  for (const [file, guard] of allowlistCases) {
+    const notes = scopeChangeNotes({ file_path: file, new_string: "fixture-key" });
+    assert.equal(notes.length, 1, file);
+    assert.match(notes[0], new RegExp(guard));
+  }
+
+  // Ordinary code edits say nothing.
+  assert.deepEqual(scopeChangeNotes({ file_path: "src/a.ts", new_string: "x" }), []);
+  assert.deepEqual(scopeChangeNotes(null), []);
 });
 
 test("regression: Verify/Revert/Decision-log extras and plan-level sections do not perturb the gate", () => {

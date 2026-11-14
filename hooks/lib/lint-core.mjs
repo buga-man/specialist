@@ -127,7 +127,7 @@ export async function lintFile({ projectDir, filePath, run }) {
           timeout: 20000,
         });
         if (r.code == null) continue; // interpreter not found — try the next one
-        if ((r.stderr || "").includes("No module named")) return null; // no ruff — skip
+        if ((r.stderr || "").includes("No module named")) continue; // ruff missing here — try the next interpreter
         return fromCode("ruff", r);
       }
       return null;

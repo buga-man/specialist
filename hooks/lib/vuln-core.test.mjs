@@ -114,6 +114,21 @@ test("checkGitCommit: a semgrep finding blocks the commit with rule, location an
   assert.ok(scan.includes("src/app.py"));
 });
 
+test("checkGitCommit: git -C <dir> scans that repository, not the session cwd", async () => {
+  const dir = project({});
+  const cwds = [];
+  const run = async (cmd, args, opts) => {
+    if (opts?.cwd !== undefined) cwds.push(opts.cwd);
+    if (args.includes("--version")) return { code: 0, stdout: "1.100.0", stderr: "" };
+    if (args[0] === "diff") return { code: 0, stdout: "src/app.py\n", stderr: "" };
+    if (args.includes("scan")) return { code: 0, stdout: "", stderr: "" };
+    return { code: 0, stdout: "", stderr: "" };
+  };
+  await checkGitCommit({ projectDir: dir, command: "git -C /elsewhere/repo commit -m x", run });
+  assert.ok(cwds.length > 0, "the staged-files diff ran");
+  for (const cwd of cwds) assert.equal(cwd, "/elsewhere/repo", "every located spawn runs in the -C target");
+});
+
 test("checkGitCommit: .vuln-allow suppresses a finding by rule-id and by path", async () => {
   const byRule = project({ ".vuln-allow": "# FP\nsql-injection\n" });
   const { run } = fakeRun({ staged: ["src/app.py"], json: JSON.stringify(FINDING) });

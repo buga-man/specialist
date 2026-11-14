@@ -91,6 +91,67 @@ export function editedFilePaths(toolInput, cap = 20) {
   return patchPaths.slice(0, cap).map((p) => p.replace(/^@/, ""));
 }
 
+/** The visibility notes when an edit touches the gates' own boundaries: a "- Files:"
+ *  scope line of a plan in docs/plans/, or one of the guard allowlists (.secrets-allow /
+ *  .vuln-allow). The gates are discipline, not walls — the agent may edit a plan or an
+ *  allowlist — but a boundary change must be seen, not pass silently: each note names
+ *  what changed and points at the git diff where the change is reviewable. Returns
+ *  string[] (empty — nothing to say). Pure: reads only the edit payload.
+ *
+ *  A whole-file Write of a plan produces no note: creating/rewriting a plan is the
+ *  normal flow (the fast lane does exactly that); the note is for an Edit that touches
+ *  an existing scope line — the shape a quiet self-expansion of scope would take. */
+export function scopeChangeNotes(toolInput) {
+  if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) return [];
+  const notes = [];
+  const norm = (p) => String(p).replace(/^@/, "").replace(/\\/g, "/");
+
+  const targets = editedFilePaths(toolInput, 5);
+  const deltas = [];
+  const push = (v) => {
+    if (typeof v === "string" && v) deltas.push(v);
+  };
+  push(toolInput.old_string ?? toolInput.oldText);
+  push(toolInput.new_string ?? toolInput.newText);
+  push(toolInput.input ?? toolInput.patch ?? toolInput.patch_text ?? toolInput.patchText); // apply_patch text
+  if (Array.isArray(toolInput.edits)) {
+    for (const e of toolInput.edits) {
+      if (!e || typeof e !== "object") continue;
+      push(e.old_string ?? e.oldText);
+      push(e.new_string ?? e.newText);
+    }
+  }
+  // A patch line carries a +/- marker before the content ("- Files:" becomes "-- Files:");
+  // one leading marker is stripped before the test, so context lines (a leading space) do
+  // not count — only the lines the edit actually changes.
+  const filesLine = (s) =>
+    /^\s*[-*+]\s*files?\s*:/i.test(s) || /^\s*[-*+]\s*files?\s*:/i.test(s.replace(/^[+-]/, ""));
+  const touchesFilesLine = deltas.some((d) => d.split(/\r?\n/).some(filesLine));
+
+  for (const target of targets) {
+    const p = norm(target);
+    const base = p.slice(p.lastIndexOf("/") + 1);
+    if (base === ".secrets-allow" || base === ".vuln-allow") {
+      const guard = base === ".secrets-allow" ? "secrets-guard" : "vuln-guard";
+      notes.push(
+        `${guard}: "${base}" was just edited — what the git boundary lets through changes with it. ` +
+          "If this was not the user's decision, revert the edit; the change is visible in the git diff.",
+      );
+      continue;
+    }
+    if (/(?:^|\/)docs\/plans\/[^/]+\.md$/i.test(p)) {
+      if (touchesFilesLine && toolInput.content === undefined) {
+        notes.push(
+          'spec-gate: a "- Files:" scope line of a plan in docs/plans/ was just edited — the gate\'s ' +
+            "editable scope changes with it. If this was not the user's decision, revert the edit; " +
+            "the scope change is visible in the plan's git diff.",
+        );
+      }
+    }
+  }
+  return [...new Set(notes)];
+}
+
 /** Collect docs/plans/*.md and extract the file paths of all open (unticked) tasks.
  *  Also reports which plan files still have open work and the open tasks' titles —
  *  plan-context uses these to orient a fresh session; spec-gate ignores them. */
@@ -104,6 +165,10 @@ export function activePlanInfo(projectDir) {
     // An open task has a "- Files:" line but no backticked paths could be parsed —
     // the plan is malformed, so its scope is unknown (see decide()).
     unparsedFiles: false,
+    // A plan file ends inside a code fence — an unbalanced fence swallows every task
+    // after it, so the gate silently loses scope. Parsed per file; decide() stays
+    // fail-open, plan-context warns.
+    unbalancedFence: false,
   };
   const plansDir = join(projectDir, "docs", "plans");
   let files = [];
@@ -178,13 +243,17 @@ export function activePlanInfo(projectDir) {
       }
     }
     flush();
+    if (inFence) result.unbalancedFence = true; // EOF inside a fence — the tail was prose
   }
   result.openFiles = [...openFiles];
   result.openPlans = [...openPlans];
   return result;
 }
 
-const CASE_INSENSITIVE = process.platform === "win32";
+// Windows is always case-insensitive; macOS default filesystems (HFS+/APFS) are too —
+// a plan spelling `Foo.ts` must not false-block an edit of `foo.ts` there. Linux stays
+// case-sensitive: there those are two different files.
+const CASE_INSENSITIVE = process.platform === "win32" || process.platform === "darwin";
 
 /** Minimal glob support for "- Files:" entries: a double-star crosses directories
  *  (with a trailing slash it also matches zero directories), a single star stays

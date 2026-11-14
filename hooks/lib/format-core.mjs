@@ -94,7 +94,7 @@ export async function formatFile({ projectDir, filePath, run }) {
           timeout: 20000,
         });
         if (r.code == null) continue; // interpreter not found — try the next one
-        if ((r.stderr || "").includes("No module named")) return null; // no ruff — skip
+        if ((r.stderr || "").includes("No module named")) continue; // ruff missing here — try the next interpreter
         if (r.code === 0) return { ok: true, tool: "ruff", output: "" };
         return { ok: false, tool: "ruff", output: clip(`${r.stdout}\n${r.stderr}`) };
       }

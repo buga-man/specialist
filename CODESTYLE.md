@@ -46,23 +46,23 @@ appears, its aspect moves out of the document into that table.
 - ESM (`.mjs`), imports only with the `node:` prefix; zero npm dependencies across the
   whole repo (`package.json` — scripts and manifests only).
 - Processes: `spawnSync` with an **array of arguments**, `encoding: "utf8"`,
-  `windowsHide: true` (`hooks/lib/kb-fs.mjs:30`, `hooks/lib/lint-guard.mjs:29`).
-- Paths are always posix: `split("\\").join("/")` (`hooks/lib/kb-fs.mjs:56`).
+  `windowsHide: true` (`hooks/lib/kb-fs.mjs:30`, `hooks/lib/hook-kit.mjs:34`).
+- Paths are always posix: `split("\\").join("/")` (`hooks/lib/kb-fs.mjs:58`).
 - CLI output goes through `Buffer.from(text, "utf8")`, not `console.log`:
   `scripts/kb.mjs:55` (independent of the Windows console encoding).
 - Glob examples in comments are written in words: `*/` and `**/` inside a block comment
-  would close it and break the module (`hooks/lib/spec-core.mjs:138`).
+  would close it and break the module (`hooks/lib/spec-core.mjs:11`).
 
 ## 5. Errors and fail-safe
 
 - A hook error never blocks work: `try { … } catch { }` → exit 0
-  (`hooks/lib/kb-gate.mjs:58`). In a core, a read/parse error is read as "I know nothing":
-  `null`, a default, an empty result (`hooks/lib/spec-core.mjs:26`).
+  (`hooks/lib/kb-gate.mjs:41`). In a core, a read/parse error is read as "I know nothing":
+  `null`, a default, an empty result (`hooks/lib/spec-core.mjs:34`).
 - Blocking is only explicit and with an explanation of the way forward: exit 2, the reason
-  on stderr (`hooks/lib/kb-gate.mjs:53`).
+  on stderr (`hooks/lib/kb-gate.mjs:36`).
 - The CLI exit-code map: 0 — success, 2 — a usage error (usage without a stack trace),
   1 — a runtime error (`scripts/kb.mjs:18`). A tool finding is signaled by its JSON, not
-  the exit code: `hooks/lib/vuln-core.mjs:92`.
+  the exit code: `hooks/lib/vuln-core.mjs:148`.
 
 ## 6. Tests
 
@@ -98,4 +98,4 @@ appears, its aspect moves out of the document into that table.
   truth is the code/files; the derivative is rebuilt from scratch. Evidence:
   `docs/skills.md` (kb-index: "add the intro paragraph to the document, not to the index").
 - ❌ Silent pass-through on unparseable data: if it did not parse — block with an
-  explanation of the format, not a silent skip (`hooks/lib/spec-core.mjs:196`).
+  explanation of the format, not a silent skip (`hooks/lib/spec-core.mjs:314`).

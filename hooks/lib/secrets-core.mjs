@@ -105,6 +105,64 @@ export function commitStagesAll(rest) {
 
 const allowlisted = (text, allowlist) => allowlist.some((re) => re.test(text));
 
+/** Unquotes a `git status --porcelain` path. With the default core.quotePath, paths
+ *  holding non-ASCII or special characters are C-quoted ("a\tb.md" with a literal tab,
+ *  "dönem.md"), and the quotes would let such a path dodge the sensitive-path patterns.
+ *  Escapes handled: \" \\ \t \n \r and octal \\NNN — the octal bytes are git's UTF-8
+ *  payload, so they are decoded as a byte sequence, not per character. A non-quoted
+ *  value is returned as is. */
+export function unquoteGitPath(path) {
+  const s = String(path ?? "");
+  if (s.length < 2 || s[0] !== '"' || s[s.length - 1] !== '"') return s;
+  const body = s.slice(1, -1);
+  let out = "";
+  let bytes = null; // octal runs collect here, then decode as UTF-8
+  const flushBytes = () => {
+    if (bytes) {
+      out += Buffer.from(bytes).toString("utf8");
+      bytes = null;
+    }
+  };
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== "\\" || i + 1 >= body.length) {
+      flushBytes();
+      out += body[i];
+      continue;
+    }
+    const c = body[++i];
+    if (c === "n") {
+      flushBytes();
+      out += "\n";
+    } else if (c === "t") {
+      flushBytes();
+      out += "\t";
+    } else if (c === "r") {
+      flushBytes();
+      out += "\r";
+    } else if (c >= "0" && c <= "7") {
+      let octal = c;
+      while (octal.length < 3 && i + 1 < body.length && body[i + 1] >= "0" && body[i + 1] <= "7") {
+        octal += body[++i];
+      }
+      (bytes ??= []).push(parseInt(octal, 8));
+    } else {
+      flushBytes();
+      out += c; // \" \\ and anything unexpected — the character itself
+    }
+  }
+  flushBytes();
+  return out;
+}
+
+/** The remote a `git push` names — its first non-flag argument; git's own default is
+ *  "origin". A lone refspec ("git push HEAD:feat" names no remote) reads as the default
+ *  too; a full push URL contains ":" and also falls back — a wrong remote just fails the
+ *  fallback query, which is silence (fail-safe). */
+function pushRemote(rest) {
+  const first = addPaths(rest)[0];
+  return first && !first.includes(":") && first !== "." ? first : "origin";
+}
+
 /** Scan text (line-oriented) for secret patterns. Returns findings with 1-based line numbers. */
 export function scanForSecrets(text, allowlist = []) {
   const findings = [];
@@ -276,16 +334,38 @@ export async function checkGitCommand({ projectDir, command, run }) {
       if (sensitive.length) return { reason: sensitiveToReason(sensitive) };
       continue;
     }
-    const diffArgs =
-      sub === "commit"
-        ? commitStagesAll(rest)
-          ? ["diff", "HEAD", "-U0"] // -a / -am stages tracked changes at commit time — scan the whole delta
-          : ["diff", "--cached", "-U0"]
-        : ["diff", "@{upstream}..HEAD", "-U0"]; // push: everything the push would publish
-    const r = await run("git", diffArgs, { cwd: dir, timeout: 15000 });
-    if (r.code !== 0 || !r.stdout) continue; // nothing staged / no upstream / git trouble — not our finding
-    const findings = scanDiff(r.stdout, allowlist);
-    if (findings.length) return { reason: findingsToReason(findings, sub) };
+    if (sub === "commit") {
+      const diffArgs = commitStagesAll(rest)
+        ? ["diff", "HEAD", "-U0"] // -a / -am stages tracked changes at commit time — scan the whole delta
+        : ["diff", "--cached", "-U0"];
+      const r = await run("git", diffArgs, { cwd: dir, timeout: 15000 });
+      if (r.code !== 0 || !r.stdout) continue; // nothing staged / git trouble — not our finding
+      const findings = scanDiff(r.stdout, allowlist);
+      if (findings.length) return { reason: findingsToReason(findings, "commit") };
+      continue;
+    }
+    // push: everything the push would publish. A dry run publishes nothing — a rehearsal
+    // must not be blocked for the secrets it would have leaked.
+    if (/(^|\s)(-[A-Za-z]*n[A-Za-z]*|--dry-run)(\s|$)/.test(rest)) continue;
+    const upstream = await run("git", ["diff", "@{upstream}..HEAD", "-U0"], { cwd: dir, timeout: 15000 });
+    let diff = upstream.code === 0 ? upstream.stdout : "";
+    if (upstream.code !== 0) {
+      // No upstream — the first push of a branch, the dominant feature-flow shape. The
+      // commits the push would send are the ones on HEAD that no remote-tracking ref of
+      // the pushed remote holds; `git log -p` over exactly those yields the unified diffs
+      // scanDiff parses. A repository with no remote refs at all (a first push) scans the
+      // whole history — correct: that push publishes all of it. `git push --all` covers
+      // only the current branch here — a documented residual.
+      const unpushed = await run(
+        "git",
+        ["log", "--format=", "-p", "-U0", "HEAD", "--not", `--remotes=${pushRemote(rest)}`],
+        { cwd: dir, timeout: 15000 },
+      );
+      if (unpushed.code === 0 && unpushed.stdout) diff = unpushed.stdout;
+    }
+    if (!diff) continue; // nothing outgoing / git trouble — not our finding
+    const findings = scanDiff(diff, allowlist);
+    if (findings.length) return { reason: findingsToReason(findings, "push") };
   }
   return null;
 }

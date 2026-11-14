@@ -14,8 +14,10 @@
  *                       so post-edit guards and staleness signals would only mislead.
  *       bash          → git-watch: after a tree-changing git operation, a staleness
  *                       signal for the derived artifacts is appended to the tool output.
- *       edit / write  → format-guard + lint-guard (project tools), vuln-guard edit scan
- *                       under `.vuln-guard = always`; failures surface as tool errors.
+ *       edit / write  → edit-guard: boundary-visibility notes, then format-guard +
+ *                       lint-guard (project tools), then the vuln-guard edit scan under
+ *                       `.vuln-guard = always` — one handler, one deterministic order;
+ *                       failures surface as tool errors, notes join the tool output.
  *   - `context` (V2) / `chat.message` (V1)
  *                     → plan-context: a fresh session starts oriented (open plan, open
  *                       tasks, spec-gate mode) and hears about a stale CODESTYLE.md;
@@ -28,7 +30,7 @@
 import { Plugin } from "@opencode/plugin";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { decide, editedFilePaths, readMode } from "../../hooks/lib/spec-core.mjs";
+import { decide, editedFilePaths, readMode, scopeChangeNotes } from "../../hooks/lib/spec-core.mjs";
 import { checkGitCommand } from "../../hooks/lib/secrets-core.mjs";
 import { checkGitCommit, readVulnMode, scanEditedFiles } from "../../hooks/lib/vuln-core.mjs";
 import { formatFile } from "../../hooks/lib/format-core.mjs";
@@ -37,6 +39,7 @@ import { buildPlanContext } from "../../hooks/lib/plan-context-core.mjs";
 import { treeChangingCommands } from "../../hooks/lib/git-watch-core.mjs";
 import { codestyleState, touchedProjectDirs, watchSignal } from "../../hooks/lib/git-watch-host.mjs";
 import { reminderLine } from "../../skills/codestyle/scripts/lib/codestyle-core.mjs";
+import { gitRoot } from "../../skills/kb-index/scripts/lib/kb-fs.mjs";
 
 /** Child-process runner matching the contract every core expects. */
 const run = (cmd: string, args: string[], opts: Record<string, unknown>) => {
@@ -97,14 +100,16 @@ async function guardBefore(projectDir: string, tool: string, args: EditInput | u
   if (blockReason) throw new Error(blockReason);
 }
 
-/** After an edit-style tool call: format, lint, and (opt-in) the semgrep edit scan —
- *  one semgrep invocation for the whole payload. Every check runs even when the
- *  previous one failed (no short-circuit), mirroring the three independent
- *  registrations on Claude Code and Codex. Failures throw — the agent repairs the
- *  file immediately. */
-async function afterEdit(projectDir: string, args: EditInput | undefined): Promise<void> {
+/** After an edit-style tool call: the boundary-visibility notes, then format, lint, and
+ * (opt-in) the semgrep edit scan — one semgrep invocation for the whole payload. Every
+ * check runs even when the previous one failed (no short-circuit). Failures throw — the
+ * agent repairs the file immediately; notes without failures are appended to the tool
+ * output (the same appendSignal channel git-watch uses). */
+async function afterEdit(projectDir: string, args: EditInput | undefined, container: any): Promise<void> {
   const failure: string[] = [];
+  let notes: string[] = [];
   try {
+    notes = scopeChangeNotes(args ?? {});
     const files = editedFiles(args);
     for (const fp of files) {
       const result = await formatFile({ projectDir, filePath: resolve(projectDir, fp), run });
@@ -129,7 +134,8 @@ async function afterEdit(projectDir: string, args: EditInput | undefined): Promi
   } catch {
     /* fail-safe: a broken formatter/linter must never break the workflow */
   }
-  if (failure.length) throw new Error(failure.join("\n\n"));
+  if (failure.length) throw new Error([...failure, ...notes].join("\n\n"));
+  if (notes.length) appendSignal(container, notes.join("\n\n"));
 }
 
 /** After a bash tool call: the git-watch signal for derived artifacts (stale kb-index,
@@ -176,8 +182,14 @@ function orientationOnce(key: unknown, push: (text: string) => void, projectDir:
   push(parts.join("\n\n"));
 }
 
-const projectDirOf = (ctx: any): string =>
-  String(ctx?.location?.directory ?? ctx?.directory ?? ctx?.project?.directory ?? process.cwd());
+/** The project directory: what the host declared, else the git root of the cwd, else the
+ *  cwd (the Claude Code chain without its env variable — a start in a subdirectory still
+ *  finds the repository root). Resolved once at setup: an OpenCode plugin instance
+ *  serves one project; a directory switch means a new instance (and thus a new setup). */
+const projectDirOf = (ctx: any): string => {
+  const declared = ctx?.location?.directory ?? ctx?.directory ?? ctx?.project?.directory;
+  return declared ? String(declared) : gitRoot(process.cwd()) || process.cwd();
+};
 
 /** The V2 plugin definition (OpenCode's current API). */
 const definition = Plugin.define({
@@ -217,7 +229,7 @@ const definition = Plugin.define({
         return;
       }
       if (tool === "edit" || tool === "write" || tool === "patch") {
-        await afterEdit(projectDir, e?.input);
+        await afterEdit(projectDir, e?.input, event);
       }
     });
   },
@@ -242,7 +254,7 @@ async function server(ctx: any) {
         return;
       }
       if (tool === "edit" || tool === "write" || tool === "patch") {
-        await afterEdit(projectDir, output?.args);
+        await afterEdit(projectDir, output?.args, output);
       }
     },
   };

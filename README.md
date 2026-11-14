@@ -69,8 +69,8 @@ traceability defect — spec-review and tech-writer check for it.
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 package.json                     pi package manifest (pi.skills / pi.extensions)
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
-hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit/edits), git-watch (a signal after tree-changing git operations), format-guard + lint-guard (formatter and linter after an edit), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
-extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, format-guard.ts, lint-guard.ts, plan-context.ts
+hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
+extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, edit-guard.ts, plan-context.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                            documentation: skills, hooks, installation; design notes; the skill template
 scripts/                         helper scripts (copy-skills.sh); skill CLIs live in the skill directories — skills/<name>/scripts/
@@ -88,11 +88,10 @@ API — [extensions/README.md](extensions/README.md).
 |---|---|---|
 | `spec-gate` | before Edit/Write | blocks code edits outside the files of **open** tasks of a `docs/plans/` plan. Modes — the `.spec-gate` file at the project root: `soft` (default; active only with an active plan), `hard` (blocks code even without a plan — run the pipeline first), `fast` (the file gate as in `soft` + the process profile: fast lane by default), `off` |
 | `skill-gate` | skill invocation (Skill) | in the `fast` profile blocks autonomous launch of brainstorm / system-thinking / decompositor — small tasks go through the fast lane (a mini-spec in the header of a one-task plan); an explicit user request — via temporarily switching the profile to `soft`; silent in the other modes |
-| `secrets-guard` | before Bash | blocks `git add` of sensitive files (`.env`, keys, credentials; `git add .`/`-A`, bare directories and wildcard paths are checked against the index with untracked files expanded, `.env.example` is allowed) and `git commit`/`git push` with secrets in the diff (two pattern tiers: definite/likely); legitimate fixtures — a regex in `.secrets-allow` at the root; a finding never echoes the secret's value; `git -C <dir>` is checked against the given directory |
-| `vuln-guard` | before Bash (git commit); optionally after Edit/Write | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too, `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
+| `secrets-guard` | before Bash | blocks `git add` of sensitive files (`.env`, keys, credentials; `git add .`/`-A`, bare directories and wildcard paths are checked against the index with untracked files expanded, quoted non-ASCII paths unescaped, `.env.example` is allowed) and `git commit`/`git push` with secrets in the diff (two pattern tiers: definite/likely; a push without an upstream — the first push of a branch — scans the commits the remote does not hold); legitimate fixtures — a regex in `.secrets-allow` at the root; a finding never echoes the secret's value; `git -C <dir>` is checked against the given directory |
+| `vuln-guard` | before Bash (git commit) | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too (inside edit-guard), `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
 | `git-watch` | after Bash | after tree-changing git operations (commit/checkout/merge/rebase/pull/reset/cherry-pick/stash pop) it reconciles derived artifacts with the disk: the kb-index index — a signal to rebuild (a data derivative), CODESTYLE.md — a signal to ask the user (the document is committed); silent when everything is fine |
-| `format-guard` | after Edit/Write | runs the project's formatter (prettier / ruff — if the project declares them), auto-fixes what it can; unfixable errors (syntax) are returned to the agent to repair |
-| `lint-guard` | after Edit/Write | the project's linter (eslint / ruff / ktlint — if the project declares them) with `--fix`: auto-fixes, returns the remaining violations to the agent |
+| `edit-guard` | after Edit/Write | one adapter, one deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:` scope line or of `.secrets-allow`/`.vuln-allow` is called out), the project's formatter (prettier / ruff), the project's linter (eslint / ruff / ktlint, each `--fix`-ing what it can), and — under `.vuln-guard = always` — a semgrep scan; unfixable errors and violations are returned to the agent to repair |
 | `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; with the `fast` profile — also the profile block, even without a plan; with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; silent without a plan and at `off` |
 | `codestyle-reminder` | session start | if `CODESTYLE.md` sits at the root: counts code commits from the recorded `base` (the threshold — 30 code commits or 30 days) and injects a single reminder line; **never blocks**; the staleness verdict — `skills/codestyle/scripts/codestyle.mjs status` |
 | `kb-gate` | Stop | reconciles the documentation index (`.kbindex/index.json`) with the disk by hashes: a document changed, appeared, or disappeared — the end of the turn is blocked with a rebuild command; without an index, at `stop_hook_active`, and on any error — silent |
@@ -100,14 +99,23 @@ API — [extensions/README.md](extensions/README.md).
 All are fail-safe: a hook failure never blocks work. `docs/**` and `*.md` are always
 editable under spec-gate. The plan contract — `docs/hooks.md`: sections
 `### Task`, task files from `- Files:` (globs are supported; a
-line whose paths cannot be parsed — a block with an explanation, not a silent opening),
-task closure — an explicit `- Done:` line (checkboxes `- [x]` are progress, not closure;
-the plan template contains no `- Done:` line). The `.spec-gate` mode file is also under
-the gate while a plan is open: the agent does not lift the gate itself, the user changes
-the mode. Boundaries: no hook checks edit semantics against the spec — that is
-`spec-review`'s job; spec-gate looks only at the target file and does not intercept
-edits made through Bash; secrets-guard, by contrast, works precisely on Bash, but only
-on git commands.
+line whose paths cannot be parsed — a block with an explanation, not a silent opening;
+a plan ending inside an unbalanced code fence — a warning, its swallowed tasks are
+named), task closure — an explicit `- Done:` line (checkboxes `- [x]` are progress, not
+closure; the plan template contains no `- Done:` line). The `.spec-gate` mode file is
+also under the gate while a plan is open: the agent does not lift the gate itself, the
+user changes the mode.
+
+**The gates are discipline, not walls.** They catch the accidental — scope creep, a
+leaked key, a broken format — not a determined agent: the plan and the
+`.secrets-allow`/`.vuln-allow` allowlists are editable, and code can be rewritten
+through `sed -i`. The system's answer is visibility: boundary edits produce notes
+(edit-guard), and every such change lands in the git diff a reviewer reads. Boundaries:
+no hook checks edit semantics against the spec — that is `spec-review`'s job; spec-gate
+looks only at the target file and does not intercept edits made through Bash;
+secrets-guard, by contrast, works precisely on Bash, but only on git commands (exotic
+wrappers — pipes, `bash -c`, aliases — are a documented residual). The per-host
+capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 ## Documentation
 
@@ -216,10 +224,11 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 
 ## Versioning
 
-- The plugin version is semver, kept in sync in four places: `.claude-plugin/plugin.json`,
-  `plugin.json` (the Codex manifest), `package.json` (the pi package) and the
-  `marketplace.json` entry. A new skill extending the pipeline — minor; an edit of a
-  skill's text — patch.
+- The plugin version is semver, kept in sync in every manifest field (enforced by
+  `npm test`): `.claude-plugin/plugin.json`, `plugin.json` (the Codex manifest),
+  `package.json` (the pi package), and the three version fields of
+  `.claude-plugin/marketplace.json` (`metadata`, the plugin entry, the marketplace root).
+  A new skill or hook — minor; an edit of a skill's text — patch.
 - Stable points — git tags `v*` on the repository.
 
 ## Links
