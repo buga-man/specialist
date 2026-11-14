@@ -60,7 +60,7 @@ Blocks a code edit if the file is not in the file lists of **unclosed** tasks of
 plan. The block returns an explanation and ways forward to the agent (update the plan or
 discuss with the user).
 
-**The plan contract** (`docs/plans/*.md`, keywords in English and Russian):
+**The plan contract** (`docs/plans/*.md`, markers are English-only):
 
 - a task = a `### Task ...` section;
 - task files = paths in backticks on the `- Files:` line (globs are supported:
@@ -69,6 +69,9 @@ discuss with the user).
 - closure = an explicit `- Done: ...` line; `- [x]` checkboxes
   are step progress and do **not** close a task. That is why the plan template contains no
   `- Done:` line — the executor adds it when closing a task.
+- every other line is ignored by the gate (`- Verify:`, `- Verify (red):`, `- Risk:`,
+  `- Revert:`, `- Criteria:`), and `## ...` headers end a task — plan-level sections
+  (`## Revert`, `## Decision log`) belong after the last task.
 
 **Modes** (the `.spec-gate` file at the project root):
 

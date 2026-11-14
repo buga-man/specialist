@@ -35,12 +35,22 @@ review there is.
 - Walk the acceptance criteria of the business spec and the changes of the system and
   repo specs. For each: examine the tests that claim to cover it, then the code, then
   the running behavior where reachable.
+- A criterion carrying `Verify:` is checked by running exactly that command (or performing
+  the named manual observation) — the verdict cites the run, not an impression. A must
+  criterion without a runnable `Verify:` is unverifiable by default; flag it as a spec
+  defect (proposed amendment), not a code failure.
 - Verdict per item:
   - **passed** — with evidence: a test, a code location, or an observed behavior;
   - **failed** — what differs from the spec and where;
   - **unverifiable** — cannot be checked from here; name exactly what is needed
     (a live environment, a manual step, a missing test).
 - A criterion with no test and no observable behavior is unverifiable, never passed.
+- **Attack the criteria.** After the walk, try to name a plausible wrong implementation
+  that would pass every criterion — the shape-checks trap from shallow oracles. If one
+  exists, the implementation may still be accepted, but the criteria set is weaker than
+  it looks: report the gap with a proposed sharper criterion (amendment) — shaped per
+  brainstorm's references/ears-patterns.md (EARS stems + the quality bar) — so the next
+  feature inherits teeth instead of the trap.
 
 ## 3. Scan for unrequested behavior
 

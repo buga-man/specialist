@@ -57,8 +57,14 @@ business spec.
 
 - **Input → output:** raw task → `docs/specs/YYYY-MM-DD-<topic>.md`
 - **In the spec:** business meaning without code (no paths, APIs, schemas), scope/non-scope
-  and constraints, must/should acceptance criteria (each with a source `[request]/[docs]/[answer #N]`),
-  business cases "actor → action → outcome", success metrics, open questions with working assumptions.
+  and constraints, must/should acceptance criteria (each with a source `[request]/[docs]/[answer #N]`,
+  an EARS shape per references/ears-patterns.md with the quality bar (fail test, discriminating
+  power, measurable vocabulary, defined terms; a worked sharpening example included) and — for
+  must — a `Verify:` command or an explicit manual check; the mechanical part of the bar is a
+  runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify presence,
+  vague wording, the 5–20 must band). Business cases "actor → action → outcome" (each covered
+  by at least one criterion), a glossary slot for the terms the criteria rely on, success
+  metrics, open questions with working assumptions and a blocking flag.
 - **When:** any new task/feature; phrases "gather requirements", "make a spec".
 - **Not for:** bugs — those belong to root-cause.
 
@@ -72,7 +78,8 @@ affected repositories, blast radius, contracts between repos (each with its owni
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
   the user explicitly (alternatives + trade-offs + a recommendation) — never slipped in as
-  a "default". Every change is traced: `[spec]/[found]/[assumption]`.
+  a "default". Every change is traced with certainty: `[spec]/[found] (file:line)/
+  [assumption: why]/[ambiguous]`; sibling-spec needs go to `depends-on` with a reason.
 - **When:** "system analysis", "how do we implement this", "which repositories are affected".
 
 ## decompositor — system spec → repo specs
@@ -87,7 +94,8 @@ changes from. It also folds the repo's aging docs into the changes.
 - **New means searched first:** an entity declared new (a function, class, endpoint, role,
   setting) is searched for across the repo first; found — extend/reuse; not found —
   `searched: <what, where>` in the spec. Otherwise a duplicate ordered by the spec will pass
-  acceptance as passed.
+  acceptance as passed. Changes serving a business criterion carry `Verify:`; lateral needs
+  go to `depends-on`; the spec names its ambiguity policy (halt and ask / skip and report).
 - **When:** "split by repository", "decomposition", "what changes in this repo".
 
 ## implementation-plan — repo spec → a task plan for an agent
@@ -98,9 +106,11 @@ needs. Written plans survive session boundaries and compaction — plans in a he
 - **Input → output:** repo spec → `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`
 - **Task format (machine-readable, parsed by spec-gate):** `### Task N`, `- Files:`
   (paths in backticks, on one line, globs allowed), action steps, `Verify` with the exact
-  command and expected result, `Commit`. One task = one commit. The hook reads only
+  command and expected result, `Commit`; optional `Risk:`/`Revert:`/`Criteria:`/`Verify (red):`
+  per task; plan-level `## Revert` (reverse-order undos + post-rollback verify), a final
+  full-suite task, an optional `## Decision log`. One task = one commit. The hook reads only
   `### Task`, `- Files:`, and `- Done:` from this (added by the executor on closure) —
-  `Verify` and `Commit` are for the executor agent, not the parser.
+  the rest is for the executor agent and spec-review, not the parser.
 - **Key rule:** the plan makes no decisions — it lays out decisions already made.
   A hole in the spec → stop and escalate, not "fill it in".
 - **When:** "make an implementation plan", "break it into tasks", "work plan".
@@ -130,11 +140,16 @@ broken until proven otherwise".
 - **Input → output:** specs + diff + executor's report → `docs/specs/YYYY-MM-DD-<topic>-<repo>-review.md`
 - **Verdicts:** `passed` (with evidence) / `failed` (what differs and where) /
   `unverifiable` (what is needed: a stand, a manual step, a test — handed over as a task,
-  not as a hope). A criterion without a test and observed behavior is unverifiable,
-  never passed.
+  not as a hope). A criterion with `Verify:` is checked by running exactly that command;
+  a must criterion without a runnable `Verify:` is unverifiable by default and flags a
+  spec defect, not a code failure. A criterion without a test and observed behavior is
+  unverifiable, never passed.
 - **Plus:** a scan for unsanctioned behavior (what the code does beyond the specs), an audit
   of the executor's report, spec-drift (a divergence without an amendment = failed; a stale
-  spec — propose an amendment). Outcome: accepted / accepted with notes / changes required.
+  spec — propose an amendment), and the criteria attack: name a plausible wrong implementation
+  that would pass every criterion — if one exists, the criteria set gets a proposed sharper
+  criterion (amendment), so the trap does not survive into the next feature. Outcome: accepted /
+  accepted with notes / changes required.
 - **Key rule:** the reviewer does not fix — fixes go back into the plan for the executor;
   bugs go to root-cause.
 - **When:** "review the implementation", "accept against the spec", "run acceptance".

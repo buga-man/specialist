@@ -293,3 +293,36 @@ test("a fenced example inside a plan is prose, never the contract", () => {
   assert.equal(info.hasOpenTasks, true);
   assert.deepEqual([...info.openFiles].sort(), ["src/a.ts", "src/b.ts"]);
 });
+
+test("regression: Verify/Revert/Decision-log extras and plan-level sections do not perturb the gate", () => {
+  const dir = project({
+    "docs/plans/p.md": [
+      "### Task 1: X",
+      "- Source: [repo spec §2]",
+      "- Files: `src/a.ts`",
+      "- Risk: touches auth",
+      "- Revert: git revert <sha>",
+      "- Criteria: AC-1",
+      "- Verify: npm test -- a → pass",
+      "- Verify (red): npm test -- a → fails before the feature exists",
+      "- Commit: feat: a",
+      "",
+      "### Task 2: Y",
+      "- Files: `src/b.ts`",
+      "- Verify: npm test -- b → pass",
+      "",
+      "## Decision log",
+      "- 2026-11-14: chose approach A — faster",
+      "",
+      "## Revert",
+      "- Task 2: undo · Task 1: undo",
+      "- After rollback: npm test → pass",
+    ].join("\n"),
+  });
+  const info = activePlanInfo(dir);
+  assert.equal(info.hasOpenTasks, true);
+  assert.equal(info.openTaskCount, 2);
+  assert.deepEqual([...info.openFiles].sort(), ["src/a.ts", "src/b.ts"]);
+  assert.equal(decide({ projectDir: dir, filePath: "src/other.ts", mode: "soft" }).action, "block");
+  assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "allow");
+});

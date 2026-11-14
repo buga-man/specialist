@@ -76,8 +76,11 @@ offer to dispatch scout subagents and keep the analysis (stage 4) in the main co
 - Walk the spec requirement by requirement and map each to concrete changes; anything unmapped is a gap.
 - Walk the surfaces the spec usually forgets: user-facing UI/UX, permissions and security,
   data migration and backward compatibility, failure modes, observability and operations, performance.
-- Mark every statement with its source: `[spec]` — stated in the spec, `[found]` — discovered
-  in code or docs, `[assumption]` — your inference.
+- Mark every statement with its source, and be honest about certainty: `[spec]` — stated in
+  the spec; `[found]` — verified in code or docs, carrying `file:line` evidence; `[assumption:
+  why]` — your inference, carrying the reason; `[ambiguous]` — could not be resolved, must stay
+  visible, never blended silently into prose. A risk or impact without evidence is `[ambiguous]`,
+  not a fact.
 
 ## 5. Ask the human
 
@@ -101,6 +104,7 @@ offer to dispatch scout subagents and keep the analysis (stage 4) in the main co
 id: <topic>                # unique artifact id — follow the sibling docs' convention
 parent: <business-spec-id>
 children: []               # repo specs — appended by decompositor
+depends-on: []             # lateral needs: <sibling-id>#<section> — each with a one-line reason in prose
 status: draft              # draft / approved
 last-updated: YYYY-MM-DD
 ---
@@ -118,7 +122,7 @@ A diagram of interactions, before → after where helpful.
 
 ## 2. Changes by repository
 ### <repo-name>
-- <change> — what changes and why, traced to its source: [spec] / [found] / [answer #N]
+- <change> — what changes and why, traced to its source: [spec] / [found] / [assumption: why] / [answer #N]
 
 ## 3. Contracts
 Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning, not code:
@@ -137,7 +141,7 @@ Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning,
 - Security and permissions: what the change grants, exposes, or tightens
 
 ## 6. Open questions
-| # | Question | Working assumption | Risk if wrong |
+| # | Question | Working assumption | Risk if wrong | Blocking |
 
 ## 7. Decisions and rationale
 Architectural decisions — each discussed with the user — and the alternatives rejected.
@@ -151,7 +155,8 @@ Append-only log of approved changes to this spec (a spec may change — never si
 
 - **No code**: contracts, boundaries, and data semantics — not implementations. Contract-level field lists are fine when they carry meaning.
 - **Architecture and behavior changes are always explicit**: discussed with the user and listed in Impact, never slipped into a changes list.
-- **Traceability**: every change cites its source (`[spec]`, `[found]`, `[answer]`); a change with no source is a new decision — surface it as such.
+- **Traceability**: every change cites its source (`[spec]`, `[found]`, `[assumption: why]`, `[answer]`); a change with no source is a new decision — surface it as such. Certainty is part of the citation: `[found]` carries `file:line`, an inference carries its reason, an unresolved point stays `[ambiguous]` and visible.
+- **Dependencies are typed**: when this spec needs an output of a sibling spec, record it in `depends-on` (`<id>#<section>`) with a reason — a silent cross-spec need is how integration surprises happen.
 - **Metadata is two-way**: when sibling docs carry YAML frontmatter, the new spec gets it
   too (copy their field set). Creating it is **two edits** — set its `parent` (the business
   spec) and append its `id` to that spec's `children`; a parent with downstream docs and

@@ -43,7 +43,8 @@ in a head do not.
 - Save as `docs/plans/YYYY-MM-DD-<topic>-<repo>.md` next to the specs; cross-link all three.
 - Per task, use the format below. Steps are single, concrete actions. Verify holds exact commands and their exact expected results. Commit holds the message; one task = one commit.
 - List every file the task will touch on the Files line, in backticks, on one line — the spec-gate hook enforces exactly that scope during implementation. Globs are allowed when a task genuinely spans many files (`src/**/*.css`); prefer exact paths.
-- Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves). The spec-gate hook ignores every line it does not parse — these three are for the executor and the reviewer.
+- Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves), `- Verify (red):` (tests-first tasks — the exact command showing the failure the unimplemented feature must produce; a red test that cannot fail checks nothing, and the task's `Verify:` then flips it green). The spec-gate hook ignores every line it does not parse — these are for the executor and the reviewer.
+- Plans of more than one task — or with any risky task — end with two plan-level sections, written after the last task (the gate reads `## ...` headers as task boundaries, so plan-level sections must not sit between tasks): `## Revert` — the per-task undos in reverse execution order plus one post-rollback verify command — and a final full-suite task (`### Task N: full suite green`, `Verify: <full test command> → exit 0, no previously-passing test regressed`). Per-task `Verify:` commands alone do not guarantee the whole suite is green.
 - Leave closure to the executor: a task is closed by a `- Done: <commit hash>` line in its section. Checkbox ticks (`- [x]`) are progress notes — the gate ignores them for closure. **Never put a `- Done:` line in the plan you write** — the gate reads any Done marker as closure, so a template line would close every task before work starts.
 - When two tasks share an interface, name it in both (what one produces, the other consumes).
 - Small implementation choices are made by repo conventions: `CODESTYLE.md` in the repo root when present; when it is absent, note in the plan that conventions are not formalized. When neither applies, pick the simplest and say so inside the task.
@@ -55,6 +56,7 @@ in a head do not.
 - Authority: no task requires a decision the specs do not make. If one surfaces, stop and raise it — the plan translates decisions, never invents them.
 - Reuse: a task creating something new cites the repo spec's `searched:` evidence; no citation — raise it, the plan does not invent duplicates.
 - Ordering: no verification depends on a later task; coupled tasks name their interface.
+- Rollback: multi-task plans carry `## Revert` and the full-suite gate task; every task's `Verify (red)` really fails before the implementation exists.
 - Proportionality: the plan stays roughly proportional to the repo spec.
 - Hand the plan to the user for approval. This skill ends at the approved plan; execution is separate work.
 
@@ -77,6 +79,8 @@ last-updated: YYYY-MM-DD
 - Repository: <name>
 - Execution: one task = one commit, in order; each task is executable
   by a fresh agent holding the repo spec and this task alone.
+- Ambiguity: on an ambiguity the specs do not cover — halt and ask (the default),
+  or skip and report. Silence is not an option.
 
 ## Constraints
 Verbatim from the specs — only what shapes the code: versions, conventions,
@@ -95,11 +99,20 @@ API behavior, security rules.
 - Revert: <the one-line undo>   (optional)
 - Criteria: <business criteria this task serves>   (optional)
 - Verify: <exact command> → <expected result>
+- Verify (red): <exact command> → <the failure before the feature exists>   (optional, tests-first)
 - Commit: <message>
 <!-- Do not write a "- Done:" line here: the executor adds it when the task closes,
      and any Done marker already present makes the spec-gate treat the task as closed. -->
 
 ### Task 2: ...
+
+## Decision log   (optional — mid-execution decisions, dated, with rationale)
+- YYYY-MM-DD: <decision> — <rationale>
+
+## Revert   (optional — plans of more than one task or any risky task)
+Undos in reverse execution order, then one post-rollback verify:
+- Task 2: <undo> · Task 1: <undo>
+- After rollback: <verify command → expected>
 ```
 
 ## Rules

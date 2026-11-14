@@ -79,6 +79,14 @@ subagents and keep the main context for judgment, not for reading raw material:
 ## 6. Write the spec — only when everything forms one picture
 
 - If it does not, say exactly what is missing and stop. A spec built on guesses the user could have resolved is waste.
+- Before the criteria are final, run the quality bar (references/ears-patterns.md) over every
+  must criterion and walk the set for completeness: every business case is covered by at least
+  one criterion, error paths and boundaries (limits, empty, maximum, permission edges) are
+  present or explicitly deferred, and no criterion survives the fail test (nothing concrete
+  could fail it). 5–15 must criteria is the normal band; more than ~20 means the scope is
+  really several features — split it with the user. The mechanical part of the bar — Verify
+  presence on must, unmeasurable wording, the count band — is checked by
+  `node "<skill-dir>/scripts/check-criteria.mjs" <spec-path>` before saving; fix what it names.
 - Save as `docs/specs/YYYY-MM-DD-<topic>.md` in the main repository of the task; if the location is unclear, ask once.
 - After the user approves the spec, this skill is done. Planning and implementation are separate work.
 
@@ -115,7 +123,14 @@ outside the project must understand what and why from this section alone.
 Numbered, verifiable statements; a business person can check each one.
 Mark every criterion's source: [request], [docs], [answer #N].
 Mark each must (the feature fails without it) or should (valuable, negotiable) — plans and reviews lean on the difference.
-1. ...
+Shape each criterion with an EARS pattern (see references/ears-patterns.md) so a fresh
+agent parses it without guessing: a fixed stem — "When <trigger>, the system shall …",
+"While <state>, …", "If <condition>, … shall not …", or a plain always-true property.
+Every must criterion carries a `Verify:` — the command that decides it, or an honest
+manual check. spec-review runs or inspects exactly that, so the verdict is evidence,
+not impression.
+1. <EARS-shaped statement> (must) — Verify: <exact command → expected result, or "manual — <who observes what>">
+2. ... (should)
 
 ## 4. Business cases
 Only cases that are genuinely distinct (happy path + key alternatives and failures),
@@ -128,13 +143,20 @@ each as an actor → action → outcome sequence.
 How the outcome is measured after release: metric, baseline, target, when measured.
 What nobody plans to measure is a wish, not a feature.
 
-## 6. Open questions
-| # | Question | Working assumption | Risk if the assumption is wrong |
+## 6. Glossary
+Only when domain terms appear in the criteria: term → definition a reader outside the
+project can use. A criterion built on an undefined term is unverifiable, however well shaped.
 
-## 7. Decisions and rationale
+## 7. Open questions
+| # | Question | Working assumption | Risk if the assumption is wrong | Blocking |
+
+Blocking = yes means downstream skills must not start before it is resolved —
+"one coherent picture" is enforced here, not in the next stage.
+
+## 8. Decisions and rationale
 Key business decisions made during brainstorming and why alternatives were rejected.
 
-## 8. Amendments
+## 9. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):
 - YYYY-MM-DD: <what and why> (approved by <user>, source: <task or ruling>)
 ```
@@ -147,5 +169,5 @@ Append-only log of approved changes to this spec (a spec may change — never si
   (copy their field set). Downstream skills append to this spec's `children` — a parent
   with downstream docs and an empty `children` is a traceability defect; if you can already
   see it stale, fix it.
-- **Every acceptance criterion is verifiable** by a business person, not only by a developer.
+- **Every acceptance criterion is verifiable** by a business person, not only by a developer — a must criterion names its `Verify:` (a command or an explicit manual observation), and its shape follows an EARS pattern (references/ears-patterns.md).
 - Write the spec in the team's working language, which may differ from the language of this skill.

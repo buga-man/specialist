@@ -69,8 +69,8 @@ in the main context:
 
 ## 4. Map the changes
 
-- Per change: what and why, where — concrete file paths and modules to add or modify, following the repo's conventions.
-- Add short illustrative snippets where they pin down intent: a signature, a data shape, a reference to the existing pattern to imitate.
+- Per change: what and why, where — concrete file paths and modules to add or modify, following the repo's conventions. A change that carries a business criterion names its `Verify:` — the command that decides it, or an honest manual check; spec-review runs or inspects exactly that.
+- Add short illustrative snippets where they pin down intent: a signature, a data shape, a reference to the existing pattern to imitate. When a behaviour is subtle (edge cases, ordering, error shapes), pin the change with a 2-3 row example table (input → expected outcome) — examples are the contract the implementer cannot misread.
 - Note the tests this repo will need, in its conventions.
 - Include the repo's own docs the change invalidates (README, architecture notes, guides) — updating them is part of the change and becomes ordinary plan tasks, not an afterthought.
 - Note ordering: which other repos' changes this one waits for.
@@ -94,6 +94,7 @@ in the main context:
 id: <topic>-<repo>         # unique artifact id — follow the sibling docs' convention
 parent: <system-spec-id>   # for a multi-page system spec: the package README's id
 children: []               # plans — appended by implementation-plan
+depends-on: []             # sibling specs this one waits for: <id>#<section> — each with a one-line reason
 status: draft              # draft / approved
 last-updated: YYYY-MM-DD
 ---
@@ -104,6 +105,8 @@ last-updated: YYYY-MM-DD
 - Status: draft / approved
 - Business spec: <link> · System spec: <link>
 - Repository: <name>
+- Ambiguity policy: what the implementer does on an ambiguity the specs do not cover —
+  halt and ask (the default), or skip and report; silence is not an option
 
 ## 1. Role in the feature
 What this repo contributes and receives; existing modules and patterns
@@ -112,10 +115,11 @@ Business criteria covered: which business-spec acceptance criteria this
 repo's changes serve — the semantic traceability spec-review verifies against.
 
 ## 2. Changes
-Per change: what and why (source: [system spec §N] / [found] / [answer #N]),
+Per change: what and why (source: [system spec §N] / [found] / [assumption: why] / [answer #N]),
 where — file paths and modules to add or modify, and the pattern to follow.
 Each change is reuse / extend / new; `new` carries its `searched:` evidence.
 Short illustrative snippets where they pin down intent.
+A change serving a business criterion carries `Verify:` (command → expected, or "manual — what is observed").
 
 ## 3. Repo-side contracts
 Each contract from the system spec as seen from this repo: what it
@@ -128,7 +132,7 @@ What to test and how this repo tests (frameworks, locations, conventions).
 Which other repos' changes this waits for; what waits for this repo.
 
 ## 6. Open questions
-| # | Question | Working assumption | Risk if wrong |
+| # | Question | Working assumption | Risk if wrong | Blocking |
 
 ## 7. Decisions and rationale
 
