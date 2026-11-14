@@ -1,6 +1,6 @@
 # Installation and dependencies
 
-The [feature-mastering](../feature-mastering/) plugin lives in the git repository
+This repository **is** the plugin: it lives in the git repository
 `github.com/buga-man/specialist` and installs through the standard mechanisms of
 **Claude Code** and **pi agent**. Skills are written once and work in both programs
 (the shared Agent Skills format); hooks (Claude Code) and extensions (pi) are a dual
@@ -51,7 +51,7 @@ does not run someone else's formatter where the project did not choose it.
 
 ```
 /plugin marketplace add https://github.com/buga-man/specialist.git
-/plugin install feature-mastering@specialist-skills
+/plugin install specialist@specialist-skills
 ```
 
 After installation the following register automatically: 12 skills (autoloaded by
@@ -75,17 +75,16 @@ echo '{"tool_name":"Bash","tool_input":{"command":"git add .env"},"cwd":"."}' \
 ## Installing into pi agent
 
 ```bash
-pi install git:github.com/buga-man/specialist.git      # bundle: ALL plugins of the repository
+pi install git:github.com/buga-man/specialist.git
 ```
 
-A git source makes pi install the repository **whole** (subpaths are not supported) — that
-is the bundle of the root `package.json`. One specific plugin — from a clone, by a local
-path:
+The git source makes pi install the repository **whole** — the repository root is the
+plugin itself (the pi manifest is the root `package.json`). From a clone, by a local path:
 
 ```bash
 git clone https://github.com/buga-man/specialist.git
 cd specialist
-pi install ./feature-mastering
+pi install .
 ```
 
 Updates: `pi update`. Pinning a version — by tag: `git:...skills.git@v<release-tag>`.
@@ -95,7 +94,7 @@ After editing or adding extensions: `/reload` inside pi.
 
 ```bash
 git clone https://github.com/buga-man/specialist.git
-cd specialist/feature-mastering
+cd specialist
 bash scripts/copy-skills.sh claude   # → ~/.claude/skills
 bash scripts/copy-skills.sh pi       # → ~/.pi/agent/skills
 bash scripts/copy-skills.sh agents   # → ~/.agents/skills (cross-harness)
@@ -134,5 +133,5 @@ while a plan is open) — the modes are changed by a human.
 ## Disabling and removal
 
 - Pointwise: `.spec-gate` = `off`, `.vuln-guard` = `off` in a specific project.
-- Fully: `/plugin uninstall feature-mastering@specialist-skills` (Claude Code),
-  `pi remove feature-mastering` (pi).
+- Fully: `/plugin uninstall specialist@specialist-skills` (Claude Code),
+  `pi remove specialist-skills` (pi).

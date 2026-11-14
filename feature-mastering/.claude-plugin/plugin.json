@@ -1,8 +1,0 @@
-{
-  "name": "feature-mastering",
-  "description": "Full-cycle feature development skills for Claude Code and pi agent: business spec → system analysis → per-repository decomposition → work plan → spec-driven implementation → up-to-date documentation",
-  "version": "0.21.0",
-  "author": {
-    "name": "Specialist"
-  }
-}

@@ -14,7 +14,7 @@ executor with fresh context.
 
 There are no style-enforcement tools: no `.editorconfig`, no eslint/prettier/ruff, and no
 agent `CLAUDE.md`/`AGENTS.md` in the repo. Discipline is held by the repository's own
-hooks (`feature-mastering/hooks/`), the tests, and this document. If such a config
+hooks (`hooks/`), the tests, and this document. If such a config
 appears, its aspect moves out of the document into that table.
 
 ## 2. Structure and modules
@@ -86,9 +86,8 @@ appears, its aspect moves out of the document into that table.
   `feat(kb-index): CLI build|search|map|audit|clean`;
   types: feat / fix / docs / chore. Merge commits are in English, as git writes them.
 - A new skill or hook — a minor version bump; an edit of a skill's text — a patch. The
-  version changes synchronously in three files: `.claude-plugin/marketplace.json`,
-  `feature-mastering/.claude-plugin/plugin.json`, both `package.json` files
-  (`feature-mastering/README.md` → "Versioning").
+  version changes synchronously in three files: `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, and `package.json` (README → "Versioning").
 
 ## 9. Anti-patterns
 
