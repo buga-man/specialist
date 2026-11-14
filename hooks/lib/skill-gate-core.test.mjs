@@ -9,7 +9,7 @@ import { decide, normalizeSkillName, STAGE_SKILLS } from "./skill-gate-core.mjs"
 test("normalizeSkillName: trim, leading slash, plugin prefix, lowercase", () => {
   assert.equal(normalizeSkillName("  brainstorm  "), "brainstorm");
   assert.equal(normalizeSkillName("/brainstorm"), "brainstorm");
-  assert.equal(normalizeSkillName("specialist-skills:brainstorm"), "brainstorm");
+  assert.equal(normalizeSkillName("specialist:brainstorm"), "brainstorm");
   assert.equal(normalizeSkillName("Brainstorm"), "brainstorm");
   assert.equal(normalizeSkillName("spec-implementation"), "spec-implementation");
 });
@@ -40,7 +40,7 @@ test("decide: fast blocks all three stage skills, the reason is a single line wi
 
 test("decide: name normalization before the check — /brainstorm and plugin:brainstorm are blocked", () => {
   assert.equal(decide({ mode: "fast", skill: "/brainstorm" }).action, "block");
-  assert.equal(decide({ mode: "fast", skill: "specialist-skills:brainstorm" }).action, "block");
+  assert.equal(decide({ mode: "fast", skill: "specialist:brainstorm" }).action, "block");
   assert.equal(decide({ mode: "fast", skill: "  /System-Thinking  " }).action, "block");
 });
 

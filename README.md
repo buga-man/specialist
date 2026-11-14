@@ -123,7 +123,7 @@ on git commands.
 
 ```
 /plugin marketplace add https://github.com/buga-man/specialist.git
-/plugin install specialist@specialist-skills
+/plugin install specialist@specialist
 ```
 
 To try it without pushing: `/plugin marketplace add <local path to the repository>`.

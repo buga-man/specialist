@@ -285,7 +285,7 @@ not cross directories, `**` does. `gistMaxChars` — the gist length in a map ro
 `bodySearch` — the body tier (§7): `false` turns it off entirely — `sections.json`
 receives no sections and the search stays face-only. On by default.
 
-The skill ships with the repository's plugin: `/plugin marketplace add <path>` + `/plugin install specialist@specialist-skills`. Nothing is written to the project except `.kbindex/` and one line in `.gitignore` (with consent).
+The skill ships with the repository's plugin: `/plugin marketplace add <path>` + `/plugin install specialist@specialist`. Nothing is written to the project except `.kbindex/` and one line in `.gitignore` (with consent).
 
 ## 11. Layout
 
@@ -310,7 +310,7 @@ The skill and the hook are part of the repository's single plugin; no separate p
 
 The core is `kb-core.mjs`, pure functions without I/O: the same core is reused by the hook and the CLI, tested with `node --test` and no mocks.
 
-**Portability.** The plugin installs into any project (`/plugin install specialist@specialist-skills`), the skill ships with it. No edits to foreign repositories, except `.kbindex/` in the one where the agent works.
+**Portability.** The plugin installs into any project (`/plugin install specialist@specialist`), the skill ships with it. No edits to foreign repositories, except `.kbindex/` in the one where the agent works.
 
 CLI:
 

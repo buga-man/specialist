@@ -78,7 +78,7 @@ test("hook: fast — the name is normalized: a leading slash and a plugin prefix
   assert.equal(slash.status, 2);
   assert.match(slash.stderr, /"brainstorm"/);
   const prefixed = runHook(
-    { tool_name: "Skill", tool_input: { skill: "specialist-skills:brainstorm" }, cwd: dir },
+    { tool_name: "Skill", tool_input: { skill: "specialist:brainstorm" }, cwd: dir },
     dir,
   );
   assert.equal(prefixed.status, 2);

@@ -1,18 +1,18 @@
 {
-  "name": "specialist-skills",
+  "name": "specialist",
   "owner": {
     "name": "Specialist"
   },
   "metadata": {
     "description": "Plugin marketplace (skills, hooks, extensions)",
-    "version": "0.22.0"
+    "version": "0.22.1"
   },
   "plugins": [
     {
       "name": "specialist",
       "source": "./",
       "description": "Full-cycle feature development skills: business spec → system analysis → per-repository decomposition → work plan → spec-driven implementation → acceptance → documentation",
-      "version": "0.22.0",
+      "version": "0.22.1",
       "author": {
         "name": "Specialist"
       }

@@ -51,7 +51,7 @@ does not run someone else's formatter where the project did not choose it.
 
 ```
 /plugin marketplace add https://github.com/buga-man/specialist.git
-/plugin install specialist@specialist-skills
+/plugin install specialist@specialist
 ```
 
 After installation the following register automatically: 12 skills (autoloaded by
@@ -133,5 +133,5 @@ while a plan is open) — the modes are changed by a human.
 ## Disabling and removal
 
 - Pointwise: `.spec-gate` = `off`, `.vuln-guard` = `off` in a specific project.
-- Fully: `/plugin uninstall specialist@specialist-skills` (Claude Code),
-  `pi remove specialist-skills` (pi).
+- Fully: `/plugin uninstall specialist@specialist` (Claude Code),
+  `pi remove specialist` (pi).

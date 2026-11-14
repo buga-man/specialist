@@ -1,6 +1,6 @@
 {
-  "name": "specialist-skills",
-  "version": "0.22.0",
+  "name": "specialist",
+  "version": "0.22.1",
   "description": "The specialist plugin for pi agent (skills, hooks, extensions)",
   "keywords": [
     "pi-package"
