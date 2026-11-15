@@ -1,7 +1,7 @@
 /**
  * Tests for the host manifests and hook registrations: every hook command must point at
  * an existing adapter, and every host manifest (Codex agent plugin, Claude Code plugin,
- * marketplace, pi package) must reference paths that exist.
+ * marketplace, pi package, ZCode plugin) must reference paths that exist.
  * Run: node --test hooks/lib/hooks-manifest.test.mjs
  */
 import { test } from "node:test";
@@ -94,6 +94,16 @@ test("host manifests: names are aligned and referenced paths exist", () => {
   assert.ok(existsSync(join(REPO_ROOT, "extensions")));
 
   assert.ok(existsSync(join(REPO_ROOT, "plugins/opencode/index.ts")), "OpenCode plugin entry");
+
+  // ZCode is protocol-compatible with Claude Code for hooks (the same seven events, the
+  // same SessionStart matchers, ${CLAUDE_PLUGIN_ROOT}, exit 2 = block), so it reuses
+  // hooks.json and the Claude Code adapters — no ZCode-specific manifest wiring.
+  const zcodePlugin = readJSON(".zcode-plugin/plugin.json");
+  assert.equal(zcodePlugin.name, "specialist");
+  assert.equal(zcodePlugin.skills, "./skills");
+  assert.equal(zcodePlugin.hooks, "./hooks/hooks.json");
+  assert.ok(existsSync(join(REPO_ROOT, zcodePlugin.skills)));
+  assert.ok(existsSync(join(REPO_ROOT, zcodePlugin.hooks)));
 });
 
 test("timeouts: every registration in both manifests sets a numeric timeout — a hung tool must never stall a turn", () => {
@@ -129,6 +139,7 @@ test("versions: every manifest field carries the same version (the version-sync 
     "claude-plugin/plugin.json": readJSON(".claude-plugin/plugin.json").version,
     "plugin.json (Codex)": readJSON("plugin.json").version,
     "package.json (pi)": readJSON("package.json").version,
+    "zcode-plugin/plugin.json (ZCode)": readJSON(".zcode-plugin/plugin.json").version,
     "marketplace.json metadata": marketplace.metadata?.version,
     "marketplace.json plugins[0]": marketplace.plugins?.[0]?.version,
     "marketplace.json root": marketplace.version,

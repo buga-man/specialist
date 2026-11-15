@@ -1,6 +1,6 @@
 /**
  * specialist — OpenCode plugin (V2 API with a V1 `server()` fallback), the twin of the
- * Claude Code / Codex hook adapters. One logic, four hosts; the cores live in
+ * Claude Code / Codex hook adapters. One logic, five hosts; the cores live in
  * `hooks/lib/*.mjs` and are imported directly.
  *
  * Mapping (tool names are OpenCode's):

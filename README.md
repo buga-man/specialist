@@ -1,7 +1,7 @@
 # specialist
 
 The repository is the **specialist** plugin: a full-cycle feature development framework
-for **Claude Code**, **pi agent**, **Codex CLI**, and **OpenCode** — from a raw task to
+for **Claude Code**, **ZCode**, **pi agent**, **Codex CLI**, and **OpenCode** — from a raw task to
 spec-driven code and up-to-date documentation. Skills are written once and work in every
 host (the shared Agent Skills format); installation uses each host's native mechanisms,
 and the skills can be used without installing the plugin.
@@ -67,6 +67,7 @@ traceability defect — spec-review and tech-writer check for it.
 .claude-plugin/plugin.json       Claude Code plugin manifest
 .claude-plugin/marketplace.json  marketplace wrapper (source: "./") — how /plugin install finds the plugin
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
+.zcode-plugin/plugin.json        ZCode plugin manifest: points ZCode at skills/ and hooks/hooks.json (ZCode speaks the Claude Code hook protocol, so the Claude Code adapters run unchanged)
 package.json                     pi package manifest (pi.skills / pi.extensions)
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
 hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
@@ -76,9 +77,11 @@ docs/                            documentation: skills, hooks, installation; des
 scripts/                         helper scripts (copy-skills.sh); skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
-## Hooks and extensions: one logic, four hosts
+## Hooks and extensions: one logic, five hosts
 
-One logic (`hooks/lib/*.mjs` cores), four wrappers: Claude Code adapters, Codex adapters
+One logic (`hooks/lib/*.mjs` cores), four wrappers for five hosts: the Claude Code
+adapters, shared verbatim with ZCode (which speaks the same hook protocol — the same
+events, matchers, and `${CLAUDE_PLUGIN_ROOT}`), Codex adapters
 (JSON output protocol, `apply_patch` support), pi extensions (`extensions/*.ts`), and the
 OpenCode plugin (`plugins/opencode/`). Details and the plan contract:
 [docs/hooks.md](docs/hooks.md); the pi extension
@@ -119,7 +122,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 ## Documentation
 
-- [Installation and dependencies](docs/installation.md) — Claude Code / pi / skills only;
+- [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
 - [Skills](docs/skills.md) — a human-readable description of all twelve skills: why they exist,
   input → output, when they trigger, key rules.
@@ -139,6 +142,21 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 ```
 
 To try it without pushing: `/plugin marketplace add <local path to the repository>`.
+
+### ZCode
+
+The repository doubles as a ZCode plugin marketplace (ZCode supports
+`.claude-plugin/marketplace.json`), and ZCode speaks the Claude Code hook protocol — the
+same adapters run unchanged. In the ZCode app:
+
+1. **Plugin Marketplace → Add → Add Plugin Marketplace** — paste the path to this
+   repository.
+2. **Personal → specialist → Install**.
+3. The hooks register automatically; **Settings → Plugin Management** shows each hook and
+   whether it is runnable. Plugin hooks run without a separate trust dialog.
+
+Updating: the marketplace page's gear button → **Marketplace Sources** → refresh this
+marketplace, then **Update** in the plugin details.
 
 ### pi agent
 

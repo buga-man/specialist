@@ -2,10 +2,10 @@
 
 This repository **is** the plugin: it lives in the git repository
 `github.com/buga-man/specialist` and installs through the standard mechanisms of
-**Claude Code**, **pi agent**, **Codex CLI**, and **OpenCode**. Skills are written once
-and work in every host
+**Claude Code**, **ZCode**, **pi agent**, **Codex CLI**, and **OpenCode**. Skills are
+written once and work in every host
 (the shared Agent Skills format); hooks and extensions are four wrappers of one logic —
-Claude Code, Codex, OpenCode, pi ([more detail](hooks.md)).
+Claude Code and ZCode (one protocol), Codex, OpenCode, pi ([more detail](hooks.md)).
 
 ## What is needed for full operation
 
@@ -15,7 +15,7 @@ Claude Code, Codex, OpenCode, pi ([more detail](hooks.md)).
 |---|---|---|
 | Access to github.com | installation via git (marketplace / `pi install` / clone) | `git ls-remote https://github.com/buga-man/specialist.git` |
 | **Node.js ≥ 18** | every hook runs as `node <script>`; pi and OpenCode themselves run on Node | `node --version` |
-| Claude Code, pi agent, Codex CLI, or OpenCode | the host; the skills work in every one, hooks where the host has an interception point | — |
+| Claude Code, ZCode, pi agent, Codex CLI, or OpenCode | the host; the skills work in every one, hooks where the host has an interception point | — |
 
 Important: **the plugin itself carries no npm dependencies** — the hooks use only the
 Node standard library. Everything below is a dependency of *your projects*, not of the
@@ -71,6 +71,21 @@ A quick manual check of a hook (it should print a message and `exit=2`):
 echo '{"tool_name":"Bash","tool_input":{"command":"git add .env"},"cwd":"."}' \
   | node "<path to the plugin>/hooks/lib/secrets-guard.mjs"; echo "exit=$?"
 ```
+
+## Installing into ZCode
+
+ZCode speaks the Claude Code hook protocol, so the same adapters run there unchanged; the
+ZCode manifest (`.zcode-plugin/plugin.json`) points it at `skills/` and
+`hooks/hooks.json`. In the ZCode app:
+
+1. **Plugin Marketplace → Add → Add Plugin Marketplace** — paste the path to this
+   repository (the marketplace root — the directory holding `.claude-plugin/`).
+2. **Personal → specialist → Install**.
+3. The hooks register automatically; **Settings → Plugin Management** shows each hook and
+   whether it is runnable. Plugin hooks run without a separate trust dialog.
+
+Updating: the marketplace page's gear button → **Marketplace Sources** → refresh this
+marketplace, then **Update** in the plugin details.
 
 ## Installing into pi agent
 
@@ -133,5 +148,5 @@ while a plan is open) — the modes are changed by a human.
 ## Disabling and removal
 
 - Pointwise: `.spec-gate` = `off`, `.vuln-guard` = `off` in a specific project.
-- Fully: `/plugin uninstall specialist@specialist` (Claude Code),
-  `pi remove specialist` (pi).
+- Fully: `/plugin uninstall specialist@specialist` (Claude Code; in ZCode —
+  **Settings → Plugins** → uninstall), `pi remove specialist` (pi).

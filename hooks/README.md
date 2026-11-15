@@ -3,8 +3,9 @@
 This directory holds the hook machinery of the plugin. The logic lives in `lib/`:
 `*-core.mjs` files are pure, I/O-free cores; `<hook>.mjs` / `<hook>-codex.mjs` are thin
 per-host adapters that translate one host event into a core call and the verdict back
-into the host protocol. Registration — two manifests: `hooks.json` (Claude Code:
-event → matcher → command) and `hooks-codex.json` (Codex; the root `plugin.json` points
+into the host protocol. Registration — two manifests: `hooks.json` (Claude Code, and
+ZCode — which speaks the same hook protocol: event → matcher → command) and
+`hooks-codex.json` (Codex; the root `plugin.json` points
 Codex at it). The pi counterparts live in `../extensions/`, the OpenCode plugin in
 `../plugins/opencode/`.
 
@@ -13,7 +14,8 @@ Invariants:
 - **Fail-safe**: an internal error, garbage config, or a missing dependency → allow /
   skip, exit 0 — never block. Blocking is only explicit and always carries an
   explanation of the way forward.
-- **One logic, four hosts**: every decision lives in a shared core; adapters stay thin.
+- **One logic, five hosts** (four wrappers — ZCode reuses the Claude Code adapters
+  verbatim): every decision lives in a shared core; adapters stay thin.
   New logic goes into a core (with a test next to it), not into an adapter.
 - **Adapter protocols**: Claude Code — stdin JSON in, exit 2 + stderr to block; Codex —
   stdin JSON in, JSON on stdout (`apply_patch` edits, `additionalContext`,

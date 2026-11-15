@@ -2,9 +2,10 @@
 
 The pipeline's rules live in skills, but a skill is a request to the model. A hook is a
 barrier at the tool level: an edit outside the plan does not go through, a secret never
-reaches git, a broken formatter is fixed on the spot. One logic, four wrappers: the shared
-core in `hooks/lib/*.mjs`, plus one adapter per host — the Claude Code hook (stdin JSON,
-exit 2 = block), the Codex hook (the same stdin; JSON output where Codex differs —
+reaches git, a broken formatter is fixed on the spot. One logic, four wrappers for five
+hosts: the shared core in `hooks/lib/*.mjs`, plus one adapter per host — the Claude Code
+hook (stdin JSON, exit 2 = block), shared verbatim with ZCode, which speaks the same hook
+protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 `apply_patch` edits, `additionalContext` on PostToolUse/SessionStart, `{"decision":
 "block"}` on Stop; registered by `hooks/hooks-codex.json`), the pi extension
 (`pi.on(...)`, TypeScript in `extensions/`), and the OpenCode plugin
@@ -12,17 +13,22 @@ exit 2 = block), the Codex hook (the same stdin; JSON output where Codex differs
 
 ## Host support
 
-| Hook | Claude Code | Codex | pi | OpenCode |
-|---|---|---|---|---|
-| `spec-gate` | ✅ block | ✅ block (`apply_patch` payloads are checked file by file) | ✅ block | ✅ block |
-| `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block |
-| `vuln-guard` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
-| `edit-guard` | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
-| `git-watch` | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
-| `plan-context` | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
-| `codestyle-reminder` | ✅ session start | ✅ session start | ✅ session start (persistent message) | ✅ with the session orientation |
-| `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | ✅ settle-time follow-up (`agent_settled` → a continuation turn) | — (no turn-end interception point) |
-| `skill-gate` | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
+| Hook | Claude Code | ZCode | Codex | pi | OpenCode |
+|---|---|---|---|---|---|
+| `spec-gate` | ✅ block | ✅ block | ✅ block (`apply_patch` payloads are checked file by file) | ✅ block | ✅ block |
+| `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block | ✅ block |
+| `vuln-guard` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
+| `edit-guard` | ✅ failures return to the agent | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
+| `git-watch` | ✅ signal (exit 2) | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
+| `plan-context` | ✅ session start | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
+| `codestyle-reminder` | ✅ session start | ✅ session start | ✅ session start | ✅ session start (persistent message) | ✅ with the session orientation |
+| `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | ✅ settle-time follow-up (`agent_settled` → a continuation turn) | — (no turn-end interception point) |
+| `skill-gate` | ✅ Skill tool | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
+
+The ZCode column mirrors Claude Code on purpose: ZCode speaks the same hook protocol
+(the same events, the same `startup/resume/clear/compact` matchers, `${CLAUDE_PLUGIN_ROOT}`,
+exit 2 = block), registered by its own manifest (`.zcode-plugin/plugin.json`) that points
+at `hooks/hooks.json` — no ZCode-specific adapters exist.
 
 `edit-guard` bundles what follows an edit: the formatter, the linter, the opt-in
 semgrep scan (`.vuln-guard = always`), and the boundary-visibility notes. The edit-scan
@@ -30,14 +36,15 @@ column moved there from `vuln-guard`, whose own registration is the commit bound
 
 Codex runs untrusted hooks only after explicit trust (`/hooks`), and its PostToolUse is
 record-only — report-only hooks there deliver findings as `additionalContext` instead of
-blocking. Where a host has no interception point — `skill-gate` outside Claude Code,
+blocking. Where a host has no interception point — `skill-gate` outside Claude Code and
+ZCode,
 `kb-gate` on OpenCode — the discipline degrades to what the skills request; that is a
 documented boundary, not a silent gap.
 
 ## Overview
 
 The overview maps the Claude Code and pi wiring; the Host support table above covers all
-four hosts.
+five hosts.
 
 | Hook | Claude Code | pi | What it does | Dependency | Project config |
 |---|---|---|---|---|---|
