@@ -1,6 +1,6 @@
 ---
 name: system-thinking
-description: Turn an approved business specification into an implementation specification — which repositories change, which contracts connect them, what breaks. Use when a spec or requirements exist and the user asks how to implement them, asks for system analysis or a repo-by-repo work breakdown, or wants API contracts defined. Analysis is critical: verify the spec against docs and code, hunt for work it never mentions (frontend, migrations, compatibility), and always discuss architectural or behavior-affecting decisions with the user before writing them down. The output contains no code.
+description: Turn an approved business specification into an implementation specification — which repositories change, which contracts connect them, what breaks. Use when a spec or requirements exist and the user asks how to implement them, asks for system analysis or a repo-by-repo work breakdown, or wants API contracts defined. Analysis is critical — verify the spec against docs and code, hunt for work it never mentions (frontend, migrations, compatibility), and always discuss architectural or behavior-affecting decisions with the user before writing them down. The output contains no code.
 ---
 
 # System thinking

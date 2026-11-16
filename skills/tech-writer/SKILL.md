@@ -1,6 +1,6 @@
 ---
 name: tech-writer
-description: Keep documentation in sync with code and build the end-user manual. Two modes, usually run together after a merge or before a release. Spec audit — use when the user asks to check spec consistency, sync specs with code, or find undocumented changes — compares specs against the code since the last audit and proposes amendments; the user approves, nothing is applied silently. User manual — use when the user asks to build or update a user guide — turns approved business specs into a standalone HTML + PDF with screenshots taken from the live stand. Documentation-side counterpart of spec-review: it reports and proposes; it does not fix code and does not review acceptance.
+description: Keep documentation in sync with code and build the end-user manual. Two modes, usually run together after a merge or before a release. Spec audit — use when the user asks to check spec consistency, sync specs with code, or find undocumented changes — compares specs against the code since the last audit and proposes amendments; the user approves, nothing is applied silently. User manual — use when the user asks to build or update a user guide — turns approved business specs into a standalone HTML + PDF with screenshots taken from the live stand. Documentation-side counterpart of spec-review — it reports and proposes; it does not fix code and does not review acceptance.
 ---
 
 # Tech writer
