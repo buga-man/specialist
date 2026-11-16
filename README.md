@@ -74,7 +74,7 @@ hooks/                           the hooks: hooks.json registers them in Claude 
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, edit-guard.ts, plan-context.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                            documentation: skills, hooks, installation; design notes; the skill template
-scripts/                         helper scripts (copy-skills.sh); skill CLIs live in the skill directories — skills/<name>/scripts/
+scripts/                         helper scripts: copy-skills.sh, compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, generated docs/skill-index.md; skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
 ## Hooks and extensions: one logic, five hosts
@@ -95,7 +95,7 @@ API — [extensions/README.md](extensions/README.md).
 | `vuln-guard` | before Bash (git commit) | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too (inside edit-guard), `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
 | `git-watch` | after Bash | after tree-changing git operations (commit/checkout/merge/rebase/pull/reset/cherry-pick/stash pop) it reconciles derived artifacts with the disk: the kb-index index — a signal to rebuild (a data derivative), CODESTYLE.md — a signal to ask the user (the document is committed); silent when everything is fine |
 | `edit-guard` | after Edit/Write | one adapter, one deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:` scope line or of `.secrets-allow`/`.vuln-allow` is called out), the project's formatter (prettier / ruff), the project's linter (eslint / ruff / ktlint, each `--fix`-ing what it can), and — under `.vuln-guard = always` — a semgrep scan; unfixable errors and violations are returned to the agent to repair |
-| `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; with the `fast` profile — also the profile block, even without a plan; with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; silent without a plan and at `off` |
+| `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; with the `fast` profile — also the profile block, even without a plan; with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; with no open tasks — the spec-chain line: the newest incomplete chain in `docs/specs/`, its stage and the skill to resume with (derived from the slugs and `status:` metadata — no state file); silent without a plan, at `off`, and when every chain is complete |
 | `codestyle-reminder` | session start | if `CODESTYLE.md` sits at the root: counts code commits from the recorded `base` (the threshold — 30 code commits or 30 days) and injects a single reminder line; **never blocks**; the staleness verdict — `skills/codestyle/scripts/codestyle.mjs status` |
 | `kb-gate` | Stop | reconciles the documentation index (`.kbindex/index.json`) with the disk by hashes: a document changed, appeared, or disappeared — the end of the turn is blocked with a rebuild command; without an index, at `stop_hook_active`, and on any error — silent |
 
@@ -224,7 +224,9 @@ In this mode hooks and extensions are **not** installed — skills only.
    variables are forbidden in SKILL.md.
    Command-and-project skills (like `stand-acceptance`, tied to a specific project's
    stand) are allowed — with an explicit scope in the description.
-4. Test in the hosts you target, bump the plugin version, and commit.
+4. Test in the hosts you target: `npm test && npm run compliance` must pass (the
+   compliance audit validates the frontmatter, the docs parity, and regenerates
+   `docs/skill-index.md` via `--fix` when it is stale). Then bump the plugin version, and commit.
 
 Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 

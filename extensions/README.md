@@ -29,8 +29,10 @@ When this repository is installed as a pi package (`pi install ...`), all
   file immediately; notes alone are appended to the result text. Logic:
   `../hooks/lib/format-core.mjs`, `lint-core.mjs`, `vuln-core.mjs`, `spec-core.mjs`.
 - **plan-context.ts** — on the session's first turn injects one persistent message with
-  orientation: the active plan, open tasks, the spec-gate mode. Silent when there is no
-  plan or the mode is `off`. After a `session_compact` the flag resets, so the
+  orientation: the active plan, open tasks, the spec-gate mode; with no open tasks —
+  the spec-chain line (the newest incomplete chain in docs/specs/ and the skill to
+  resume with, derived from the slugs and `status:` metadata). Silent when there is
+  nothing to report or the mode is `off`. After a `session_compact` the flag resets, so the
   orientation returns once the context was wiped. Logic:
   `../hooks/lib/plan-context-core.mjs`.
 - **git-watch.ts** — after a successful `bash` that ran a tree-changing git operation,

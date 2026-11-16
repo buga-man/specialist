@@ -145,6 +145,10 @@ Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning,
 
 ## 7. Decisions and rationale
 Architectural decisions — each discussed with the user — and the alternatives rejected.
+Decisions that are hard to reverse (public contracts, schemas, migrations, removals of
+existing behavior) are listed as a separate sub-list, each with the date, the rejected
+reversible alternative, and the revert cost: these outlive the feature, and every
+downstream skill — and tech-writer's audit — reads them first.
 
 ## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):

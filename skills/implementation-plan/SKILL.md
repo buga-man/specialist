@@ -41,6 +41,13 @@ in a head do not.
 ## 4. Write the plan
 
 - Save as `docs/plans/YYYY-MM-DD-<topic>-<repo>.md` next to the specs; cross-link all three.
+- Work lands on a feature branch: the plan names it on the `- Branch:` line (the repo's
+  own convention when it has one, else `feat/<topic>-<repo>`); the executor creates the
+  branch from the base **before Task 1** and every task commit lands on it. One branch
+  per plan is what makes acceptance cheap: spec-review diffs the branch against its base
+  instead of hunting commits across the history. A plan marked risky (shared core, data,
+  security) goes one step further — a dedicated worktree (`git worktree add`), so the
+  main checkout stays on `main` while the risky work runs isolated.
 - Per task, use the format below. Steps are single, concrete actions. Verify holds exact commands and their exact expected results. Commit holds the message; one task = one commit.
 - List every file the task will touch on the Files line, in backticks, on one line — the spec-gate hook enforces exactly that scope during implementation. Globs are allowed when a task genuinely spans many files (`src/**/*.css`); prefer exact paths.
 - Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves), `- Verify (red):` (tests-first tasks — the exact command showing the failure the unimplemented feature must produce; a red test that cannot fail checks nothing, and the task's `Verify:` then flips it green). The spec-gate hook ignores every line it does not parse — these are for the executor and the reviewer.
@@ -77,6 +84,8 @@ last-updated: YYYY-MM-DD
 - Status: draft / approved
 - Specs: business <link> · system <link> · repo <link>
 - Repository: <name>
+- Branch: <feat/<topic>-<repo>> — created before Task 1, one branch (or worktree) for
+  the whole plan; spec-review diffs it against the base
 - Execution: one task = one commit, in order; each task is executable
   by a fresh agent holding the repo spec and this task alone.
 - Ambiguity: on an ambiguity the specs do not cover — halt and ask (the default),
