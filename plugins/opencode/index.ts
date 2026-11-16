@@ -5,7 +5,8 @@
  *
  * Mapping (tool names are OpenCode's):
  *   - `tool.execute.before` / `execute.before`
- *       bash          → secrets-guard (git boundary) + vuln-guard (commit scan);
+ *       bash          → secrets-guard (git boundary) + vuln-guard (commit scan) +
+ *                       suite-gate (the .suite-gate suite before a commit);
  *                       a violation throws, which is OpenCode's way to block a tool call.
  *       edit / write  → spec-gate: the plan scope (docs/plans/) is enforced on the
  *                       payload's target files.
@@ -33,6 +34,7 @@ import { resolve } from "node:path";
 import { decide, editedFilePaths, readMode, scopeChangeNotes } from "../../hooks/lib/spec-core.mjs";
 import { checkGitCommand } from "../../hooks/lib/secrets-core.mjs";
 import { checkGitCommit, readVulnMode, scanEditedFiles } from "../../hooks/lib/vuln-core.mjs";
+import { checkGitCommit as checkSuiteGateCommit } from "../../hooks/lib/suite-core.mjs";
 import { formatFile } from "../../hooks/lib/format-core.mjs";
 import { lintFile } from "../../hooks/lib/lint-core.mjs";
 import { buildPlanContext } from "../../hooks/lib/plan-context-core.mjs";
@@ -44,6 +46,18 @@ import { gitRoot } from "../../skills/kb-index/scripts/lib/kb-fs.mjs";
 /** Child-process runner matching the contract every core expects. */
 const run = (cmd: string, args: string[], opts: Record<string, unknown>) => {
   const r = spawnSync(cmd, args, { ...opts, encoding: "utf8" } as never);
+  return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+};
+
+/** The shell-line runner for config-file command lines (`.suite-gate`) — the platform
+ *  shell sorts out quoting and `&&` for them. */
+const runShell = (commandLine: string, opts: Record<string, unknown>) => {
+  const r = spawnSync(String(commandLine), {
+    ...opts,
+    shell: true,
+    encoding: "utf8",
+    windowsHide: true,
+  } as never);
   return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 };
 
@@ -82,6 +96,10 @@ async function guardBefore(projectDir: string, tool: string, args: EditInput | u
         else {
           const vuln = await checkGitCommit({ projectDir, command, run });
           if (vuln) blockReason = vuln.reason;
+          else {
+            const tests = await checkSuiteGateCommit({ projectDir, command, run, runShell });
+            if (tests) blockReason = tests.reason;
+          }
         }
       }
     } else if (tool === "edit" || tool === "write" || tool === "patch") {

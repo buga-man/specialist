@@ -35,6 +35,13 @@ export function run(cmd, args, opts = {}) {
   return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
+/** The shell-line runner for commands that come from project config files (`.suite-gate`)
+ *  as command lines, not argv — the shell sorts out quoting and `&&` for them. */
+export function runShell(commandLine, opts = {}) {
+  const r = spawnSync(String(commandLine), { ...opts, shell: true, encoding: "utf8", windowsHide: true });
+  return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+}
+
 /** The project directory of a hook call, resolved the same way in every adapter:
  *  the host's project root when it says so (CLAUDE_PROJECT_DIR), else the git root of
  *  the session cwd, else the cwd itself. One resolution so the per-project lookups
