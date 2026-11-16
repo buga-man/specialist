@@ -46,7 +46,8 @@ spec text directly.
 - **Refactor — the behavior must not change.** A failing test would encode the change you
   are about to make. Write characterization tests: they pass against the current code and
   must still pass after the refactor. A mixed change splits: behavior → feature path,
-  structure → refactor path.
+  structure → refactor path. A refactor is not a license to strip comments either — see
+  the why-comments rule below.
 
 ### 3. Implement to the spec
 
@@ -98,6 +99,11 @@ change — that is the proof nothing changed.
   The specs win until the user amends them: code and specs never drift apart silently.
 - Scope guard: work discovered along the way but absent from the plan goes through the
   tiers above, never absorbed silently.
+- **Why-comments are repo memory, not noise.** A comment carrying context — the bug
+  behind a workaround, a business constraint, an upstream issue, a dated decision, a
+  commit reference — is preserved and updated when its code moves, never deleted as
+  "clutter". The next reader (usually an agent with fresh context) has only the code and
+  these comments to explain why it looks like this; stripping them deletes the reason.
 
 ## Final report
 

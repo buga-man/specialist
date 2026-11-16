@@ -134,6 +134,9 @@ restore the behavior — it turns green. A test that was never red verifies noth
 - **Three tiers of deviations:** local (a different way, same behavior) — a ruling in the
   report; behavior/contract/scope — stop, an amendment to the owning spec after approval;
   changed intent — back to brainstorm.
+- **Why-comments stay:** context comments (the bug behind a workaround, a business
+  constraint, a dated decision, a commit reference) are preserved and updated, never
+  stripped as clutter — they are the repo's memory for the next reader, agent included.
 - **Final report:** decisions the specs did not cover; ambiguous readings (the one place a
   human is genuinely needed); rulings; spec amendments; unproven tests.
 - **When:** "implement", "execute the plan", "implement per the spec".
@@ -272,6 +275,11 @@ mimicry: agent code is indistinguishable from developer code.
   configs → git log → a sample of 15–25 files → rules with evidence → verification against
   a held-out sample); verify — a cheap cross-check against recent commits
   ("24 rules: 22 confirmed, 1 updated, 1 removed").
+- **Agent readability (section 10):** the repo's other reader navigates by grep and reads
+  in capped chunks — the section records the size/name/comment constraints the repo
+  actually meets, measured by `node <skill>/scripts/codestyle.mjs scan` (files, largest,
+  oversized, the 500-line threshold); a constraint the numbers break is named as an
+  exception, never a rule to pretend.
 - **Hard rules:** a rule without `file:line` evidence is not recorded; generate never reads
   the previous document (anti-echo-chamber); linter configs are the primary source, their
   aspects are not paraphrased; a 150-line cap.
