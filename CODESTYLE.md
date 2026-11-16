@@ -1,6 +1,6 @@
 ---
 codestyle: 1
-generated: 2026-11-14
+generated: 2026-11-16
 base: 0531468dcde6232c8416203663b1f08f4d85ac0e
 ---
 
@@ -99,3 +99,15 @@ appears, its aspect moves out of the document into that table.
   `docs/skills.md` (kb-index: "add the intro paragraph to the document, not to the index").
 - ❌ Silent pass-through on unparseable data: if it did not parse — block with an
   explanation of the format, not a silent skip (`hooks/lib/spec-core.mjs:314`).
+
+## 10. Agent readability
+
+- Code files stay within one capped agent read — 80 of 83 under 500 lines
+  (`skills/codestyle/scripts/codestyle.mjs scan`, 2026-11-16). The exceptions are all in
+  kb-index — `skills/kb-index/scripts/lib/kb-core.mjs` (1197),
+  `skills/kb-index/scripts/lib/kb-core.test.mjs` (627), `skills/kb-index/scripts/kb.mjs`
+  (546): read them in chunks, do not split unprompted.
+- Why-comments carry provenance and survive refactors: a dated decision record
+  (`hooks/lib/vuln-core.mjs:9` — "Design decisions (agreed 2026-11-08)"), the reason a
+  workaround exists (`skills/codestyle/scripts/lib/codestyle-core.mjs:103` — the local-date
+  note). Deleting one is losing the reason the code looks like this.

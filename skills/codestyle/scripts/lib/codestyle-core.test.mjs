@@ -10,8 +10,10 @@ import {
   daysSince,
   freshness,
   isCodeFile,
+  LARGE_FILE,
   parseFrontmatter,
   parseGitLog,
+  readabilityFacts,
   reminderLine,
   todayISO,
 } from "./codestyle-core.mjs";
@@ -146,4 +148,34 @@ test("reminderLine: one line, the keys present in the text, no newline", () => {
   assert.match(line, /base a1b2c3d/);
   assert.match(line, /generated 2026-10-01/);
   assert.match(line, /codestyle\.mjs" status/);
+});
+
+test("readabilityFacts: the largest file, the oversized list capped at five, the limit carried", () => {
+  const files = [
+    { path: "src\\small.mjs", lines: 120 },
+    { path: "src/big.mjs", lines: 610 },
+    { path: "src/mid.ts", lines: LARGE_FILE - 1 },
+    { path: "src/edge.mjs", lines: LARGE_FILE },
+    { path: "a1.mjs", lines: 900 },
+    { path: "a2.mjs", lines: 800 },
+    { path: "a3.mjs", lines: 700 },
+    { path: "a4.mjs", lines: 660 },
+    { path: "a5.mjs", lines: 640 },
+    { path: "a6.mjs", lines: 630 },
+  ];
+  const facts = readabilityFacts(files);
+  assert.equal(facts.files, files.length);
+  assert.deepEqual(facts.largest, { file: "a1.mjs", lines: 900 }); // backslashes normalized
+  assert.equal(facts.limit, LARGE_FILE);
+  assert.deepEqual(
+    facts.oversized.map((f) => f.file),
+    ["a1.mjs", "a2.mjs", "a3.mjs", "a4.mjs", "a5.mjs"], // top five by lines, the rest cut
+  );
+  assert.ok(facts.oversized.every((f) => f.lines >= LARGE_FILE), "499 stays out of oversized");
+});
+
+test("readabilityFacts: empty or malformed input — honest empties, not a crash", () => {
+  assert.deepEqual(readabilityFacts([]), { files: 0, largest: null, oversized: [], limit: LARGE_FILE });
+  assert.deepEqual(readabilityFacts(null), { files: 0, largest: null, oversized: [], limit: LARGE_FILE });
+  assert.equal(readabilityFacts([{ path: "ok.mjs", lines: 5 }, { path: 7, lines: "x" }, null]).files, 1);
 });

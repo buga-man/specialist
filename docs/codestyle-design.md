@@ -47,6 +47,7 @@ base: a1b2c3d4
 7. **Comments and language** — density, the code's language vs the documentation's language.
 8. **Commits** — the message format from git log.
 9. **Anti-patterns** — "we do not write like this here", each with an evidence example.
+10. **Agent readability** — what serves the machine reader: file sizes within one capped read, unique greppable names. The evidence is measured (`codestyle.mjs scan`), and a constraint the numbers break is named as an exception, not a rule.
 
 ### Rule format
 
@@ -99,7 +100,7 @@ The "not markdown = code" heuristic is deliberately crude: precision is not need
 | stale | one line: "CODESTYLE.md may be stale: N code commits since <date>. Check: `codestyle.mjs status` / `/codestyle verify`" |
 | broken frontmatter, no git, any error | exit 0, silence (fail-safe as in every gate of this repo) |
 
-**CLI** — `scripts/codestyle.mjs status`: prints the verdict as JSON (`{stale, codeCommits, days, base}`); the skill's verify mode uses the same call — a single source of truth about "stale or not", not a formula buried in instruction prose.
+**CLI** — `scripts/codestyle.mjs status`: prints the verdict as JSON (`{stale, codeCommits, days, base}`); the skill's verify mode uses the same call — a single source of truth about "stale or not", not a formula buried in instruction prose. A second command, `scan`, prints the agent-readability facts (§14) — the same "measurement lives in the CLI, not in the prose" principle.
 
 **Mechanics** — as in kb-index §8: `CLAUDE_PROJECT_DIR` → otherwise `git rev-parse --show-toplevel`; Windows — `spawnSync` with an argument array, paths via `/`, UTF-8 explicit.
 
@@ -179,3 +180,16 @@ codestyle-fs; `gitRoot` is inlined instead of being imported from kb-fs). The sk
 plugin installed, in any harness; the hook adapter `hooks/lib/codestyle-reminder.mjs` stayed in place
 and imports the core from the skill directory. Paths in SKILL.md are relative (`<skill-dir>`),
 `${CLAUDE_PLUGIN_ROOT}` is forbidden in skills (the rule in docs/skill-template).
+
+## 14. Update 2026-11-16 — section 10 (agent readability)
+
+The skeleton grows a tenth section aimed at the repo's other reader — an agent that navigates
+by grep and reads in capped chunks ("Clean Code for AI Agents": the primary reader of code is
+now a machine). The descriptive hard rule stands: only constraints the repo actually meets are
+recorded. The file-size evidence is measured, not sampled — `codestyle.mjs scan`
+(`walkCodeFiles` in codestyle-fs: the repo's own code files, dependencies and build output
+skipped; `readabilityFacts` in codestyle-core) prints `{files, largest, oversized, limit}`
+with the 500-line threshold (`LARGE_FILE`). A constraint the numbers break is named as an
+exception with the file and its size — a fact to know, never a rule to pretend (§2). The
+frontmatter schema stays `codestyle: 1`: the section is optional, documents generated before
+it remain valid; verify re-runs `scan` to refresh the numbers.

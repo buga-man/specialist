@@ -32,6 +32,10 @@ export const STALE_COMMITS = 30;
 /** Days since `generated` that make the document stale. */
 export const STALE_DAYS = 30;
 
+/** A code file at or above this many lines no longer fits one agent read — the
+ *  agent-readability threshold the `scan` command reports (not a verdict: facts). */
+export const LARGE_FILE = 500;
+
 const HASH_RE = /^[0-9a-f]{7,40}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -125,4 +129,24 @@ export function reminderLine(verdict) {
     `, generated ${verdict.generated}). Check it: run the codestyle skill in verify mode ` +
     'or node "<plugin>/skills/codestyle/scripts/codestyle.mjs" status.'
   );
+}
+
+/**
+ * The agent-readability facts behind the `scan` command: how large the repo's own
+ * code files are. Facts, not a verdict — a file over the threshold is reported,
+ * judging it belongs to the generate/verify modes. Input is [{ path, lines }] as
+ * measured by the fs layer (walkCodeFiles); output is the one-line JSON the CLI
+ * prints and the skill's section 10 cites as evidence.
+ */
+export function readabilityFacts(files) {
+  const list = (Array.isArray(files) ? files : [])
+    .filter((f) => typeof f?.path === "string" && Number.isFinite(f?.lines))
+    .map((f) => ({ file: f.path.replace(/\\/g, "/"), lines: f.lines }));
+  const sorted = [...list].sort((a, b) => b.lines - a.lines || a.file.localeCompare(b.file));
+  return {
+    files: list.length,
+    largest: sorted[0] ?? null,
+    oversized: sorted.filter((f) => f.lines >= LARGE_FILE).slice(0, 5),
+    limit: LARGE_FILE,
+  };
 }
