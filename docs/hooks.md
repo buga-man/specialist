@@ -236,8 +236,22 @@ the gap. The opt-in marker is the mere presence of `.spec-gate`: without it, oth
 repositories are left untouched. A missing artifact is incomplete onboarding, not an error,
 so the hook does not block.
 
-Silent when `off` or when there is nothing to report; with no open tasks it injects only
-the `fast` profile and onboarding. Never repeats twice within a session.
+The spec chain: when no plan has open tasks, the hook looks at `docs/specs/` and reports
+the newest **incomplete** feature chain in one line — where it stopped and which skill
+resumes it ("business spec approved — next: system-thinking", "plans cover 1/2 repo
+specs — continue with implementation-plan"). The pointer is derived, not stored: stage
+from the slug-shaped file names, approval state from the `status:` field the specs
+already carry, completeness from the presence of downstream artifacts. A chain with any
+`-review` file counts as complete; a chain's spec in `draft` makes approval — not the
+next skill — the named step. No handoff state file exists: agent edits and `git pull`
+are indistinguishable to a file, so the frontier is recomputed from disk on every
+session start. Unlike the onboarding line, the chain needs no `.spec-gate` marker: a
+`docs/specs/` tree is itself the opt-in — the project is mid-pipeline by definition,
+and the line only names where it stopped.
+
+Silent when `off`, when every chain is complete, or when there is nothing to report; with
+open plan tasks the plan orientation wins and the chain line is skipped. Never repeats
+twice within a session.
 
 ## codestyle-reminder — conventions must not go stale
 

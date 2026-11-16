@@ -185,3 +185,107 @@ test("buildPlanContext: a plan ending inside a code fence is named before its ta
   assert.match(text, /invisible to the gate/);
   assert.doesNotMatch(text, /no backticked paths/);
 });
+
+// --- spec chain: the resume pointer is derived from docs/specs, never stored ---
+
+const spec = (status) => `---\nid: x\nstatus: ${status}\n---\n\n# X\n`;
+
+test("spec chain: approved business spec without a system spec — next is system-thinking", () => {
+  const dir = project({ "docs/specs/2026-11-01-dark-mode.md": spec("approved") });
+  const text = buildPlanContext(dir);
+  assert.ok(text, "a mid-flight chain is worth a line even without a plan");
+  assert.ok(text.includes('spec-chain "dark-mode"'));
+  assert.ok(text.includes("next: system-thinking"));
+  assert.ok(!text.includes("draft"));
+});
+
+test("spec chain: a draft frontier means approval is the next step, not the next skill", () => {
+  const draftBusiness = project({ "docs/specs/2026-11-01-dark-mode.md": spec("draft") });
+  assert.match(buildPlanContext(draftBusiness), /business spec is a draft/);
+  const draftSystem = project({
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/specs/2026-11-03-dark-mode-implementation.md": spec("draft"),
+  });
+  const text = buildPlanContext(draftSystem);
+  assert.match(text, /system spec is a draft/);
+  assert.match(text, /then decompositor/);
+});
+
+test("spec chain: system spec ready — decompositor; repo specs — implementation-plan", () => {
+  const files = (extra) => ({
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/specs/2026-11-03-dark-mode-implementation.md": spec("approved"),
+    ...extra,
+  });
+  const sysOnly = buildPlanContext(project(files({})));
+  assert.match(sysOnly, /system spec ready/);
+  assert.match(sysOnly, /next: decompositor/);
+  const withRepo = buildPlanContext(
+    project(files({ "docs/specs/2026-11-04-dark-mode-api.md": spec("approved") })),
+  );
+  assert.match(withRepo, /1 repo spec\(s\) ready/);
+  assert.match(withRepo, /next: implementation-plan/);
+});
+
+test("spec chain: plans in progress by count, executed plans — review; reviewed — silence", () => {
+  const base = {
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/specs/2026-11-03-dark-mode-implementation.md": spec("approved"),
+    "docs/specs/2026-11-04-dark-mode-api.md": spec("approved"),
+    "docs/specs/2026-11-04-dark-mode-web.md": spec("approved"),
+  };
+  const onePlan = project({
+    ...base,
+    "docs/plans/2026-11-05-dark-mode-api.md": "# plan\n",
+  });
+  assert.match(buildPlanContext(onePlan), /plans cover 1\/2 repo spec\(s\)/);
+  const bothPlans = project({
+    ...base,
+    "docs/plans/2026-11-05-dark-mode-api.md": "# plan\n",
+    "docs/plans/2026-11-06-dark-mode-web.md": "# plan\n",
+  });
+  assert.match(buildPlanContext(bothPlans), /plan\(s\) executed/);
+  assert.match(buildPlanContext(bothPlans), /next: spec-review/);
+  const reviewed = project({
+    ...bothPlans,
+    "docs/specs/2026-11-07-dark-mode-api-review.md": spec("approved"),
+  });
+  assert.equal(buildPlanContext(reviewed), null, "a reviewed chain is complete — silence");
+});
+
+test("spec chain: open plan tasks win — the plan orientation is the current signal", () => {
+  const dir = project({
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/plans/2026-11-05-dark-mode-api.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.ok(text.startsWith("plan-context:"));
+  assert.ok(!text.includes("spec-chain"), "no chain line while a plan is open");
+});
+
+test("spec chain: only the newest incomplete chain is reported — one line per session", () => {
+  const dir = project({
+    "docs/specs/2026-10-01-old-idea.md": spec("approved"),
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+  });
+  const text = buildPlanContext(dir);
+  assert.match(text, /spec-chain "dark-mode"/);
+  assert.ok(!text.includes("old-idea"));
+});
+
+test("spec chain: a fast-lane quick plan and unrelated specs do not join chains", () => {
+  const dir = project({
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/plans/2026-11-02-typos-quick.md": "# quick\n",
+    "docs/plans/2026-11-02-other-thing.md": "# plan\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.match(text, /business spec approved/); // "other-thing" is not dark-mode's plan
+});
+
+test("spec chain: an uppercase .MD suffix is still a slug — a Windows filesystem makes it real", () => {
+  const dir = project({ "docs/specs/2026-11-01-dark-mode.MD": spec("approved") });
+  const text = buildPlanContext(dir);
+  assert.ok(text, ".MD passes the suffix filter — the slug regex must not drop it");
+  assert.match(text, /spec-chain "dark-mode"/);
+});

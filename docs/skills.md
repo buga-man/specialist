@@ -80,6 +80,10 @@ affected repositories, blast radius, contracts between repos (each with its owni
   the user explicitly (alternatives + trade-offs + a recommendation) — never slipped in as
   a "default". Every change is traced with certainty: `[spec]/[found] (file:line)/
   [assumption: why]/[ambiguous]`; sibling-spec needs go to `depends-on` with a reason.
+- **Irreversible decisions** (public contracts, schemas, migrations, removals) are a
+  separate sub-list in Decisions — each with the date, the rejected reversible
+  alternative, and the revert cost; they outlive the feature and are read first
+  downstream.
 - **When:** "system analysis", "how do we implement this", "which repositories are affected".
 
 ## decompositor — system spec → repo specs
@@ -113,6 +117,9 @@ needs. Written plans survive session boundaries and compaction — plans in a he
   the rest is for the executor agent and spec-review, not the parser.
 - **Key rule:** the plan makes no decisions — it lays out decisions already made.
   A hole in the spec → stop and escalate, not "fill it in".
+- **Branch line:** the plan names its branch (`- Branch:`); the executor creates it
+  before Task 1 and every task commit lands there, so spec-review diffs one branch
+  against its base; a risky plan may isolate in a dedicated worktree.
 - **When:** "make an implementation plan", "break it into tasks", "work plan".
 
 ## spec-implementation — plan → code
@@ -150,6 +157,9 @@ broken until proven otherwise".
   that would pass every criterion — if one exists, the criteria set gets a proposed sharper
   criterion (amendment), so the trap does not survive into the next feature. Outcome: accepted /
   accepted with notes / changes required.
+- **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
+  derived from the slug dates; no state stored (tech-writer's audit aggregates these
+  into a cycle-times table).
 - **Key rule:** the reviewer does not fix — fixes go back into the plan for the executor;
   bugs go to root-cause.
 - **When:** "review the implementation", "accept against the spec", "run acceptance".
@@ -177,7 +187,9 @@ finds five kinds of drift: undocumented (code without a spec), stale claim (a sp
 about the code), orphan amendment (an amendment never reached the manual), unowned feature
 (a feature with no spec at all), broken trace (`parent`/`children` metadata desynced along
 the chain). Each finding comes with file:line evidence and ready
-amendment text; it is applied only after approval. Mode 2 — **user manual**: a skeleton
+amendment text; it is applied only after approval, and the report ends with a
+cycle-times table (per completed chain: plan date → review date in days, derived from
+the slug dates — the pipeline's only metric, and it costs no state). Mode 2 — **user manual**: a skeleton
 from the business specs (business cases → step-by-step how-tos), screenshots from the stand
 via browser automation, and building `md → standalone HTML + PDF` with the skill's script
 (`node <skill>/scripts/build-manual.mjs docs/manual`).

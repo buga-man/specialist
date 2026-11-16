@@ -55,9 +55,11 @@ test("resolveProjectDir: CLAUDE_PROJECT_DIR wins, then the git root, then cwd", 
     process.env.CLAUDE_PROJECT_DIR = "/host/said/so";
     assert.equal(resolveProjectDir({ cwd: nested }), "/host/said/so");
     delete process.env.CLAUDE_PROJECT_DIR;
-    // The git root, not the subdirectory (realpath: git resolves macOS /var → /private/var).
-    assert.equal(resolveProjectDir({ cwd: nested }), realpathSync(repo));
-    assert.equal(resolveProjectDir({}), process.cwd());
+    // The git root, not the subdirectory (realpath: git resolves macOS /var → /private/var;
+    // realpath on both sides: the git flavor decides the slashes — MSYS emits "C:/…",
+    // realpathSync(repo) is native "C:\…").
+    assert.equal(realpathSync(resolveProjectDir({ cwd: nested })), realpathSync(repo));
+    assert.equal(realpathSync(resolveProjectDir({})), realpathSync(process.cwd()));
   } finally {
     if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
     else process.env.CLAUDE_PROJECT_DIR = saved;

@@ -83,6 +83,10 @@ review there is.
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-review.md`, next to the
   spec it reviews — verdicts, proposed amendments, and open items must stay navigable,
   not live in chat.
+- The report opens with a cycle line: `Cycle: plan YYYY-MM-DD → accepted YYYY-MM-DD
+  (N days)` — derived from the dates in the plan's and the review's file names. The
+  dates ride the slugs, so no state is stored; the same derivation aggregated across
+  features is tech-writer's cycle-times table.
 - Overall: **accepted** / **accepted with notes** / **changes required**.
 - Per-criterion table: item, verdict, evidence.
 - Then: deviations found, proposed spec amendments, questions for the user, what remains

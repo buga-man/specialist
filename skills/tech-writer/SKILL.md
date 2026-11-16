@@ -58,6 +58,10 @@ is not a verdict — same bar as spec-review.
 
 - Save the report as `docs/audits/YYYY-MM-DD-doc-sync.md`: the commit range, verdicts
   with evidence, and for each finding a ready-to-paste amendment text.
+- End the report with a cycle-times table: per completed chain — plan date → review
+  date in days, derived from the slug file names (the same derivation as spec-review's
+  cycle line, aggregated). The only metric the pipeline keeps, and it costs no state:
+  if acceptance starts taking longer, the table shows it before anyone complains.
 - Present the findings to the user. Approved amendments go into the owning spec's
   **Amendments** section — the writer proposes, the user approves, nothing is silent.
   Unowned features go back upstream: the user decides between a brainstorm run and
