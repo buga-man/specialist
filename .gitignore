@@ -7,3 +7,4 @@ node_modules/
 .pi/
 .claude/settings.local.json
 .mimosa/
+.kbindex/
