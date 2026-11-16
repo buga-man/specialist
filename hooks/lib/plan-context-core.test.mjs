@@ -282,3 +282,10 @@ test("spec chain: a fast-lane quick plan and unrelated specs do not join chains"
   const text = buildPlanContext(dir);
   assert.match(text, /business spec approved/); // "other-thing" is not dark-mode's plan
 });
+
+test("spec chain: an uppercase .MD suffix is still a slug — a Windows filesystem makes it real", () => {
+  const dir = project({ "docs/specs/2026-11-01-dark-mode.MD": spec("approved") });
+  const text = buildPlanContext(dir);
+  assert.ok(text, ".MD passes the suffix filter — the slug regex must not drop it");
+  assert.match(text, /spec-chain "dark-mode"/);
+});

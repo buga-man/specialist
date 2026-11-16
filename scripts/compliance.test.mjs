@@ -45,6 +45,17 @@ test("strict frontmatter: duplicate keys, tabs and non-pair lines are named", ()
   assert.match(bad.errors[2], /not a "key: value" pair/);
 });
 
+test("strict frontmatter: escapes unescape to what a real YAML parser reads", () => {
+  // The kb-index bug class: \" inside a double-quoted scalar used to land in the
+  // generated catalog as a literal backslash-quote instead of what hosts autoload.
+  const dq = parseFrontmatterStrict(fm('description: "say \\"hi\\" and C:\\\\temp"\n'));
+  assert.deepEqual(dq.errors, []);
+  assert.equal(dq.data.description, 'say "hi" and C:\\temp');
+  const sq = parseFrontmatterStrict(fm("description: 'it''s fine'\n"));
+  assert.deepEqual(sq.errors, []);
+  assert.equal(sq.data.description, "it's fine");
+});
+
 test("strict frontmatter: a comment-only line is allowed, unclosed block is an error", () => {
   const ok = parseFrontmatterStrict(fm("# a comment\nname: a\ndescription: b\n"));
   assert.deepEqual(ok.errors, []);

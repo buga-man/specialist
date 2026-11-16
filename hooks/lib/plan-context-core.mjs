@@ -8,17 +8,20 @@
  * against a plan it does not know about.
  *
  * Deliberately silent when there is nothing to say: no open tasks, or the gate is
- * switched off. Two exceptions carry process rules that must be in context even
- * before any plan exists, so they are injected with no open tasks too:
+ * switched off. Three process rules carry context that must survive even before any
+ * plan exists, so they are injected with no open tasks too:
  *   - the "fast" SDD profile (its stage skills and lane rules);
  *   - the onboarding reminder: a project that opted into the SDD discipline (a
  *     .spec-gate file in any mode but "off") is expected to carry CODESTYLE.md and a
  *     built documentation index — missing pieces get one line. Absence is unfinished
  *     onboarding, not an error, so the reminder never blocks and never fires in
- *     projects without the marker.
+ *     projects without the marker;
+ *   - the spec-chain resume pointer (below). Unlike the onboarding reminder it needs
+ *     no marker: a docs/specs/ tree is itself the opt-in signal — the project is
+ *     mid-pipeline by definition, and the line only names where it stopped.
  * The block must stay small (a few lines) — it enters the context of every session.
  *
- * A third orientation source joined the two process blocks: the spec chain. When a
+ * The third orientation source: the spec chain. When a
  * feature chain (docs/specs/, one slug per feature) stopped mid-pipeline — a business
  * spec without a system spec, repo specs without plans, executed plans without a
  * review — the newest such chain gets one line naming the stage and the skill to
@@ -61,7 +64,9 @@ function onboardingBlock(projectDir) {
   return missing.length ? `Onboarding: ${missing.join("; ")}.` : null;
 }
 
-const DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/;
+// Case-insensitive on the suffix on purpose: the filter above accepts ".MD", and a
+// Windows filesystem makes the uppercase variant a real occurrence.
+const DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})-(.+)\.md$/i;
 
 /** Dated markdown artifacts of one directory (specs and plans carry the date in the
  *  slug). Any read error — an empty list; the chain line is a nice-to-have. */
@@ -171,11 +176,13 @@ export function specChainBlock(projectDir) {
  *
  * - off: always null (silent).
  * - soft/hard: the plan orientation (open tasks, gate state, closing contract) — only
- *   when there are open tasks; with no open tasks: the onboarding line when the project
- *   opted in via .spec-gate, otherwise null.
+ *   when there are open tasks; with no open tasks: the spec-chain line (no marker
+ *   needed — a docs/specs/ tree is the opt-in), else the onboarding line when the
+ *   project opted in via .spec-gate, otherwise null.
  * - fast: with an open plan the usual orientation (with the soft file-gate wording,
  *   since fast is soft for files) plus the fast-profile block; with no open tasks the
- *   fast-profile block alone — the process orientation is needed before any plan exists.
+ *   fast-profile block plus the chain line — the process orientation is needed before
+ *   any plan exists.
  * - The onboarding line (when present) is appended in every non-off case.
  */
 export function buildPlanContext(projectDir) {

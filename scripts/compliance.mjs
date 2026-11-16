@@ -67,9 +67,16 @@ export function parseFrontmatterStrict(text) {
     const key = m[1];
     if (key in data) errors.push(`line ${i + 1}: duplicate key "${key}"`);
     let value = (m[2] ?? "").trim();
-    const quoted = /^"(.*)"$/s.test(value) || /^'(.*)'$/s.test(value);
-    if (quoted) {
-      value = value.slice(1, -1);
+    const doubleQuoted = /^"(.*)"$/s.test(value);
+    const singleQuoted = /^'(.*)'$/s.test(value);
+    if (doubleQuoted || singleQuoted) {
+      const inner = value.slice(1, -1);
+      // Unescape what a real YAML parser unescapes, so the derived catalog shows what
+      // the hosts actually autoload (the kb-index description carries \"). The strict
+      // subset knows no other escapes — anything else stays literal.
+      value = doubleQuoted
+        ? inner.replace(/\\(["\\])/g, "$1")
+        : inner.replace(/''/g, "'");
     } else if (value) {
       if (value.includes(": ")) {
         errors.push(
@@ -196,10 +203,7 @@ function main() {
   const fix = process.argv.includes("--fix");
   if (process.argv.slice(2).some((a) => !a.startsWith("--"))) {
     process.stdout.write(
-      Buffer.from(
-        "usage: node scripts/compliance.mjs [--fix]\n  --fix  regenerate the derived artifacts (docs/skill-index.md)\n",
-        "utf8",
-      ),
+      "usage: node scripts/compliance.mjs [--fix]\n  --fix  regenerate the derived artifacts (docs/skill-index.md)\n",
     );
     process.exit(2);
   }
@@ -214,11 +218,16 @@ function main() {
     infos.push({ name, description: parseFrontmatterStrict(text).data.description ?? "" });
   }
 
+  // Directory and file names go into regexes below; a name with regex metacharacters
+  // must match literally, not bend the pattern.
+  const headingRe = (word) =>
+    new RegExp(`^## ${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "m");
+
   const readme = read("README.md");
   const skillsDoc = read("docs/skills.md");
   for (const name of names) {
     if (!readme.includes(`\`${name}\``)) findings.push(`README.md: skill "${name}" is not mentioned`);
-    if (!new RegExp(`^## ${name}\\b`, "m").test(skillsDoc)) {
+    if (!headingRe(name).test(skillsDoc)) {
       findings.push(`docs/skills.md: no "## ${name}" section`);
     }
   }
@@ -230,12 +239,12 @@ function main() {
   const hookNames = (files) =>
     [...new Set(files.map((f) => f.replace(/-codex\.(?:mjs|ts)$/, "").replace(/\.(?:mjs|ts)$/, "")))].sort();
   for (const hook of hookNames(registeredAdapters())) {
-    if (!new RegExp(`^## ${hook}\\b`, "m").test(hooksDoc)) {
+    if (!headingRe(hook).test(hooksDoc)) {
       findings.push(`docs/hooks.md: no "## ${hook}" section for a registered hook`);
     }
   }
   for (const hook of hookNames(piExtensions())) {
-    if (!new RegExp(`^## ${hook}\\b`, "m").test(hooksDoc)) {
+    if (!headingRe(hook).test(hooksDoc)) {
       findings.push(`docs/hooks.md: no "## ${hook}" section for a pi extension`);
     }
   }
@@ -261,7 +270,7 @@ function main() {
 
   if (findings.length) {
     const out = findings.map((f) => `- ${f}`).join("\n") + `\n${findings.length} finding(s)\n`;
-    process.stdout.write(Buffer.from(out, "utf8"));
+    process.stdout.write(out);
     process.exit(1);
   }
   console.log(`compliance: ${names.length} skills, docs parity, catalog — all checks pass`);

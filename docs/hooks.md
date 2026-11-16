@@ -245,7 +245,9 @@ already carry, completeness from the presence of downstream artifacts. A chain w
 `-review` file counts as complete; a chain's spec in `draft` makes approval — not the
 next skill — the named step. No handoff state file exists: agent edits and `git pull`
 are indistinguishable to a file, so the frontier is recomputed from disk on every
-session start.
+session start. Unlike the onboarding line, the chain needs no `.spec-gate` marker: a
+`docs/specs/` tree is itself the opt-in — the project is mid-pipeline by definition,
+and the line only names where it stopped.
 
 Silent when `off`, when every chain is complete, or when there is nothing to report; with
 open plan tasks the plan orientation wins and the chain line is skipped. Never repeats
