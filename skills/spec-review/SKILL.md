@@ -93,7 +93,8 @@ review there is.
   unverifiable — "check on a live environment" is a legitimate verdict, hand it over as a
   task, not a hope.
 - **Changes required** items go back into the plan as tasks; a finding that is a plain
-  bug rather than a spec deviation goes to root-cause instead. This skill does not fix code.
+  bug rather than a spec deviation goes to root-cause (a known failing case) or bug-hunt
+  (a wider adversarial sweep of the area). This skill does not fix code.
 
 ## Rules
 

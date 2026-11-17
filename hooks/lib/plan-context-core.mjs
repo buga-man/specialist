@@ -121,7 +121,12 @@ export function specChainBlock(projectDir) {
   // decompositor runs on a system spec, and a file with a chain of its own is that
   // chain's head, not someone's repo spec.
   const hasSystem = (T) => specs.some((s) => s.rest === `${T}-implementation`);
-  const suffixed = (s) => s.rest.endsWith("-review") || s.rest.endsWith("-implementation");
+  // Side review reports (code-review's -quality, bug-hunt's -audit) are not chain
+  // links: only spec-review's -review closes a chain, and a report is not a repo spec
+  // either — the repo/plans counts must not count it.
+  const sideReport = (s) => s.rest.endsWith("-quality") || s.rest.endsWith("-audit");
+  const suffixed = (s) =>
+    s.rest.endsWith("-review") || s.rest.endsWith("-implementation") || sideReport(s);
   const candidates = specs.filter((s) => !suffixed(s));
   const isRepoSpec = (R) =>
     !hasSystem(R) &&
@@ -141,6 +146,7 @@ export function specChainBlock(projectDir) {
         s.rest.startsWith(`${T}-`) &&
         s.rest !== `${T}-implementation` &&
         !s.rest.endsWith("-review") &&
+        !sideReport(s) &&
         isRepoSpec(s.rest),
     );
     const topicPlans = plans.filter((p) => p.rest.startsWith(`${T}-`) && !p.rest.endsWith("-quick"));

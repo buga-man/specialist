@@ -16,6 +16,7 @@ task → brainstorm → business spec
                         task plan → spec-implementation → code (tests first, the spec as the oracle)
                               code → spec-review → acceptance (criterion by criterion, verdicts with evidence)
                                     unverifiable → stand-acceptance (live acceptance on the stand)
+                                    deeper pass on demand → code-review (quality & logic) / bug-hunt (bugs & security)
 
 after merge / before release → tech-writer → docs audit (code ↔ specs, amendments via Amendments)
                                             + user manual (md → html + pdf, screenshots from the stand)
@@ -35,6 +36,8 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `implementation-plan` | repo spec → task plan for the agent (vertical slices, Verify "command → expected result", one task = one commit) |
 | `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; report: decisions, rulings, spec amendments) |
 | `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; best in a fresh session) |
+| `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity — findings with file:line evidence and severity; the reviewer does not fix) |
+| `bug-hunt` | diff/branch/area → adversarial audit report `*-audit.md` (bugs: boundaries, off-by-one, error paths, races, leaks; security: injection, authn/authz, secrets, crypto; every finding with a trigger scenario; critical — reported immediately) |
 | `root-cause` | bug report → root cause (reproduction required, red test, minimal fix, full suite) |
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + a manual `md → standalone html + pdf` with screenshots from the stand |
@@ -53,7 +56,8 @@ range and a rebuild of the user manual from the updated specs.
 **Feature artifact navigation**: all specs, acceptances, and plans live in the target
 repository's `docs/specs/` and `docs/plans/` and carry the topic slug from the business
 spec — `YYYY-MM-DD-<topic>*` (`-implementation`, `-<repo>`, `-<repo>-review` for specs,
-`<repo>` for plans). The whole chain of one feature is one glob away:
+`-<repo>-quality` / `-<repo>-audit` for code-review / bug-hunt reports, `<repo>` for
+plans). The whole chain of one feature is one glob away:
 `ls docs/specs/*<topic>* docs/plans/*<topic>*`; in addition, the header of each spec
 carries direct links to its parent specs. Spec YAML metadata (`id`/`parent`/`children`)
 is bidirectional: the skill creating a downstream artifact immediately appends its id to
@@ -125,7 +129,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twelve skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all fourteen skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all eleven hooks and extensions: events, what they block,
   configuration, boundaries, and fail-safe behavior.

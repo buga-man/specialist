@@ -46,7 +46,7 @@ does not run someone else's formatter where the project did not choose it.
 |---|---|---|
 | `tech-writer` (manual build) | Node + **Chrome or Edge** (headless PDF printing); for screenshots — the host's browser automation and a live dev stand | HTML is built without a browser; the browser is needed only for the PDF. Chrome/Edge is present on any Windows machine; on Linux/macOS it installs the standard way |
 | `stand-acceptance` | the docker compose stand of the specific project; the host's browser automation for the UI checks | A team-and-project skill (a deliberate exception to portability) |
-| the other 10 skills | only the agent itself and the repository | — |
+| the other 12 skills | only the agent itself and the repository | — |
 
 ## Installing into Claude Code
 
@@ -55,7 +55,7 @@ does not run someone else's formatter where the project did not choose it.
 /plugin install specialist@specialist
 ```
 
-After installation the following register automatically: 12 skills (autoloaded by
+After installation the following register automatically: 14 skills (autoloaded by
 description), the hooks from `hooks/hooks.json` (spec-gate, skill-gate, secrets-guard,
 vuln-guard, suite-gate on PreToolUse; git-watch, edit-guard on PostToolUse;
 plan-context, codestyle-reminder on SessionStart; kb-gate on Stop).

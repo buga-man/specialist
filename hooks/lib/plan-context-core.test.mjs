@@ -253,6 +253,24 @@ test("spec chain: plans in progress by count, executed plans — review; reviewe
   assert.equal(buildPlanContext(reviewed), null, "a reviewed chain is complete — silence");
 });
 
+test("spec chain: -quality and -audit reports do not close the chain — only -review does", () => {
+  const dir = project({
+    "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
+    "docs/specs/2026-11-03-dark-mode-implementation.md": spec("approved"),
+    "docs/specs/2026-11-04-dark-mode-api.md": spec("approved"),
+    "docs/plans/2026-11-05-dark-mode-api.md": "# plan\n",
+    "docs/specs/2026-11-07-dark-mode-api-quality.md": spec("approved"),
+    "docs/specs/2026-11-08-dark-mode-api-audit.md": spec("approved"),
+  });
+  const text = buildPlanContext(dir);
+  assert.match(text, /plan\(s\) executed/);
+  assert.match(
+    text,
+    /next: spec-review/,
+    "code-review's -quality and bug-hunt's -audit are side reports, not acceptance",
+  );
+});
+
 test("spec chain: open plan tasks win — the plan orientation is the current signal", () => {
   const dir = project({
     "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
