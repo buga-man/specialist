@@ -18,6 +18,7 @@ protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 | `spec-gate` | ✅ block | ✅ block | ✅ block (`apply_patch` payloads are checked file by file) | ✅ block | ✅ block |
 | `secrets-guard` | ✅ block | ✅ block | ✅ block | ✅ block | ✅ block |
 | `vuln-guard` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
+| `suite-gate` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
 | `edit-guard` | ✅ failures return to the agent | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
 | `git-watch` | ✅ signal (exit 2) | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
 | `plan-context` | ✅ session start | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
@@ -52,6 +53,7 @@ five hosts.
 | `skill-gate` | PreToolUse: Skill | — | in the `fast` profile, blocks autonomous runs of the pipeline's stage skills | Node | `.spec-gate` |
 | `secrets-guard` | PreToolUse: Bash | `tool_call` bash | secrets never reach git | Node, git | `.secrets-allow` |
 | `vuln-guard` | PreToolUse: Bash (commit) | `tool_call` bash | semgrep at the commit boundary | Node, git, **semgrep** | `.vuln-guard`, `.vuln-allow`, `semgrep.yml` |
+| `suite-gate` | PreToolUse: Bash (commit) | `tool_call` bash | the `.suite-gate` test command must be green before a commit | Node, git + the project's own test runner | `.suite-gate` |
 | `git-watch` | PostToolUse: Bash | `tool_result` bash | after tree-changing git operations, a signal about stale derived artifacts | Node, git | — |
 | `edit-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order | Node + the project's prettier/eslint/ruff/ktlint | — |
 | `plan-context` | SessionStart (startup/resume/clear/compact) | `before_agent_start` | orients a fresh session to the plan | Node | — |
@@ -166,6 +168,26 @@ is opt-in — `.vuln-guard` = `always` (a synonym of `edit`) — and runs inside
 - semgrep not installed (`semgrep` / `python -m semgrep`) — a no-op (the overhead is a few
   quick probes of the binary per check);
   native on Windows/Linux/macOS, installed with `pip install semgrep`.
+
+## suite-gate — green tests at the commit boundary
+
+`git commit` (including `git -C <dir> commit`): the project's own test command runs, and a
+non-zero exit blocks the commit with the tail of the output. The command comes from the
+`.suite-gate` file at the project root — **the gate is opt-in**, deliberately the only such
+guard: a full suite costs minutes, so without the file nothing ever runs.
+
+- **`.suite-gate`:** the first line is the command (`npm test`, `mix test`, `cargo test`);
+  the lines after it are free-form notes for the team; `off` or an empty file disables the
+  gate; no file — the hook is silent.
+- **Exit-code mapping:** 0 — green, the commit proceeds; non-zero — blocked with the last
+  ~1500 characters of the output (test failures report themselves at the end). A spawn
+  error or a timeout (570 s, under the 600 s registration cap) is uncertainty, not a red
+  suite — no block, no noise (fail-safe).
+- An empty index (nothing staged) is skipped — that commit fails on its own; the suite is
+  not run for it.
+- The command runs through the shell, so `.suite-gate` may use `&&` and quoting — a
+  repo-owned file, the same trust level as the repo's own scripts. A red suite that
+  predates the change still blocks: the reason says the gate is the user's to lift.
 
 ## git-watch — git changed the tree under the agent
 
@@ -318,6 +340,10 @@ echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"cwd":"<rep
 echo '{"tool_name":"Bash","tool_input":{"command":"git add .env"},"cwd":"."}' \
   | node "<plugin>/hooks/lib/secrets-guard.mjs"; echo "exit=$?"
 
+# suite-gate: a red suite from .suite-gate blocks the commit → exit 2
+echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"cwd":"<project with .suite-gate>"}' \
+  | node "<plugin>/hooks/lib/suite-gate.mjs"; echo "exit=$?"
+
 # edit-guard: an edit widening a plan's - Files: scope → exit 2 with the boundary note
 echo '{"tool_name":"Edit","tool_input":{"file_path":"docs/plans/p.md","old_string":"- Files: \`src/a.ts\`","new_string":"- Files: \`src/a.ts\`, \`src/b.ts\`"},"cwd":"."}' \
   | node "<plugin>/hooks/lib/edit-guard.mjs"; echo "exit=$?"
@@ -354,6 +380,10 @@ Tests of all cores: `npm test` at the repository root.
   committed by someone else's tool, bypassing the agent, is not seen by the hooks (an
   ordinary pre-commit framework will cover the residual risk). The first semgrep registry
   fetch needs the network; offline it degrades to silence.
+- **suite-gate is opt-in and trusts `.suite-gate`** — the gate exists only where the project
+  wrote the file, and the file's line runs with the repo's own privileges (`&&`, quoting,
+  any command). The hook guards the *commit boundary*, not the command's honesty — the
+  same trust the repo's own scripts already enjoy.
 - **Allowlist regexes are the project's own** — a pathological pattern in
   `.secrets-allow`/`.vuln-allow` (catastrophic backtracking) can hang the hook until its
   registration timeout kills it; the fail-safe direction is "allow", and the timeout is

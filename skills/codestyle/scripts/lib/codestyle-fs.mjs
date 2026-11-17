@@ -10,8 +10,9 @@
  * both callers stay silent on null (a reminder without honest data is noise).
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { isCodeFile } from "./codestyle-core.mjs";
 
 /** The root of the git repository the directory belongs to, or null.
  *  Inlined (was re-exported from kb-fs.mjs): the kb cores live with the kb-index skill now. */
@@ -56,4 +57,39 @@ export function gitCommitsSince(projectDir, base) {
   );
   if (result.error || result.status !== 0) return null;
   return result.stdout;
+}
+
+/** Directories the readability walk never enters: dependencies and build output are
+ *  not the repo's own code, .kbindex is a derived artifact. Symlinked directories are
+ *  not followed either (readdir Dirents report them as neither file nor directory). */
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "out", "vendor", "coverage", ".kbindex"]);
+
+/** Every code file of the project with its line count: [{ path, lines }], paths
+ *  relative to the project root with forward slashes. The "not markdown = code"
+ *  heuristic is the same one staleness uses; unreadable files are skipped. */
+export function walkCodeFiles(projectDir) {
+  const out = [];
+  const walk = (rel) => {
+    let entries;
+    try {
+      entries = readdirSync(join(projectDir, rel), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name)) walk(relPath);
+      } else if (entry.isFile() && isCodeFile(relPath)) {
+        try {
+          const lines = readFileSync(join(projectDir, relPath), "utf8").split(/\r?\n/).length;
+          out.push({ path: relPath, lines });
+        } catch {
+          /* unreadable — skip, the facts stay honest about what they measured */
+        }
+      }
+    }
+  };
+  walk("");
+  return out;
 }

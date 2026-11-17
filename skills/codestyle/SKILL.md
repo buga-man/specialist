@@ -54,7 +54,14 @@ Section skeleton — order fixed, set grows with the stack:
 ## 7. Comments         density, language of code vs language of docs
 ## 8. Commits          message format from git log
 ## 9. Anti-patterns    "we don't write like this here" — each with an example
+## 10. Agent readability  what serves the machine reader — file sizes, greppable names
 ```
+
+Section 10 is for the repo's other reader — an agent that navigates by grep and reads in
+capped chunks. The evidence there is measured, not sampled: the CLI reports the file-size
+facts, and the constraints the repo actually meets get recorded (small files, unique
+greppable names, why-comments that carry context). A constraint the numbers break is named
+as an exception with the file and its size — a fact to know, never a rule to pretend.
 
 A rule is one imperative line with its evidence:
 
@@ -74,7 +81,16 @@ Run when the document is absent or the user asks to rebuild. In order:
 3. **Sample 15–25 files**: entry points, core, tests, scripts. Recent style wins a
    conflict with old style; a surviving contradiction becomes a module-local convention,
    not a global rule.
-4. **Draft the rules**, each with its evidence.
+4. **Draft the rules**, each with its evidence. For section 10, measure instead of
+   sampling:
+
+   ```bash
+   node "<skill-dir>/scripts/codestyle.mjs" scan
+   ```
+
+   The JSON carries the code-file count, the largest file, and the oversized list — cite
+   those numbers as the evidence; names and comments there are verified by grep
+   spot-checks like any other rule.
 5. **Verify against a held-out sample** — files that were NOT in the sample. A rule the
    held-out files contradict is deleted or marked module-local. This pass is the
    anti-hallucination gate: a rule without a real example does not survive it.
@@ -97,7 +113,8 @@ The cheap pass — normally as a reaction to the session-start reminder:
 
 2. Walk the rules against the commits since `base`: update the evidence that moved,
    delete rules the code stopped following, add rules for a new dominant pattern —
-   each with fresh evidence.
+   each with fresh evidence. For section 10, re-run `scan`: the numbers age with every
+   commit that adds or splits a file.
 3. Do not rewrite the document — report the outcome: "24 rules: 22 confirmed,
    1 updated, 1 removed".
 4. Commit with bumped `generated` and `base` = current HEAD.

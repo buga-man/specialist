@@ -33,6 +33,7 @@ install:
 | `plan-context` | — (Node only) | — | always works |
 | `secrets-guard` | `git` | a system package | reacts only to git commands, which do not exist without git |
 | `vuln-guard` | **semgrep** | `pip install semgrep` (native on Windows/Linux/macOS) | no-op (the overhead is a few quick probes of the binary per check) |
+| `suite-gate` | `git` + the project's own test runner (the command from `.suite-gate`) | the project | silent — the gate is opt-in, without `.suite-gate` nothing runs |
 | `edit-guard` | `prettier` + `eslint` — declared in the project's package.json; `ruff` — in the Python environment; `ktlint` — a binary on PATH + a mention in Gradle; semgrep — only for the opt-in edit scan (`.vuln-guard = always`) | the project | silent for files of that stack |
 
 A note on prettier/eslint: a transitive copy in `node_modules` does not count — the tool
@@ -56,7 +57,7 @@ does not run someone else's formatter where the project did not choose it.
 
 After installation the following register automatically: 12 skills (autoloaded by
 description), the hooks from `hooks/hooks.json` (spec-gate, skill-gate, secrets-guard,
-vuln-guard on PreToolUse; git-watch, edit-guard on PostToolUse;
+vuln-guard, suite-gate on PreToolUse; git-watch, edit-guard on PostToolUse;
 plan-context, codestyle-reminder on SessionStart; kb-gate on Stop).
 
 Verification without pushing the marketplace — by a local path:
@@ -128,6 +129,7 @@ the plugin):
 |---|---|---|---|
 | `.spec-gate` | spec-gate | `soft` / `hard` / `off` | `soft` (the gate is active only with an open plan) |
 | `.vuln-guard` | vuln-guard | `commit` / `always` (a synonym of `edit`) / `off` | `commit` (a scan only on commit); `off` disables the hook entirely |
+| `.suite-gate` | suite-gate | the first line is the test command (`npm test`, …); the rest are notes; `off` / empty — disabled | absent (the gate is opt-in: no file — nothing runs) |
 | `.secrets-allow` | secrets-guard | one regexp per line; `#` — a comment | absent |
 | `.vuln-allow` | vuln-guard | a regexp on the rule-id or path; `#` — a comment | absent |
 | `semgrep.yml` / `.semgrep.yml` | vuln-guard | the project's semgrep rules | registry packs (best-effort) |

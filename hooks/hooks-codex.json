@@ -24,6 +24,11 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/vuln-guard.mjs\"",
             "timeout": 120
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/suite-gate.mjs\"",
+            "timeout": 600
           }
         ]
       }
