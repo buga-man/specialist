@@ -1,4 +1,4 @@
-# Skills: what each of the twelve does
+# Skills: what each of the fourteen does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
@@ -13,6 +13,7 @@ task → brainstorm → business spec
                         plan → spec-implementation → code (tests-first, the spec is the oracle)
                               code → spec-review → acceptance (criterion by criterion)
                                     unverifiable → stand-acceptance (live acceptance on the stand)
+                                    deeper pass on demand → code-review (quality & logic) / bug-hunt (bugs & security)
 
 after merge / before release → tech-writer → spec audit + user manual
 
@@ -41,9 +42,9 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
   asking the user: may scouts be used here, and how many. The granted count is the hard
   budget; without subagents (denied or unsupported) the same missions run sequentially.
 - **Slug navigation.** All artifacts of a feature carry its slug: `docs/specs/YYYY-MM-DD-<topic>*`
-  (business spec, `-implementation`, `-<repo>`, `-<repo>-review`) and
-  `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`. The whole chain is one glob:
-  `ls docs/specs/*<topic>* docs/plans/*<topic>*`.
+  (business spec, `-implementation`, `-<repo>`, `-<repo>-review`; review reports —
+  `-<repo>-quality`, `-<repo>-audit`) and `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`. The
+  whole chain is one glob: `ls docs/specs/*<topic>* docs/plans/*<topic>*`.
 - Content is written in the team's working language; the skills themselves are in English.
 
 ---
@@ -166,6 +167,59 @@ broken until proven otherwise".
 - **Key rule:** the reviewer does not fix — fixes go back into the plan for the executor;
   bugs go to root-cause.
 - **When:** "review the implementation", "accept against the spec", "run acceptance".
+
+## code-review — diff → quality & logic report
+
+**Why:** spec-review proves the code does what the spec ordered; nobody yet asked how
+well it is written. The skill reviews readability and the cost of the logic: could a new
+developer maintain this code a month from now, and does it do its work without needless
+effort.
+
+- **Input → output:** diff (branch against base) + the code around each hunk +
+  `CODESTYLE.md` where present → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
+- **Two passes:** quality — intent vs naming, structure, duplication (new symbols
+  grepped against the repo; a duplicate is a finding even when the plan ordered it),
+  dead weight, error-handling idioms, tautological tests; logic — needless work, N+1,
+  data-structure fit judged against real data sizes, hot vs cold paths, accidental
+  complexity — and premature optimization as a finding too.
+- **Findings:** `file:line` + what and why + a proposed direction (not a patch);
+  severity blocker / worth fixing / note; outcome clean / worth a pass / rework
+  required. Blockers and worth-fixing go back into the plan as tasks.
+- **Key rules:** evidence, not impressions; not a linter — what lint configs catch is a
+  pointer, never a re-description; severity honesty — a style nit is a note, never a
+  blocker; the reviewer does not fix.
+- **When:** "review the code quality", "is this well-written", "any needless work
+  here", "review the logic" — before merge or on demand; complements spec-review.
+- **Not for:** spec compliance (spec-review), bugs and security (bug-hunt).
+
+## bug-hunt — code → adversarial audit report
+
+**Why:** tests prove only what their author thought to check, and the author already
+believes the code works. The skill assumes the code is broken and reads twice — as a
+destroyer feeding it inputs it did not expect, and as an attacker feeding it inputs it
+must never accept.
+
+- **Input → output:** diff / branch / code area, traced to its entry points (handlers,
+  CLI, cron, consumers, UI events) → `docs/specs/YYYY-MM-DD-<topic>-<repo>-audit.md`
+- **Bug checklist:** boundaries (empty/null/one/many/negative/max/unicode/timezone),
+  off-by-one, error paths (partial failure midway, swallowed errors, retry without
+  idempotency), concurrency (shared state, TOCTOU, unawaited promises), resource leaks,
+  unasserted invariants, time arithmetic.
+- **Security checklist:** injection (SQL/command/path traversal/XSS/template/log),
+  authn/authz per endpoint (IDOR, privileges from the client), secrets (hardcoded,
+  logged, echoed), SSRF, redirects from user input, unsafe deserialization, crypto
+  misuse, new dependencies with advisories.
+- **Findings:** `file:line` + the trigger scenario (bugs — a reproduction sketch;
+  security — an exploitation sketch) + severity critical/high/medium/low;
+  **no scenario — no finding**. Critical security findings are reported to the user
+  immediately; the report never carries live secret values. Outcome: no findings /
+  findings listed / exploitable — fix before merge.
+- **Key rules:** the hunter does not fix — fixes go back into the plan (or root-cause
+  for a single confirmed bug); a layer, not a substitute — vuln-guard/secrets-guard
+  catch the moment of commit, this audits the code itself.
+- **When:** "find bugs", "hunt for defects", "audit the security", before a release, on
+  a risky diff.
+- **Not for:** a known reproducible bug (root-cause), spec compliance (spec-review).
 
 ## stand-acceptance — acceptance on a live stand
 
