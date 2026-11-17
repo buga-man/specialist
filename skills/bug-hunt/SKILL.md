@@ -30,6 +30,17 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   already sit in it.
 - Security-sensitive surfaces the diff touches: auth and permissions, uploads, exec,
   templates, redirects, serialization, crypto.
+- **Threat sketch first** — 15 minutes before the checklists: list the assets the target
+  guards (data, money, privileges, availability), who can reach each, and through which
+  entry. The sketch aims the hunt: checklist items touching an asset get depth, the rest
+  get breadth. An audit attacks assets, not patterns.
+- **Installed analyzers are inputs**: where installed, run the project's semgrep rules
+  and linters over the target — their findings are leads to verify like any other, never
+  verdicts (tools propose, the hunter verifies); a lead that cannot earn a trigger
+  scenario is dropped as a false positive with one line of why.
+- A previous `*-audit` report for the topic (one glob: `ls docs/specs/*<topic>*`) → the
+  hunt opens by re-verifying its findings (see §4), then hunts fresh ground. The old
+  report is input, never truth: a finding marked fixed is re-proven, not believed.
 
 ## 2. Bugs — the destroyer's checklist
 
@@ -60,18 +71,43 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
 
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-audit.md`, next to the
   specs of the feature.
+- Findings live in a table — one row per finding: `location | class | severity |
+  scenario` — classes from the checklists above (boundaries, off-by-one, error paths,
+  concurrency, resources, invariants, time, injection, authz, secrets, surface,
+  dependencies), so the next hunt and tech-writer's report card can count them.
 - Every finding: location (`file:line`), the scenario that triggers it, severity.
   - Bugs: a reproduction sketch — concrete inputs, observed vs expected outcome.
   - Security: an exploitation sketch — who can send what, and what it yields.
   - Severity: **critical** / **high** / **medium** / **low** — impact × plausibility.
 - **No scenario, no finding**: a suspicious pattern without a way to trigger it is a
   note, never a finding.
+- **Re-verification** (when a previous report exists): its carried findings get a
+  status — **closed** (re-proven: the scenario no longer triggers), **not closed**, or
+  **fixed with regression** (the old scenario is gone, a new one opened — a fresh
+  finding, severity one step up). The header line: `Re-verified: N closed, M not
+  closed, K regressions`.
 - Critical security findings are reported to the user immediately, not only in the file.
 - The report never contains live secret values — a finding names the secret's location,
   not its content.
+- The report ends with `Recurring: <class>[, <class>…]` — the finding classes this
+  report shares with its predecessor (`Recurring: none` when empty). That line is the
+  pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
+  anti-pattern proposals.
 - Outcome: **no findings** / **findings listed** / **exploitable — fix before merge**.
 - Fixes go back into the plan (or root-cause for a single confirmed bug); this skill
   does not fix.
+
+## Parallel hunters (scouts — by explicit permission)
+
+- A large or risky target may be hunted in parallel: 2–3 independent hunters, each with
+  one checklist focus (e.g. one — concurrency and resources, one — authz and data
+  flows, one — error paths and boundaries), plus the coordinator's own pass. The same
+  permission rule as the recon skills: ask the user first — may scouts be used here,
+  and how many; the granted count is the hard budget. Without subagents (denied or
+  unsupported) the same foci run sequentially in one session.
+- The coordinator deduplicates by scenario, not by location: two hunters naming the
+  same trigger scenario is one finding. Disagreement (one calls it a bug, the other
+  does not) is resolved by building the scenario out, never by vote.
 
 ## Rules
 

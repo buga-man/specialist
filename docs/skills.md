@@ -38,7 +38,8 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
 - **The reviewer does not fix, the writer does not edit silently** — role independence
   matters more than speed.
 - **Scouts by explicit permission.** The recon-heavy skills (brainstorm, system-thinking,
-  decompositor) may parallelize research with read-only subagent scouts — but only after
+  decompositor) — and bug-hunt's parallel hunters — may parallelize research with
+  read-only subagent scouts — but only after
   asking the user: may scouts be used here, and how many. The granted count is the hard
   budget; without subagents (denied or unsupported) the same missions run sequentially.
 - **Slug navigation.** All artifacts of a feature carry its slug: `docs/specs/YYYY-MM-DD-<topic>*`
@@ -138,8 +139,11 @@ restore the behavior — it turns green. A test that was never red verifies noth
 - **Why-comments stay:** context comments (the bug behind a workaround, a business
   constraint, a dated decision, a commit reference) are preserved and updated, never
   stripped as clutter — they are the repo's memory for the next reader, agent included.
+- **Self-review (after the last task):** the branch diff walked against the reviewers'
+  checklists (bug-hunt's, code-review's) — the trivial fixed on the spot, the
+  unresolved edges carried into the report as the reviewer's starting points.
 - **Final report:** decisions the specs did not cover; ambiguous readings (the one place a
-  human is genuinely needed); rulings; spec amendments; unproven tests.
+  human is genuinely needed); rulings; spec amendments; unproven tests; self-review notes.
 - **When:** "implement", "execute the plan", "implement per the spec".
 
 ## spec-review — code → acceptance
@@ -185,6 +189,11 @@ effort.
 - **Findings:** `file:line` + what and why + a proposed direction (not a patch);
   severity blocker / worth fixing / note; outcome clean / worth a pass / rework
   required. Blockers and worth-fixing go back into the plan as tasks.
+- **Re-verification and memory:** a previous `*-quality` report opens the pass —
+  carried findings get closed / not closed / fixed-with-regression statuses
+  (`Re-verified: N closed, M not closed, K regressions`); findings live in a countable
+  table and the report ends with a `Recurring:` line — the review memory tech-writer
+  aggregates into CODESTYLE anti-patterns.
 - **Key rules:** evidence, not impressions; not a linter — what lint configs catch is a
   pointer, never a re-description; severity honesty — a style nit is a note, never a
   blocker; the reviewer does not fix.
@@ -201,6 +210,9 @@ must never accept.
 
 - **Input → output:** diff / branch / code area, traced to its entry points (handlers,
   CLI, cron, consumers, UI events) → `docs/specs/YYYY-MM-DD-<topic>-<repo>-audit.md`
+- **Aiming the hunt:** a 15-minute threat sketch first (assets → who reaches them →
+  through which entries), and the installed analyzers (semgrep, linters) as verifiable
+  leads — tools propose, the hunter verifies.
 - **Bug checklist:** boundaries (empty/null/one/many/negative/max/unicode/timezone),
   off-by-one, error paths (partial failure midway, swallowed errors, retry without
   idempotency), concurrency (shared state, TOCTOU, unawaited promises), resource leaks,
@@ -214,6 +226,11 @@ must never accept.
   **no scenario — no finding**. Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /
   findings listed / exploitable — fix before merge.
+- **Parallel hunters (by explicit permission):** a large target may run 2–3
+  independent hunters with distinct checklist foci (same scout permission rule as the
+  recon skills); the coordinator deduplicates by scenario and resolves disagreements by
+  building the scenario. Re-verification statuses and the `Recurring:` line — the same
+  memory loop as code-review.
 - **Key rules:** the hunter does not fix — fixes go back into the plan (or root-cause
   for a single confirmed bug); a layer, not a substitute — vuln-guard/secrets-guard
   catch the moment of commit, this audits the code itself.
@@ -246,12 +263,16 @@ about the code), orphan amendment (an amendment never reached the manual), unown
 the chain). Each finding comes with file:line evidence and ready
 amendment text; it is applied only after approval, and the report ends with a
 cycle-times table (per completed chain: plan date → review date in days, derived from
-the slug dates — the pipeline's only metric, and it costs no state). Mode 2 — **user manual**: a skeleton
+the slug dates — a metric that costs no state). Mode 2 — **user manual**: a skeleton
 from the business specs (business cases → step-by-step how-tos), screenshots from the stand
 via browser automation, and building `md → standalone HTML + PDF` with the skill's script
 (`node <skill>/scripts/build-manual.mjs docs/manual`).
 
 - **Input → output:** code + specs → audit report / `docs/manual/` (md + assets + html + pdf)
+- **Review memory:** the audit aggregates `Recurring:` lines from `*-quality` /
+  `*-audit` reports — a class recurring across reports becomes a ready-to-paste
+  CODESTYLE.md anti-pattern proposal (after approval); a review report card (findings
+  by class, re-verification counts, the confirmation rate) rides the same report.
 - **Key rules:** the manual's audience is the user, not a developer (no paths or internal
   names); the manual describes only verified behavior (by spec or live); everything else is
   marked `[draft: unconfirmed]`; screenshots come only from the dev stand + synthetic data.

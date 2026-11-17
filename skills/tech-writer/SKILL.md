@@ -60,8 +60,21 @@ is not a verdict — same bar as spec-review.
   with evidence, and for each finding a ready-to-paste amendment text.
 - End the report with a cycle-times table: per completed chain — plan date → review
   date in days, derived from the slug file names (the same derivation as spec-review's
-  cycle line, aggregated). The only metric the pipeline keeps, and it costs no state:
-  if acceptance starts taking longer, the table shows it before anyone complains.
+  cycle line, aggregated). A metric that costs no state: if acceptance starts taking
+  longer, the table shows it before anyone complains.
+- **Review memory → CODESTYLE:** collect the `Recurring:` lines from the `*-quality`
+  and `*-audit` reports in the audited range; a finding class recurring in two or more
+  reports is a candidate anti-pattern — propose a ready-to-paste rule for
+  `CODESTYLE.md`'s Anti-patterns section (evidence: the findings' `file:line`s),
+  applied only after the user's approval. That loop — review findings become
+  conventions, conventions teach the executors — is how a finding class dies out
+  instead of recurring forever.
+- **Review report card:** per review report in the range — findings by class and
+  severity, plus the re-verification counts (`closed / not closed / regressions`)
+  where a successor report exists. The confirmation rate (closed ÷ re-verified) is the
+  review's own metric: a rate stuck low means findings do not survive — either the
+  fixes are cosmetic or the hunt cries wolf; a class that keeps regressing means the
+  fixes treated the symptom.
 - Present the findings to the user. Approved amendments go into the owning spec's
   **Amendments** section — the writer proposes, the user approves, nothing is silent.
   Unowned features go back upstream: the user decides between a brainstorm run and
