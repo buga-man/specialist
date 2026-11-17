@@ -26,7 +26,7 @@ the code comes from the test. When they disagree, the priority is **spec > test 
 for each task, in plan order:
   1 extract behaviors → 2 tests first → 3 implement → 4 close gaps
   → 5 prove tests fail → 6 verify against the plan & commit
-after the last task: full suite → final report
+after the last task: full suite → self-review → final report
 ```
 
 ## Task loop
@@ -105,6 +105,17 @@ change — that is the proof nothing changed.
   "clutter". The next reader (usually an agent with fresh context) has only the code and
   these comments to explain why it looks like this; stripping them deletes the reason.
 
+## Self-review (after the last task)
+
+The diff is about to meet a fresh-session reviewer — spend ten minutes in its shoes
+first. Walk the whole branch diff against the reviewers' checklists: bug-hunt's
+(boundaries, error paths, concurrency, resources, injection, authz) and code-review's
+(naming, duplication, needless work) — the classes reviewers keep finding are the
+classes authors keep missing. Fix the trivial on the spot as a fresh commit; what you
+cannot resolve — uncertain edges, suspicious spots without a proof — carries into the
+final report as self-review notes, so the reviewer starts at the deep end, not at the
+surface.
+
 ## Final report
 
 State what was implemented (tasks, commits), then the review points — a human or the next
@@ -118,3 +129,5 @@ session reads only this list:
 - **Spec amendments** — changes made to the specs mid-implementation, each with its
   approval trail.
 - **Unproven tests and deferred items** — tests that could not be proven falsifiable, and why.
+- **Self-review notes** — the spots the self-review pass could not resolve; the
+  reviewer's starting points, so a fresh session is not spent rediscovering them.

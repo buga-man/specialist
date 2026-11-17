@@ -27,6 +27,9 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   oracle for style findings; a style finding cites the rule it breaks. No document —
   style stays a note at most.
 - The tests the diff carries: code and tests are reviewed as one judgment, not two.
+- A previous `*-quality` report for the topic (one glob: `ls docs/specs/*<topic>*`) →
+  open by re-verifying its findings (see §4), then review fresh ground. The old report
+  is input, never truth: a finding marked fixed is re-proven, not believed.
 
 ## 2. Quality pass — how it reads
 
@@ -62,12 +65,26 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
 
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`, next to the
   specs of the feature — findings must stay navigable, not live in chat.
+- Findings live in a table — one row per finding: `location | class | severity |
+  direction` — classes from the two passes (naming, structure, duplication, dead
+  weight, error idioms, tests; needless work, data fit, hot path, accidental
+  complexity, premature optimization) — so the next pass and tech-writer's report card
+  can count them.
 - Each finding: location (`file:line`), what and why, a proposed direction — a
   direction, not a patch; the reviewer does not fix.
 - Severity per finding:
   - **blocker** — unmaintainable as is, or the design will hurt every future change;
   - **worth fixing** — real cost, fixable in the normal flow;
   - **note** — the reader should know; style nits live here.
+- **Re-verification** (when a previous report exists): its carried findings get a
+  status — **closed** (re-proven: the problem is gone at that location), **not
+  closed**, or **fixed with regression** (the old problem gone, a new one opened — a
+  fresh finding, severity one step up). The header line: `Re-verified: N closed, M not
+  closed, K regressions`.
+- The report ends with `Recurring: <class>[, <class>…]` — the finding classes this
+  report shares with its predecessor (`Recurring: none` when empty). That line is the
+  pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
+  anti-pattern proposals.
 - Outcome: **clean** / **worth a pass** / **rework required**.
 - Blockers and worth-fixing findings go back into the plan as tasks; notes ride along.
 
