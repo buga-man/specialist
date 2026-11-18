@@ -261,7 +261,9 @@ about.
 
 With the `fast` profile (`.spec-gate`), it also injects the profile block — **even without
 an open plan**: fast lane is the default for small tasks; stage skills only on the user's
-explicit request.
+explicit request. The same goes for a role pin (`role: <analyst|dev|qa>`): the pin line is
+announced up front — otherwise its first symptom would be a mid-work skill-gate block. The
+pin gates skills, not files, so its line speaks even in mode `off` (as the only line).
 
 Onboarding: if the project has a `.spec-gate` (any mode except `off`) but `CODESTYLE.md`
 or `.kbindex/index.json` is missing — a reminder line is added naming the skill that closes

@@ -73,6 +73,29 @@ test("hard mode changes the gate wording; off — full silence", () => {
   assert.equal(buildPlanContext(off), null);
 });
 
+test("role pin: announced with and without an open plan, and it survives mode off", () => {
+  const noPlan = buildPlanContext(project({ ".spec-gate": "role: qa\n" }));
+  assert.ok(noPlan.includes("Role pin:"), "the pin speaks before any plan exists");
+  assert.ok(noPlan.includes("role: qa"));
+  assert.ok(noPlan.includes("dispatch protocol"));
+  const withPlan = buildPlanContext(
+    project({ ".spec-gate": "role: qa\n", "docs/plans/2026-01-01-t.md": PLAN }),
+  );
+  assert.ok(withPlan.startsWith("plan-context:"), "the plan orientation stays first");
+  assert.ok(withPlan.includes("Role pin:"));
+  const off = buildPlanContext(project({ ".spec-gate": "mode: off\nrole: dev\n" }));
+  assert.ok(off.includes("Role pin:"), "the pin gates skills, not files — off keeps it");
+  assert.ok(off.includes("role: dev"));
+  assert.ok(!off.includes("plan-context:"), "off keeps the file gate silent");
+});
+
+test("role pin: an unknown role is not announced (fail-open, like the gate)", () => {
+  // the .spec-gate marker itself may still produce the onboarding line — the point is
+  // that no Role pin line appears for a role the map does not know
+  const text = buildPlanContext(project({ ".spec-gate": "role: develop\n" }));
+  assert.ok(!text.includes("Role pin:"));
+});
+
 test("fast without plans: a single profile block — the fast lane and stage skills", () => {
   const text = buildPlanContext(project({ ".spec-gate": "fast\n" }));
   assert.ok(text, "in fast mode the profile is injected even without open tasks");

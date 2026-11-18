@@ -305,6 +305,23 @@ function main() {
   }
   findings.push(...validateRoleMap(names));
 
+  // The EARS mirror: spec-review ships its own copy of brainstorm's reference so the
+  // quality bar travels with the qa plugin (which carries no brainstorm). The mirror
+  // is a derived artifact — the original's full text must stay contained in it, or the
+  // copy has silently drifted (compared newline-insensitively, like the roles trees).
+  {
+    const norm = (s) => s.replace(/\r\n/g, "\n");
+    const mirrorRel = "skills/spec-review/references/ears-patterns.md";
+    if (!existsSync(join(REPO_ROOT, mirrorRel))) {
+      findings.push(`${mirrorRel} — the EARS mirror is missing`);
+    } else if (!norm(read(mirrorRel)).includes(norm(read("skills/brainstorm/references/ears-patterns.md")))) {
+      findings.push(
+        `${mirrorRel} no longer contains brainstorm's references/ears-patterns.md — the ` +
+          "mirror drifted; recopy the original (keep the mirror note at the top)",
+      );
+    }
+  }
+
   // Directory and file names go into regexes below; a name with regex metacharacters
   // must match literally, not bend the pattern.
   const headingRe = (word) =>

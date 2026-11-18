@@ -45,11 +45,31 @@ another role's work. Stop and ask the user, with these options:
 2. **New session with the needed role** — cleanest for heavy stage work (specs,
    acceptance); the current session keeps its context for its own role.
 3. **A subagent with the role** — where the host supports subagents, hand the task to a
-   fresh agent instructed to enter the role; this session keeps its role.
+   fresh agent with a role-entry prompt (this session keeps its role):
+
+   > Enter the \<role\> role of the specialist framework: load the `role-\<role\>` skill
+   > and follow it. The task: \<one paragraph\>. The handoff artifact: \<path\>. Stay
+   > inside the role — anything out of role goes back as a recorded artifact, not as
+   > silent work.
+
 4. **Stay in the current role** — record the out-of-role part as an artifact for the
    other role (an open question in the spec, a bug report, an amendment) and continue.
 
 No answer or a "no" means option 4 — the user decides, not the agent.
+
+## The relay artifacts
+
+Roles hand work to each other through files, never through chat memory. The artifact is
+the handoff: whoever picks it up next — a session, a subagent, a human — starts from it,
+even if the producing role's skills are not installed on that side.
+
+| Transition | The artifact |
+|---|---|
+| analyst → dev | the repo specs (`docs/specs/*-<repo>.md`): changes, patterns, criteria |
+| dev → qa | the executed plan — tasks with `Verify:` commands — plus the executor's report |
+| qa → dev | the findings report (`*-review` / `-quality` / `-audit`): every finding with a trigger scenario |
+| qa → analyst | proposed amendments (spec gaps) inside the same report — the user approves them |
+| any → user | decisions only a human makes: changed intent, risk, scope |
 
 ## Nuances
 
