@@ -8,9 +8,12 @@
  * against a plan it does not know about.
  *
  * Deliberately silent when there is nothing to say: no open tasks, or the gate is
- * switched off. Three process rules carry context that must survive even before any
+ * switched off. Four process rules carry context that must survive even before any
  * plan exists, so they are injected with no open tasks too:
  *   - the "fast" SDD profile (its stage skills and lane rules);
+ *   - the role pin: .spec-gate's `role:` directive announced up front — otherwise its
+ *     first symptom is a mid-work skill-gate block. The pin gates skills, not files,
+ *     so its line speaks even in mode "off";
  *   - the onboarding reminder: a project that opted into the SDD discipline (a
  *     .spec-gate file in any mode but "off") is expected to carry CODESTYLE.md and a
  *     built documentation index — missing pieces get one line. Absence is unfinished
@@ -34,7 +37,8 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { activePlanInfo, readMode } from "./spec-core.mjs";
+import { activePlanInfo, readGateConfig, readMode } from "./spec-core.mjs";
+import { roleNames } from "../../scripts/roles.mjs";
 
 const MAX_TITLES = 5;
 const MAX_TITLE_LEN = 80;
@@ -62,6 +66,21 @@ function onboardingBlock(projectDir) {
     missing.push("no documentation index — run the kb-index skill (build)");
   }
   return missing.length ? `Onboarding: ${missing.join("; ")}.` : null;
+}
+
+/** The pinned-role line, or null: .spec-gate's `role:` directive (a name from the
+ *  roles map — anything else reads as unset, fail-open like the gate itself). The pin
+ *  is orthogonal to the mode: it gates skills, not files, so the line speaks even in
+ *  mode "off". */
+function roleBlock(projectDir) {
+  const { role } = readGateConfig(projectDir);
+  if (!role || !roleNames().includes(role)) return null;
+  return (
+    `Role pin: .spec-gate pins role: ${role} — this session works inside the ${role} ` +
+    "role (its skills, dispatch, and the role-* entries). Out-of-role skills are " +
+    "blocked by the skill-gate; switching needs the user's explicit consent (the " +
+    "dispatch protocol)."
+  );
 }
 
 // Case-insensitive on the suffix on purpose: the filter above accepts ".MD", and a
@@ -180,7 +199,7 @@ export function specChainBlock(projectDir) {
 /**
  * Returns the context block, or null when there is nothing to inject.
  *
- * - off: always null (silent).
+ * - off: silent — except the role pin (it gates skills, not files, and survives off).
  * - soft/hard: the plan orientation (open tasks, gate state, closing contract) — only
  *   when there are open tasks; with no open tasks: the spec-chain line (no marker
  *   needed — a docs/specs/ tree is the opt-in), else the onboarding line when the
@@ -189,14 +208,16 @@ export function specChainBlock(projectDir) {
  *   since fast is soft for files) plus the fast-profile block; with no open tasks the
  *   fast-profile block plus the chain line — the process orientation is needed before
  *   any plan exists.
- * - The onboarding line (when present) is appended in every non-off case.
+ * - The role-pin and onboarding lines (when present) are appended in every case.
  */
 export function buildPlanContext(projectDir) {
   try {
     const mode = readMode(projectDir);
-    if (mode === "off") return null;
+    const role = roleBlock(projectDir);
+    if (mode === "off") return role;
     const onboarding = onboardingBlock(projectDir);
-    const withOnboarding = (text) => (onboarding ? `${text}\n${onboarding}` : text);
+    const extras = [role, onboarding].filter(Boolean).join("\n");
+    const withExtras = (text) => (extras ? `${text}\n${extras}` : text);
 
     const info = activePlanInfo(projectDir);
     if (!info.hasOpenTasks) {
@@ -204,10 +225,10 @@ export function buildPlanContext(projectDir) {
       // chain is the thing a fresh session would otherwise not know to continue.
       const chain = specChainBlock(projectDir);
       if (mode === "fast") {
-        return withOnboarding(chain ? `${FAST_PROFILE_BLOCK}\n${chain}` : FAST_PROFILE_BLOCK);
+        return withExtras(chain ? `${FAST_PROFILE_BLOCK}\n${chain}` : FAST_PROFILE_BLOCK);
       }
-      if (!chain) return onboarding;
-      return withOnboarding(chain);
+      if (!chain) return extras || null;
+      return withExtras(chain);
     }
 
     const n = info.openTaskCount || info.openTaskTitles.length || 1;
@@ -241,7 +262,7 @@ export function buildPlanContext(projectDir) {
       `${gate}\n` +
       'Close a task with an explicit "- Done: <commit>" line in the plan — "- [x]" checkboxes are progress, not closure.';
 
-    return withOnboarding(mode === "fast" ? `${text}\n${FAST_PROFILE_BLOCK}` : text);
+    return withExtras(mode === "fast" ? `${text}\n${FAST_PROFILE_BLOCK}` : text);
   } catch {
     return null; // fail-safe: orientation is a nice-to-have, never a burden
   }

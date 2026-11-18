@@ -1,8 +1,16 @@
-# EARS patterns for acceptance criteria
+# EARS patterns — spec-review mirror
 
-Mirror of brainstorm's `references/ears-patterns.md` (the analyst role ships the
-original) — kept beside the reviewer so the quality bar travels with the qa role
-even when the analyst plugin is not installed.
+
+
+Mirror of brainstorm's `references/ears-patterns.md` (the analyst role ships the original) — kept
+
+beside the reviewer so the quality bar travels with the qa role even when the analyst
+
+plugin is not installed. Recopy: this note, a `---` line, then the original verbatim.
+
+---
+
+# EARS patterns for acceptance criteria
 
 EARS (Easy Approach to Requirements Syntax) gives each acceptance criterion a
 fixed grammatical shape, so a reviewer or a fresh-context agent can parse it
