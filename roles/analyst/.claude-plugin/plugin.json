@@ -1,0 +1,9 @@
+{
+  "name": "specialist-analyst",
+  "description": "The analyst role of the specialist framework — a raw task to business, system, and per-repository specs, and documentation that stays true to the code. Skills-only plugin; the guards ship with the full specialist bundle.",
+  "version": "0.31.0",
+  "author": {
+    "name": "Specialist"
+  },
+  "skills": "./skills"
+}

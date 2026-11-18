@@ -5,18 +5,45 @@
   },
   "metadata": {
     "description": "Plugin marketplace (skills, hooks, extensions)",
-    "version": "0.30.1"
+    "version": "0.31.0"
   },
   "plugins": [
     {
       "name": "specialist",
       "source": "./",
       "description": "Full-cycle feature development skills: business spec → system analysis → per-repository decomposition → work plan → spec-driven implementation → acceptance → documentation",
-      "version": "0.30.1",
+      "version": "0.31.0",
+      "author": {
+        "name": "Specialist"
+      }
+    },
+    {
+      "name": "specialist-analyst",
+      "source": "./roles/analyst",
+      "description": "The analyst role of the specialist framework — a raw task to business, system, and per-repository specs, and documentation that stays true to the code. Skills-only plugin; the guards ship with the full specialist bundle.",
+      "version": "0.31.0",
+      "author": {
+        "name": "Specialist"
+      }
+    },
+    {
+      "name": "specialist-dev",
+      "source": "./roles/dev",
+      "description": "The developer role of the specialist framework — a repo spec to spec-driven code: implementation plans, tests-first minimal implementation, conventions, bug root-causing. Skills-only plugin; the guards ship with the full specialist bundle.",
+      "version": "0.31.0",
+      "author": {
+        "name": "Specialist"
+      }
+    },
+    {
+      "name": "specialist-qa",
+      "source": "./roles/qa",
+      "description": "The QA/reviewer role of the specialist framework — acceptance against the specs, live-stand acceptance, quality review, adversarial bug and security hunting. Skills-only plugin; the guards ship with the full specialist bundle.",
+      "version": "0.31.0",
       "author": {
         "name": "Specialist"
       }
     }
   ],
-  "version": "0.30.1"
+  "version": "0.31.0"
 }

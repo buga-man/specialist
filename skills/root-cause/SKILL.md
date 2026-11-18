@@ -34,7 +34,8 @@ exists, the user's statement otherwise. The current code is not the oracle; it i
 - Grep every caller of the code you are about to touch: the same cause often surfaces at
   several call sites. Fix it once in the shared code, not at each symptom.
 - If the code does exactly what it was built to do, and that is not what is wanted — this
-  is not a bug. Route it to brainstorm as a feature request.
+  is not a bug. Route it to brainstorm as a feature request (the analyst role; if it is
+  not installed, record the request for that role — do not spec it yourself).
 
 ## 4. Red test
 
@@ -61,4 +62,4 @@ exists, the user's statement otherwise. The current code is not the oracle; it i
 
 - Root cause in one sentence; the fix in one sentence; the regression test by name.
 - Same-cause call sites checked (list them), and anything left suspicious nearby.
-- Risky fix (shared core, data, security) → send it through spec-review in a fresh session.
+- Risky fix (shared core, data, security) → send it through spec-review in a fresh session (the qa role; if it is not installed, a fresh review session before merge).

@@ -55,8 +55,9 @@ does not run someone else's formatter where the project did not choose it.
 /plugin install specialist@specialist
 ```
 
-After installation the following register automatically: 14 skills (autoloaded by
-description), the hooks from `hooks/hooks.json` (spec-gate, skill-gate, secrets-guard,
+After installation the following register automatically: 18 skills (autoloaded by
+description; the pipeline's fourteen plus `dispatch` and the three `role-*` entry
+skills), the hooks from `hooks/hooks.json` (spec-gate, skill-gate, secrets-guard,
 vuln-guard, suite-gate on PreToolUse; git-watch, edit-guard on PostToolUse;
 plan-context, codestyle-reminder on SessionStart; kb-gate on Stop).
 
@@ -106,6 +107,29 @@ pi install .
 Updates: `pi update`. Pinning a version — by tag: `git:...specialist.git@v<release-tag>`.
 After editing or adding extensions: `/reload` inside pi.
 
+## Roles — analyst / developer / QA
+
+The framework installs as one full plugin or as three skills-only role plugins
+(`specialist-analyst`, `specialist-dev`, `specialist-qa`) — install one role and the
+session carries only that role's skills (the role sets do not overlap; every role also
+carries `dispatch`, the classifier/routing entry point, and its own `role-*` entry skill).
+Role switching mid-session is governed by `dispatch`: only with the user's explicit
+consent — switch here / a new session with the role / a role subagent / stay and record
+the task for the other role.
+
+- **Claude Code** — `/plugin install specialist-qa@specialist` (the same marketplace);
+  **ZCode** — the marketplace page lists all four plugins. Switching roles day-to-day =
+  enabling/disabling the installed plugins.
+- **pi / skills-only** — `bash scripts/copy-skills.sh <target> --role qa` copies only
+  that role's skills.
+- `.spec-gate` can pin the session to one role (`role: qa`) — on Claude Code and ZCode
+  the skill-gate then blocks out-of-role skills until the user consents to a switch.
+
+Role plugins are skills-only: the guards (hooks) ship with the full `specialist` bundle —
+do not install a role together with the bundle (the skill names collide). The `roles/`
+trees are generated from `scripts/roles.mjs`; `node scripts/compliance.mjs --fix`
+rebuilds them.
+
 ## Skills only, without installing the plugin
 
 ```bash
@@ -114,6 +138,7 @@ cd specialist
 bash scripts/copy-skills.sh claude   # → ~/.claude/skills
 bash scripts/copy-skills.sh pi       # → ~/.pi/agent/skills
 bash scripts/copy-skills.sh agents   # → ~/.agents/skills (cross-harness)
+bash scripts/copy-skills.sh claude --role qa   # only the qa role's skills
 ```
 
 Existing skills are not overwritten without confirmation. The target can be any directory:
@@ -127,7 +152,7 @@ the plugin):
 
 | File | Who reads it | Values | Default |
 |---|---|---|---|
-| `.spec-gate` | spec-gate | `soft` / `hard` / `off` | `soft` (the gate is active only with an open plan) |
+| `.spec-gate` | spec-gate, skill-gate | a single word — `soft` / `hard` / `fast` / `off`; or one directive per line: `mode:` (same values) and `role: analyst|dev|qa` (pins the session to one role — skill-gate blocks the other roles' skills until the user consents to a switch) | `soft`, no role (the gate is active only with an open plan) |
 | `.vuln-guard` | vuln-guard | `commit` / `always` (a synonym of `edit`) / `off` | `commit` (a scan only on commit); `off` disables the hook entirely |
 | `.suite-gate` | suite-gate | the first line is the test command (`npm test`, …); the rest are notes; `off` / empty — disabled | absent (the gate is opt-in: no file — nothing runs) |
 | `.secrets-allow` | secrets-guard | one regexp per line; `#` — a comment | absent |

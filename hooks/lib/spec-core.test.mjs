@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { activePlanInfo, applyPatchPaths, decide, editedFilePaths, isAlwaysAllowed, readMode, scopeChangeNotes } from "./spec-core.mjs";
+import { activePlanInfo, applyPatchPaths, decide, editedFilePaths, isAlwaysAllowed, readGateConfig, readMode, scopeChangeNotes } from "./spec-core.mjs";
 
 const dirs = [];
 process.on("exit", () => {
@@ -60,6 +60,28 @@ test("readMode: fast is accepted, case-insensitively", () => {
   assert.equal(readMode(dir), "fast");
   writeFileSync(join(dir, ".spec-gate"), "FAST");
   assert.equal(readMode(dir), "fast");
+});
+
+test("readGateConfig: the legacy bare word is the mode, role stays null", () => {
+  const dir = project({ ".spec-gate": "fast\n" });
+  assert.deepEqual(readGateConfig(dir), { mode: "fast", role: null });
+});
+
+test("readGateConfig: the line format carries mode and role, with comments and case-insensitivity", () => {
+  const dir = project({ ".spec-gate": "# pinned via dispatch\nmode: Hard\nrole: QA\n" });
+  assert.deepEqual(readGateConfig(dir), { mode: "hard", role: "qa" });
+});
+
+test("readGateConfig: role without mode — the mode defaults to soft", () => {
+  const dir = project({ ".spec-gate": "role: analyst\n" });
+  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "analyst" });
+});
+
+test("readGateConfig: unknown keys and values are ignored, never restrictive", () => {
+  // role validation is the consumer's job (skill-gate-core knows the roles map) —
+  // the parser stays generic and preserves the word it was given.
+  const dir = project({ ".spec-gate": "mode: sometimes\nrole: develop\ntempo: fast\n" });
+  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "develop" });
 });
 
 test("decide (fast): file gate behaves exactly like soft", () => {

@@ -117,3 +117,33 @@ test("hook: env without CLAUDE_PROJECT_DIR — payload.cwd points at the fast pr
   assert.equal(r.status, 2);
   assert.match(r.stderr, /skill-gate/);
 });
+
+test("hook: role qa — brainstorm is blocked with the dispatch protocol", () => {
+  const dir = project({ ".spec-gate": "role: qa\n" });
+  const r = runHook({ tool_name: "Skill", tool_input: { skill: "brainstorm" }, cwd: dir }, dir);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /belongs to the analyst role/);
+  assert.match(r.stderr, /role: qa/);
+  assert.match(r.stderr, /dispatch options/);
+});
+
+test("hook: role qa — its own skills, dispatch and the role-* entries pass", () => {
+  const dir = project({ ".spec-gate": "role: qa\n" });
+  for (const skill of ["bug-hunt", "spec-review", "dispatch", "role-dev"]) {
+    const r = runHook({ tool_name: "Skill", tool_input: { skill }, cwd: dir }, dir);
+    assert.equal(r.status, 0, skill);
+    assert.equal(r.stderr, "", skill);
+  }
+});
+
+test("hook: role with mode — both profiles read from one file", () => {
+  const dir = project({ ".spec-gate": "mode: fast\nrole: dev\n" });
+  const stage = runHook({ tool_name: "Skill", tool_input: { skill: "brainstorm" }, cwd: dir }, dir);
+  assert.equal(stage.status, 2);
+  assert.match(stage.stderr, /fast` SDD profile/);
+  const outOfRole = runHook({ tool_name: "Skill", tool_input: { skill: "code-review" }, cwd: dir }, dir);
+  assert.equal(outOfRole.status, 2);
+  assert.match(outOfRole.stderr, /belongs to the qa role/);
+  const inRole = runHook({ tool_name: "Skill", tool_input: { skill: "lazy" }, cwd: dir }, dir);
+  assert.equal(inRole.status, 0);
+});

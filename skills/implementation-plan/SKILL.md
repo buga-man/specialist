@@ -24,7 +24,7 @@ in a head do not.
 ## 1. Read the specs
 
 - The repo spec is the source of record: its Changes section is the entire task universe. The system spec supplies contracts and rollout order; the business spec supplies intent and acceptance criteria.
-- No repo spec → stop: run decompositor first.
+- No repo spec → stop: run decompositor first (the analyst role; if it is not installed, ask the user for the spec rather than sketching one yourself).
 - An existing plan for this topic with unchecked tasks → stop and ask the user; never overwrite work that may be mid-build.
 
 ## 2. Map changes to tasks
@@ -135,5 +135,5 @@ Undos in reverse execution order, then one post-rollback verify:
   and append the plan's `id` to that spec's `children`; a parent with downstream docs and
   an empty `children` is a traceability defect.
 - **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language).
-- **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later; do not inflate it into a full spec chain.
+- **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later (the qa role; if it is not installed, a fresh review pass before merge); do not inflate it into a full spec chain.
 - Write the plan in the team's working language, which may differ from the language of this skill.

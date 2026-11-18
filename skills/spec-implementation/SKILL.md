@@ -110,8 +110,9 @@ change — that is the proof nothing changed.
 The diff is about to meet a fresh-session reviewer — spend ten minutes in its shoes
 first. Walk the whole branch diff against the reviewers' checklists: bug-hunt's
 (boundaries, error paths, concurrency, resources, injection, authz) and code-review's
-(naming, duplication, needless work) — the classes reviewers keep finding are the
-classes authors keep missing. Fix the trivial on the spot as a fresh commit; what you
+(naming, duplication, needless work) — both are the qa role's skills; where they are
+not installed, the classes named here are the checklist. The classes reviewers keep
+finding are the classes authors keep missing. Fix the trivial on the spot as a fresh commit; what you
 cannot resolve — uncertain edges, suspicious spots without a proof — carries into the
 final report as self-review notes, so the reviewer starts at the deep end, not at the
 surface.

@@ -1,4 +1,4 @@
-# Skills: what each of the fourteen does
+# Skills: what each of the eighteen does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
@@ -25,6 +25,26 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
 ```
 
 `lazy` is not a stage but a behavioral overlay for any coding.
+
+## Roles: how the skills ship
+
+The same pipeline installs as one full plugin or as three skills-only role plugins —
+install a role and the session carries only that role's skills. `dispatch` (in every
+plugin) classifies a task by role before any work starts; `role-analyst` / `role-dev` /
+`role-qa` are the roles' entry skills. Roles are switched only with the user's explicit
+consent — the options live in `dispatch`.
+
+| Plugin | The role | Skills |
+|---|---|---|
+| `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, `role-analyst` |
+| `specialist-dev` | a repo spec to spec-driven code | implementation-plan, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
+| `specialist-qa` | acceptance, review, bug hunting | spec-review, stand-acceptance, code-review, bug-hunt, `role-qa` |
+| `specialist` (full) | the whole cycle + the guards (hooks) | all of the above |
+
+The role plugins are generated from the roles map (`scripts/roles.mjs`) — one source of
+truth for the plugins, the role profile of the skill-gate, and `copy-skills.sh --role`.
+On Claude Code and ZCode, `.spec-gate` can pin the session to one role (`role: qa`) —
+out-of-role skills are then blocked until the user consents to a switch.
 
 ## Principles of the whole system
 
@@ -364,6 +384,59 @@ mimicry: agent code is indistinguishable from developer code.
   "codestyle" — or a hook reminder.
 - **Key rule:** the document describes how code is *written here*, not how it *should be* —
   it is a derivative of the code; the source of truth is always the code.
+
+## dispatch — which role takes this task
+
+The framework's entry point, carried by every plugin (roles and the full bundle). One
+decision comes before any work: which role owns the task — work inside the wrong role
+produces the wrong artifacts.
+
+- **Classify:** analyst (understanding, specifying, docs) / dev (making — implement, fix,
+  refactor) / qa (proving — review, acceptance, hunting) / outside the framework (ops,
+  git chores, chat — just do the work). Announce the verdict, load the role's `role-*`
+  entry skill. The role is not installed — name the plugin to install or suggest a
+  session with that role; unclear — one short question to the user, not a guess.
+- **Switching:** mid-task the work may outgrow the role. Never drift. Ask the user:
+  switch here (the behavior changes; on Claude Code/ZCode also update `.spec-gate` to
+  `role: <name>`) / a new session with the role / a role subagent (where the host
+  supports them) / stay and record the out-of-role part as an artifact for the other
+  role. No answer means stay.
+- **Enforcement:** on Claude Code and ZCode the skill-gate blocks out-of-role skill
+  calls with a pointer here; on pi, Codex CLI, and OpenCode the skill is advisory —
+  follow it honestly.
+
+## role-analyst — enter the analyst role
+
+The analyst's entry skill: mission (understanding, written down — specs a business person
+can verify and a developer implements without guessing), the working cycle
+(brainstorm → system-thinking → decompositor, kb-index to navigate, tech-writer after
+merge), and the role's principles — no code and no implementation decisions, at most 10
+questions before the spec, every criterion EARS-shaped with an explicit `Verify:`, the
+blast radius named. Out of role: writing/fixing code, verdicts, bug hunting — use the
+dispatch switching protocol. On hosts with the skill-gate, activation offers to pin
+`role: analyst` in `.spec-gate`.
+
+## role-dev — enter the developer role
+
+The developer's entry skill: mission (working code that does exactly what the spec says,
+proven by tests that fail without it), the working cycle (implementation-plan →
+spec-implementation; `lazy` always on; `codestyle` first in an unfamiliar repo;
+`root-cause` for bugs), and the principles — spec > test > code, tests first, vertical
+slices, one task = one commit, the smallest change that fully satisfies the spec, a bug
+fixed once at the cause behind a red-then-green test. The self-review pass is part of
+the work; the acceptance verdict is qa's. Out of role: specs, verdicts, reviews — the
+dispatch protocol. Activation offers `role: dev` in `.spec-gate`.
+
+## role-qa — enter the QA role
+
+The reviewer's entry skill: mission (a verdict the reader trusts without re-running the
+work — every claim with evidence), the working cycle (spec-review criterion by
+criterion; stand-acceptance for the locally unverifiable; code-review / bug-hunt on
+demand; best in a fresh session), and the principles — a verdict without evidence is an
+opinion; passed / failed / unverifiable-with-reason, never "mostly passes"; adversarial
+by default; critical findings reported immediately; the reviewer does not fix — findings
+and failed criteria are handoff artifacts for dev (`root-cause`) and the analyst
+(amendments). Activation offers `role: qa` in `.spec-gate`.
 
 ## Fast lane — SDD for small tasks
 

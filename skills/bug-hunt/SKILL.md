@@ -94,8 +94,8 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
   anti-pattern proposals.
 - Outcome: **no findings** / **findings listed** / **exploitable — fix before merge**.
-- Fixes go back into the plan (or root-cause for a single confirmed bug); this skill
-  does not fix.
+- Fixes go back into the plan (or root-cause — the dev role, if installed — for a single
+  confirmed bug); this skill does not fix.
 
 ## Parallel hunters (scouts — by explicit permission)
 
