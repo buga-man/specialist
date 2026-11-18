@@ -86,6 +86,20 @@ test("host manifests: names are aligned and referenced paths exist", () => {
   assert.equal(marketplace.plugins[0].name, "specialist");
   assert.equal(marketplace.plugins[0].source, "./");
 
+  // The role plugins: skills-only siblings of the full bundle, generated from the
+  // roles map into roles/<role>/ (compliance flags drift; this checks the wiring —
+  // the marketplace entry resolves to a directory with a plugin manifest).
+  const roles = ["analyst", "dev", "qa"];
+  assert.equal(marketplace.plugins.length, 1 + roles.length, "the bundle + three role plugins");
+  marketplace.plugins.slice(1).forEach((entry, i) => {
+    const role = roles[i];
+    assert.equal(entry.name, `specialist-${role}`, `marketplace entry ${i + 1}`);
+    assert.equal(entry.source, `./roles/${role}`);
+    assert.ok(existsSync(join(REPO_ROOT, "roles", role, ".claude-plugin", "plugin.json")), `${role} manifest`);
+    assert.ok(existsSync(join(REPO_ROOT, "roles", role, "plugin.json")), `${role} Codex manifest`);
+    assert.ok(existsSync(join(REPO_ROOT, "roles", role, "skills")), `${role} skills tree`);
+  });
+
   const piPackage = readJSON("package.json");
   assert.equal(piPackage.name, "specialist");
   assert.deepEqual(piPackage.pi.skills, ["./skills"]);
@@ -144,6 +158,17 @@ test("versions: every manifest field carries the same version (the version-sync 
     "marketplace.json plugins[0]": marketplace.plugins?.[0]?.version,
     "marketplace.json root": marketplace.version,
   };
+  // The role plugins' generated manifests ride the same version (compliance rebuilds
+  // them from package.json — this keeps the rule honest after a bump).
+  for (const role of ["analyst", "dev", "qa"]) {
+    versions[`roles/${role}/plugin.json`] = readJSON(`roles/${role}/plugin.json`).version;
+    versions[`roles/${role}/.claude-plugin/plugin.json`] = readJSON(
+      `roles/${role}/.claude-plugin/plugin.json`,
+    ).version;
+  }
+  marketplace.plugins.slice(1).forEach((entry, i) => {
+    versions[`marketplace.json plugins[${i + 1}] (${entry.name})`] = entry.version;
+  });
   for (const [place, version] of Object.entries(versions)) {
     assert.ok(typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version), `${place}: ${version}`);
   }

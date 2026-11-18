@@ -102,20 +102,31 @@ plan); the user edits it.
 **Boundaries:** does not read the contents of edits (only the target file); does not
 intercept edits via Bash; semantic fit to the spec is checked by `spec-review`.
 
-## skill-gate — the process profile at skill invocation
+## skill-gate — the process profile and the role pin at skill invocation
 
-`PreToolUse` on the `Skill` tool (Claude Code only; pi has no interception point for skill
-invocations — there the profile arrives only through plan-context's orientation). The same
-`.spec-gate` file sets the profile: the value `fast` makes fast lane the project default —
-autonomous runs of the pipeline's stage skills (`brainstorm`, `system-thinking`,
-`decompositor`) are blocked with an explanation: a small task goes through fast lane (a
-mini-spec in the header of a one-task plan), while an explicit user request is served by
-temporarily switching the profile to `soft`.
+`PreToolUse` on the `Skill` tool (Claude Code and ZCode; pi has no interception point for
+skill invocations — there the profile arrives only through plan-context's orientation).
+The same `.spec-gate` file carries two directives, one per line (`mode:` and `role:`; a
+single bare word is the legacy form of the mode):
+
+- `mode: fast` makes fast lane the project default — autonomous runs of the pipeline's
+  stage skills (`brainstorm`, `system-thinking`, `decompositor`) are blocked with an
+  explanation: a small task goes through fast lane (a mini-spec in the header of a
+  one-task plan), while an explicit user request is served by temporarily switching the
+  profile to `soft`.
+- `role: analyst|dev|qa` pins the session to one role plugin: the other roles' skills are
+  blocked until the user consents to a switch — the block message points to the dispatch
+  protocol (switch here / a new session with the role / a role subagent / stay and record
+  the task for the other role). Always allowed: the active role's skills, `dispatch`
+  (shared), every `role-*` entry skill (switching means loading the new role's entry),
+  and skills the roles map does not know (third-party). The role lists come from
+  `scripts/roles.mjs` — the same map the role plugins are generated from; an unknown
+  role value reads as "no pin" (fail-open).
 
 The skill name is normalized (`/brainstorm` and `plugin:brainstorm` are the same thing).
-The profile changes the default rather than forbidding forever: without an open plan,
+The profiles change the default rather than forbidding forever: without an open plan,
 `.spec-gate` is edited freely (the file gate allows it); with an open plan, only the user
-changes the mode. In `soft`/`hard`/`off` the hook is silent.
+changes it. In `soft`/`hard`/`off` without a role pin the hook is silent.
 
 ## secrets-guard — secrets never reach git
 

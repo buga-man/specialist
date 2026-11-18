@@ -21,20 +21,47 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 
-/** Mode file in the project root: "hard" forces the pipeline even without a plan,
- *  "fast" is soft for the file gate but changes process orientation (skill-gate blocks
- *  the stage skills, plan-context advertises the fast lane), "off" disables the gate. */
-export function readMode(projectDir) {
+/** Config file `.spec-gate` in the project root. Two formats:
+ *   - legacy — one bare word, the mode: "hard" forces the pipeline even without a plan,
+ *     "fast" is soft for the file gate but changes process orientation (skill-gate
+ *     blocks the stage skills, plan-context advertises the fast lane), "off" disables
+ *     the gate, anything else reads as the default "soft";
+ *   - line-based — `mode: <soft|hard|fast|off>` and `role: <analyst|dev|qa>` directives,
+ *     one per line, blank lines and "#" comments allowed. `role` pins the session to one
+ *     role plugin: skill-gate then blocks the other roles' skills until the user
+ *     consents to a switch (the dispatch protocol). null when unset.
+ *  Unknown keys and values are ignored — the file never turns restrictive by accident. */
+const GATE_MODES = new Set(["soft", "hard", "fast", "off"]);
+
+/** Reads the whole .spec-gate config: { mode, role }. Fail-safe: a missing or
+ *  unparsable file is the defaults, never a restriction. */
+export function readGateConfig(projectDir) {
+  let mode = "soft";
+  let role = null;
   try {
     const p = join(projectDir, ".spec-gate");
     if (existsSync(p)) {
-      const v = readFileSync(p, "utf8").trim().toLowerCase();
-      if (v === "hard" || v === "off" || v === "fast") return v;
+      for (let line of readFileSync(p, "utf8").split(/\r?\n/)) {
+        line = line.trim().toLowerCase();
+        if (!line || line.startsWith("#")) continue;
+        const m = line.match(/^([a-z-]+):\s*(\S+)$/);
+        if (m) {
+          if (m[1] === "mode" && GATE_MODES.has(m[2])) mode = m[2];
+          else if (m[1] === "role" && /^[a-z][a-z-]*$/.test(m[2])) role = m[2];
+          continue;
+        }
+        if (GATE_MODES.has(line) && line !== "soft") mode = line; // legacy bare word
+      }
     }
   } catch {
-    /* fall through to default */
+    /* fall through to the defaults */
   }
-  return "soft";
+  return { mode, role };
+}
+
+/** The gate mode alone — spec-gate and plan-context orient by it. */
+export function readMode(projectDir) {
+  return readGateConfig(projectDir).mode;
 }
 
 /** Files the agent may always touch: documentation, specs, plans. The .spec-gate mode

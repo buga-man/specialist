@@ -49,7 +49,7 @@ review there is.
   that would pass every criterion — the shape-checks trap from shallow oracles. If one
   exists, the implementation may still be accepted, but the criteria set is weaker than
   it looks: report the gap with a proposed sharper criterion (amendment) — shaped per
-  brainstorm's references/ears-patterns.md (EARS stems + the quality bar) — so the next
+  references/ears-patterns.md (EARS stems + the quality bar) — so the next
   feature inherits teeth instead of the trap.
 
 ## 3. Scan for unrequested behavior
@@ -93,8 +93,9 @@ review there is.
   unverifiable — "check on a live environment" is a legitimate verdict, hand it over as a
   task, not a hope.
 - **Changes required** items go back into the plan as tasks; a finding that is a plain
-  bug rather than a spec deviation goes to root-cause (a known failing case) or bug-hunt
-  (a wider adversarial sweep of the area). This skill does not fix code.
+  bug rather than a spec deviation goes to root-cause (a known failing case — the dev
+  role, if installed) or bug-hunt (a wider adversarial sweep of the area). This skill
+  does not fix code.
 
 ## Rules
 

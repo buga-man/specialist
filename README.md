@@ -45,6 +45,13 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
 
+**Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
+`specialist-dev`, `specialist-qa` — alongside the full bundle. `dispatch` classifies a
+task by role before any work starts; `role-analyst` / `role-dev` / `role-qa` are the
+roles' entry skills (mission, working cycle, principles, switching); `.spec-gate` can pin
+the session to one role (`role: qa`) — the skill-gate then blocks out-of-role skills
+until the user consents to a switch. [Installation by role](#roles-analyst--developer--qa).
+
 Each spec is the contract input of the next skill; decisions are made and recorded at
 the top, everything below only executes. Specs are living documents: deviations during
 implementation travel up the chain (local ones — rulings in the report; behavior/contract
@@ -69,16 +76,17 @@ traceability defect — spec-review and tech-writer check for it.
 
 ```
 .claude-plugin/plugin.json       Claude Code plugin manifest
-.claude-plugin/marketplace.json  marketplace wrapper (source: "./") — how /plugin install finds the plugin
+.claude-plugin/marketplace.json  marketplace wrapper: the full plugin (source "./") + the three role plugins (source "roles/<role>") — what /plugin install lists
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 .zcode-plugin/plugin.json        ZCode plugin manifest: points ZCode at skills/ and hooks/hooks.json (ZCode speaks the Claude Code hook protocol, so the Claude Code adapters run unchanged)
 package.json                     pi package manifest (pi.skills / pi.extensions)
+roles/                           the three role plugins (specialist-analyst / specialist-dev / specialist-qa): skills-only, generated from scripts/roles.mjs + skills/ and committed; compliance --fix rebuilds them on drift
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
 hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile at skill invocation), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red suite from .suite-gate blocks the commit — opt-in), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, edit-guard.ts, plan-context.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                            documentation: skills, hooks, installation; design notes; the skill template
-scripts/                         helper scripts: copy-skills.sh, compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, generated docs/skill-index.md; skill CLIs live in the skill directories — skills/<name>/scripts/
+scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the generated docs/skill-index.md and roles/; skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
 ## Hooks and extensions: one logic, five hosts
@@ -94,7 +102,7 @@ API — [extensions/README.md](extensions/README.md).
 | Hook | When | What it does |
 |---|---|---|
 | `spec-gate` | before Edit/Write | blocks code edits outside the files of **open** tasks of a `docs/plans/` plan. Modes — the `.spec-gate` file at the project root: `soft` (default; active only with an active plan), `hard` (blocks code even without a plan — run the pipeline first), `fast` (the file gate as in `soft` + the process profile: fast lane by default), `off` |
-| `skill-gate` | skill invocation (Skill) | in the `fast` profile blocks autonomous launch of brainstorm / system-thinking / decompositor — small tasks go through the fast lane (a mini-spec in the header of a one-task plan); an explicit user request — via temporarily switching the profile to `soft`; silent in the other modes |
+| `skill-gate` | skill invocation (Skill) | in the `fast` profile blocks autonomous launch of brainstorm / system-thinking / decompositor — small tasks go through the fast lane (a mini-spec in the header of a one-task plan); an explicit user request — via temporarily switching the profile to `soft`. With `.spec-gate` pinning `role: <analyst/dev/qa>` — blocks the other roles' skills until the user consents to a switch (the block points to the dispatch protocol); silent otherwise |
 | `secrets-guard` | before Bash | blocks `git add` of sensitive files (`.env`, keys, credentials; `git add .`/`-A`, bare directories and wildcard paths are checked against the index with untracked files expanded, quoted non-ASCII paths unescaped, `.env.example` is allowed) and `git commit`/`git push` with secrets in the diff (two pattern tiers: definite/likely; a push without an upstream — the first push of a branch — scans the commits the remote does not hold); legitimate fixtures — a regex in `.secrets-allow` at the root; a finding never echoes the secret's value; `git -C <dir>` is checked against the given directory |
 | `vuln-guard` | before Bash (git commit) | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too (inside edit-guard), `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
 | `suite-gate` | before Bash (git commit) | the project's own test command from `.suite-gate` (first line) runs at the commit boundary — a non-zero exit blocks with the tail of the output; spawn error/timeout — no block (fail-safe). Opt-in: no `.suite-gate` — the hook is silent; `off`/empty — disabled |
@@ -129,7 +137,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all fourteen skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all eighteen skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all eleven hooks and extensions: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -200,6 +208,38 @@ skills work on their own: `bash scripts/copy-skills.sh opencode` (→
 `~/.config/opencode/skills`); the compatibility sources `~/.claude/skills` and
 `~/.agents/skills` are picked up automatically.
 
+### Roles (analyst / developer / QA)
+
+The framework ships as three skills-only role plugins alongside the full bundle — install
+one role and the session carries only that role's skills:
+
+| Plugin | The role | Skills |
+|---|---|---|
+| `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `role-analyst` |
+| `specialist-dev` | from a repo spec to spec-driven code | `implementation-plan`, `spec-implementation`, `codestyle`, `lazy`, `root-cause`, `role-dev` |
+| `specialist-qa` | acceptance, review, bug hunting | `spec-review`, `stand-acceptance`, `code-review`, `bug-hunt`, `role-qa` |
+
+Every role plugin also carries `dispatch` — the entry point that classifies a task by
+role before any work starts and governs switching: roles are switched only with the
+user's explicit consent (switch here / a new session with the role / a role subagent /
+stay and record the task for the other role).
+
+- **Claude Code / ZCode** — the same marketplace, another plugin:
+  `/plugin install specialist-qa@specialist`; the ZCode marketplace page lists all four.
+  Switching roles day-to-day = enabling/disabling the installed plugins.
+- **Codex CLI** — `codex plugin add specialist-qa@specialist`.
+- **pi / skills-only** — `bash scripts/copy-skills.sh <target> --role qa` copies only
+  that role's skills; **OpenCode** — point `opencode.json`'s `skills` array at
+  `roles/qa/skills` inside this repository.
+- On Claude Code and ZCode, `.spec-gate` can pin the session to one role (`role: qa`) —
+  the skill-gate then blocks out-of-role skills until the user consents to a switch.
+
+Role plugins are skills-only: the guards (spec-gate, secrets-guard, vuln-guard,
+suite-gate, edit-guard, …) ship with the full `specialist` bundle. Installing several
+roles together is fine (the skill sets do not overlap and roles carry no hooks); do not
+combine roles with the bundle — the skill names collide. The `roles/` trees are generated
+from `scripts/roles.mjs` — `node scripts/compliance.mjs --fix` rebuilds them.
+
 ### Skills only, without installing the plugin
 
 ```bash
@@ -229,9 +269,13 @@ In this mode hooks and extensions are **not** installed — skills only.
    variables are forbidden in SKILL.md.
    Command-and-project skills (like `stand-acceptance`, tied to a specific project's
    stand) are allowed — with an explicit scope in the description.
-4. Test in the hosts you target: `npm test && npm run compliance` must pass (the
-   compliance audit validates the frontmatter, the docs parity, and regenerates
-   `docs/skill-index.md` via `--fix` when it is stale). Then bump the plugin version, and commit.
+4. Assign the skill to a role in `scripts/roles.mjs` (a role list, or `shared` for the
+   skills every plugin carries) and regenerate the role trees:
+   `node scripts/compliance.mjs --fix`.
+5. Test in the hosts you target: `npm test && npm run compliance` must pass (the
+   compliance audit validates the frontmatter, the docs parity, the roles map, and
+   regenerates `docs/skill-index.md` and `roles/` via `--fix` when they are stale).
+   Then bump the plugin version, and commit.
 
 Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 
@@ -251,8 +295,10 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 
 - The plugin version is semver, kept in sync in every manifest field (enforced by
   `npm test`): `.claude-plugin/plugin.json`, `plugin.json` (the Codex manifest),
-  `package.json` (the pi package), and the three version fields of
-  `.claude-plugin/marketplace.json` (`metadata`, the plugin entry, the marketplace root).
+  `.zcode-plugin/plugin.json` (the ZCode manifest), `package.json` (the pi package), the
+  version fields of `.claude-plugin/marketplace.json` (`metadata`, every plugin entry,
+  the marketplace root), and the generated manifests of the role plugins
+  (`roles/<role>/plugin.json` — rebuilt from `package.json` by compliance `--fix`).
   A new skill or hook — minor; an edit of a skill's text — patch.
 - Stable points — git tags `v*` on the repository.
 

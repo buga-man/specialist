@@ -96,13 +96,14 @@ test("validateSkill: a frontmatter parse error surfaces with the skill's name", 
   assert.ok(findings.some((f) => f.startsWith("beta:") && f.includes('": "')));
 });
 
-test("buildCatalog: alphabetical rows, links, pipes escaped", () => {
+test("buildCatalog: alphabetical rows, role column, links, pipes escaped", () => {
   const md = buildCatalog([
-    { name: "zeta", description: "Last | one" },
+    { name: "zeta", description: "Last | one", role: "qa" },
     { name: "alpha", description: "First one" },
   ]);
   const rows = md.split("\n").filter((l) => l.startsWith("| ["));
   assert.equal(rows.length, 2);
-  assert.match(rows[0], /\[alpha\]\(\.\.\/skills\/alpha\/SKILL\.md\) \| First one/);
-  assert.match(rows[1], /Last \\[|] one/);
+  assert.match(rows[0], /\[alpha\]\(\.\.\/skills\/alpha\/SKILL\.md\) \| — \| First one/);
+  assert.match(rows[1], /\[zeta\]\(\.\.\/skills\/zeta\/SKILL\.md\) \| qa \| Last \\[|] one/);
+  assert.match(md, /\| Skill \| Role \| Description \(the autoload trigger\) \|/);
 });
