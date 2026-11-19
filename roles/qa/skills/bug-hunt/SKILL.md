@@ -160,3 +160,9 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   next.
 - Write the report in the team's working language, which may differ from the language of
   this skill.
+
+## Next
+
+Findings with their trigger scenarios go to the dev role; the hunt loop re-runs fresh
+scouts per the agreed budget until clean — or the iterations run out and the report names
+what is left.

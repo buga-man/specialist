@@ -1,7 +1,7 @@
 {
   "name": "specialist-qa",
   "description": "The QA/reviewer role of the specialist framework — acceptance against the specs, live-stand acceptance, quality review, adversarial bug and security hunting. Skills-only plugin; the guards ship with the full specialist bundle.",
-  "version": "0.33.0",
+  "version": "0.33.1",
   "author": {
     "name": "Specialist"
   },

@@ -186,3 +186,8 @@ text under review stays the text that was reviewed.
   see it stale, fix it.
 - **Every acceptance criterion is verifiable** by a business person, not only by a developer — a must criterion names its `Verify:` (a command or an explicit manual observation), and its shape follows an EARS pattern (references/ears-patterns.md).
 - Write the spec in the team's working language, which may differ from the language of this skill.
+
+## Next
+
+The approved spec moves to `system-thinking` — which repositories change, which contracts
+connect them, what breaks. Nothing downstream starts from a spec the user has not accepted.

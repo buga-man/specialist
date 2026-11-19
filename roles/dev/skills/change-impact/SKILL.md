@@ -63,3 +63,9 @@ gets an explicit "not touched", not silence.
 - **Requires confirmation / will not do** — changes no code: assessment, not editing
   (the edit is spec-implementation / root-cause work); cross-repo blast radius —
   system-thinking; the quality of the written code — code-review.
+
+## Next
+
+With the before-list written, the edit runs in its executing skill — `spec-implementation`
+for features, `root-cause` for defects. The after-report, with the before-list, becomes
+the promised-scope map for `code-review`.

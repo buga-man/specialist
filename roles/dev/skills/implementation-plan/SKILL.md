@@ -139,3 +139,9 @@ Undos in reverse execution order, then one post-rollback verify:
 - **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language).
 - **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later (the qa role; if it is not installed, a fresh review pass before merge); do not inflate it into a full spec chain.
 - Write the plan in the team's working language, which may differ from the language of this skill.
+
+## Next
+
+A nontrivial task opens with `change-impact` (the before-list), then runs in
+`spec-implementation`; fast-lane-sized work goes straight to `spec-implementation`. The
+last task closed there hands the branch to `spec-review`.

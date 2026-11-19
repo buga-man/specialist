@@ -1,13 +1,13 @@
 {
   "name": "specialist",
-  "version": "0.33.0",
+  "version": "0.33.1",
   "description": "The specialist plugin: a full-cycle feature development framework (skills, hooks, extensions)",
   "keywords": [
     "pi-package"
   ],
   "private": true,
   "scripts": {
-    "test": "node --test hooks scripts skills && node scripts/compliance.mjs",
+    "test": "node --test && node scripts/compliance.mjs",
     "compliance": "node scripts/compliance.mjs"
   },
   "pi": {

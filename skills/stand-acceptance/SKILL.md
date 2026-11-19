@@ -124,6 +124,11 @@ or artifact and what exactly was observed (output, status, row count, screenshot
   (repro → red test → minimal fix); the report cites the observation and leaves the
   fixing to that pass.
 
+## Next
+
+READY → merge is the user's call. A defect routes to `root-cause` (above); an open item
+goes back into the plan — never into silence.
+
 ---
 
 Moved from a command skill (2026-11-06): personal paths and names replaced with `<placeholders>`.
