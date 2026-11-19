@@ -265,7 +265,10 @@ In this mode hooks and extensions are **not** installed — skills only.
 1. Copy `docs/skill-template/` to `skills/<skill-name>/`.
 2. Fill in `SKILL.md`: `name` — matches the folder name (kebab-case, up to 64 characters);
    `description` — up to 1024 characters, the main autoload trigger ("what it does and
-   when to apply it").
+   when to apply it"). The template carries two optional sections — **Boundaries**
+   (can do autonomously / requires confirmation / will not do) and **Troubleshooting**
+   (symptom → likely cause → what to do) — add them when the skill's scope is easy to
+   overstep or it has known failure shapes.
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
    Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in
