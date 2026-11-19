@@ -206,3 +206,9 @@ Append-only log of approved changes to this spec (a spec may change — never si
   an empty `children` is a traceability defect.
 - **Cross-repo order matters**: state rollout and migration dependencies explicitly.
 - Write the spec in the team's working language, which may differ from the language of this skill.
+
+## Next
+
+The approved system spec moves to `decompositor` — one repo spec per repository, each
+carrying only its own side of the contracts. The landing order across repositories comes
+from this spec's rollout, not from the repo specs.

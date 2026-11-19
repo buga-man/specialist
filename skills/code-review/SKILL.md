@@ -158,3 +158,9 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   next report worth reading.
 - Write the report in the team's working language, which may differ from the language of
   this skill.
+
+## Next
+
+Findings go to the dev role as fix work (the reviewer does not fix); a re-review after
+fixes reads the diff against the same before-list. Zero findings → the verdict is clean —
+say so and stop.

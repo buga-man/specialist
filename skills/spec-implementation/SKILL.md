@@ -166,3 +166,9 @@ session reads only this list:
 - **Unproven tests and deferred items** — tests that could not be proven falsifiable, and why.
 - **Self-review notes** — the spots the self-review pass could not resolve; the
   reviewer's starting points, so a fresh session is not spent rediscovering them.
+
+## Next
+
+The last task closed and committed hands the branch to `spec-review` (the qa role; if it
+is not installed — a fresh review session before merge). The executor's report travels
+with the branch; the closed-out plan keeps the work resumable.

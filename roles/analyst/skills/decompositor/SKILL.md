@@ -156,3 +156,9 @@ Append-only log of approved changes to this spec (a spec may change — never si
   its `id` to the system spec's `children` (for a multi-page system spec, the package
   README's); a parent with downstream docs and an empty `children` is a traceability defect.
 - Write the spec in the team's working language, which may differ from the language of this skill.
+
+## Next
+
+Each repo spec moves to `implementation-plan` in its repository — a task plan an agent
+executes. Multi-repo landing order follows the system spec's rollout; this skill only
+cuts the per-repo slices.

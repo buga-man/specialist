@@ -127,3 +127,9 @@ review there is.
 - **A failure is not negotiable silently**: if the user overrides a failed criterion,
   record it as an accepted deviation — never reclassify it as passed.
 - Write the report in the team's working language, which may differ from the language of this skill.
+
+## Next
+
+Passed → merge is the user's call. Unverifiable criteria → `stand-acceptance` on the
+stand; a deeper quality pass → `code-review`; bugs and security → `bug-hunt`. Failed
+findings return to the plan and the executor.
