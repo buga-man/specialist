@@ -65,6 +65,20 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   removed, unbounded caches and queues.
 - **Invariants the code assumes but never asserts** — note which ones hold by luck.
 - **Time**: parsing and rounding, duration vs timestamp arithmetic, clock skew.
+- **Second pass — where hidden bugs live**: after the checklist, sweep the target once
+  more by named symptom — a re-aim of the pass above, not a replacement:
+  - **Async race** — the state changed between the check and the use; two competing
+    updates of the same state.
+  - **Stale state** — a cache, closure, or subscription still holds the value the
+    source has since replaced.
+  - **Missing state transition** — a state enterable but never left, or the reverse —
+    hunt the incomplete transition table.
+  - **Swallowed error** — an empty or generic catch turns the error into a silent
+    fallback; follow the error branch, it must lead somewhere.
+  - **Cross-boundary reset** — a shared reset or cleanup reaches into another module,
+    session, or page.
+  - **Conditional dead path** — a condition makes a branch unreachable — a typo in the
+    comparison, a swapped operator, an always-false guard.
 
 ## 3. Security — the attacker's checklist
 
@@ -124,9 +138,12 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
 - A large or risky target may be hunted in parallel: 2–3 independent hunters, each with
   one checklist focus (e.g. one — concurrency and resources, one — authz and data
   flows, one — error paths and boundaries), plus the coordinator's own pass. The same
-  permission rule as the recon skills: ask the user first — may scouts be used here,
-  and how many; the granted count is the hard budget. Without subagents (denied or
-  unsupported) the same foci run sequentially in one session.
+  permission rule as the recon skills: ask the user first — a plain hunt in this
+  session or scouts; if scouts — how many, and how many hunt→fix→hunt iterations the
+  budget covers (default ≤3); the granted counts are the hard budget. Every iteration
+  runs fresh scouts with no context from the previous one — inherited arguments anchor
+  the new eyes (docs/review-discipline.md). Without subagents (denied or unsupported)
+  the same foci run sequentially in one session.
 - The coordinator deduplicates by scenario, not by location: two hunters naming the
   same trigger scenario is one finding. Disagreement (one calls it a bug, the other
   does not) is resolved by building the scenario out, never by vote.

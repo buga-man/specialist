@@ -102,10 +102,27 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   — so the next pass and tech-writer's report card can count them.
 - Each finding: location (`file:line`), what and why, a proposed direction — a
   direction, not a patch; the reviewer does not fix.
+- **Pre-report gate** — four checks before a finding enters the table; any fail → not
+  a finding:
+  1. the exact spot can be quoted (`file:line`) — "somewhere in the auth layer" is a
+     hunch, not a finding;
+  2. a concrete scenario can be told — input, state, bad outcome; a smell without a
+     story is pattern-matching, not review;
+  3. the surrounding context is read — callers, imports, tests; many "problems" are
+     handled one frame up;
+  4. the severity survives challenge — see Severity honesty below.
+- **Known false positives — do not report**: error handling a middleware or calling
+  layer already owns; "magic numbers" that are the domain's vocabulary — 200/404 in an
+  HTTP handler; "too long" aimed at a switch or dispatch table — length is the shape
+  there; an N+1 over a fixed or knowingly tiny set; TODO/FIXME in code the diff did
+  not touch; crypto-hardening demands on code that moves no secrets.
 - Severity per finding:
   - **blocker** — unmaintainable as is, or the design will hurt every future change;
   - **worth fixing** — real cost, fixable in the normal flow;
   - **note** — the reader should know; style nits live here.
+  - A blocker carries proof: the snippet, its line, the scenario of hurt, and why the
+    defenses already in place — tests, types, middleware — do not catch it. No proof →
+    downgrade or drop.
 - **Re-verification** (when a previous report exists): its carried findings get a
   status — **closed** (re-proven: the problem is gone at that location), **not
   closed**, or **fixed with regression** (the old problem gone, a new one opened — a
@@ -119,7 +136,12 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   report shares with its predecessor (`Recurring: none` when empty). That line is the
   pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
   anti-pattern proposals.
-- Outcome: **clean** / **worth a pass** / **rework required**.
+- **Zero findings is a valid verdict** — a clean review is a real result, not a failed
+  one; filler nits and speculative "consider using X" are the reviewer's chief failure
+  mode. Final test of every finding: would a senior engineer on this team actually
+  change this in review? No → drop it.
+- Outcome: **clean** / **worth a pass** / **rework required** — clean is an approve,
+  never withheld for the look of rigor.
 - Blockers and worth-fixing findings go back into the plan as tasks; notes ride along.
 
 ## Rules
