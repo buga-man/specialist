@@ -60,7 +60,8 @@ subagents and keep the main context for judgment, not for reading raw material:
   recon. Never a vague "look at the repo".
 - **Report contract**: citable facts, each with a `file:line` or document reference and
   ready to become a spec source; uncertainties and gaps as a separate list. No prose
-  retelling.
+  retelling. What leaves for a scout is cleaned of secrets and personal data —
+  delegation must not widen what the git boundary already guards.
 - Scout findings are hypotheses until verified: before a fact becomes an acceptance
   criterion or feeds a question, check it in the main context. Scouts read — never edit.
 
@@ -167,6 +168,12 @@ Key business decisions made during brainstorming and why alternatives were rejec
 ## 9. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):
 - YYYY-MM-DD: <what and why> (approved by <user>, source: <task or ruling>)
+A change request against an approved spec is classified by impact before it lands:
+wording only → apply as an amendment; touches an acceptance criterion → the user
+re-confirms the criterion — never edited silently; contradicts a recorded decision →
+a conflict, raised and decided, not resolved in place. While the spec sits with an
+external reviewer, edits stop: changes land as amendments after the verdict, so the
+text under review stays the text that was reviewed.
 ```
 
 ## Rules

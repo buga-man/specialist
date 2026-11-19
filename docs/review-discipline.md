@@ -117,7 +117,7 @@ prior `*-audit` reports — same scenario already open → link and carry its st
 duplicate row. Cheap addition: one line in the destroyer pass for the misuse personas
 (the novice's random input, the power user's shortcuts).
 
-**Source.** `.agent/templates-local/bug.md` ("fix criteria"), qa-bug-ticket-creator
+**Source.** `.agent/templates-local/bug.md` (its fix-criteria section), qa-bug-ticket-creator
 (Search → Compare → Create), qa-manual-test-designer (personas).
 
 **DoD.** SKILL.md §4; `docs/skills.md` sync.
@@ -222,6 +222,26 @@ comparing alternatives"; "does not amend old ADRs retroactively").
 | The source pack's severity emoji scale (🔴/🟡/🔵) | Each skill already carries its own severity vocabulary, tuned to its report format |
 | PlantUML self-containment rules | No diagram artifacts in the pipeline today; revisit if system-thinking starts emitting diagrams |
 | Kaiten scripts / tracker workflows | Tool-specific; the generic pattern is captured in the backlog item above |
+
+## Follow-ups — the second delta (shipped in 0.32.0, after the branch review)
+
+The review of this branch re-surveyed the source pack and found a second delta the
+plan had never discussed — neither as adoption nor as rejection. Adopted:
+
+| Follow-up | Where |
+|---|---|
+| Recorded decisions vs the diff — code contradicting a "Decisions and rationale" record is a finding (class `decisions`) | code-review §1/§5 |
+| Contract completeness checklist — fields, an example pair, an error table, limits or an explicit "no limits"; changes to an existing contract classified breaking/additive (breaking → migration plan mandatory) | system-thinking §3/§8, spec-review §5 |
+| Incoming-change classification by impact (wording / touches a criterion / contradicts a decision) and freeze while an external reviewer holds the spec | brainstorm §9 |
+| Session charter (mission / scope / time-box 25–45–90) and a closing debrief for hunts | bug-hunt §1/§4 |
+| UI elements table (element / type / visible when / label / behavior) as the verifiable shape of UI requirements | decompositor §2 |
+| Scout prompts carry artifacts cleaned of secrets and personal data — delegation must not widen what the git boundary guards | brainstorm / system-thinking / decompositor, Scouts |
+| mutation-guard: `git checkout <ref> -- <paths>` and `git stash drop/clear` join the blocked shapes (the same forced-discard / hard-to-undo class) | mutation-guard-core |
+
+Not adopted from the same sweep: go/no-go report format (the skills' outcome lines
+already carry verdicts), scheduler-style event tables for dispatch (phrase routing
+suffices today), drift rotation of "worn-out" checks (trace-audit is too young to
+retire checks).
 
 ## Common definition of done
 

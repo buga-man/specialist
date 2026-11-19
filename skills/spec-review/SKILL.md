@@ -109,7 +109,10 @@ review there is.
   line>)`. The reviewer records the decision, never makes it. An amendment left
   `proposed` stays open across reports: the next review re-verifies the gap and carries
   the amendment forward with its age — a proposal nobody decided on is a debt the
-  pipeline owes, visible until paid.
+  pipeline owes, visible until paid. An amendment that changes an existing contract or
+  public interface carries its blast-radius class — **breaking** (some existing
+  consumer breaks; a migration note is part of the amendment) or **additive** — so the
+  user decides on the blast radius, not just the wording.
 - **Changes required** items go back into the plan as tasks; a finding that is a plain
   bug rather than a spec deviation goes to root-cause (a known failing case — the dev
   role, if installed) or bug-hunt (a wider adversarial sweep of the area). This skill

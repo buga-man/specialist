@@ -89,7 +89,11 @@ business spec.
   metrics, open questions with working assumptions and a blocking flag. **Value-first,
   above the formal bar** — problem, not solution (strip every mention of implementation;
   the need must still stand on its own) and no gold-plating (every criterion traces to
-  the stated value; a criterion beyond the need is a finding, not a bonus).
+  the stated value; a criterion beyond the need is a finding, not a bonus). Amendments
+  to an approved spec are classified by impact — wording / touches a criterion (the
+  user re-confirms) / contradicts a recorded decision (a conflict, raised) — and the
+  spec freezes while an external reviewer holds it: changes land after the verdict,
+  so the text under review stays the text that was reviewed.
 - **When:** any new task/feature; phrases "gather requirements", "make a spec".
 - **Not for:** bugs — those belong to root-cause.
 
@@ -98,7 +102,12 @@ business spec.
 **Why:** the main value is finding work the spec is silent about: a frontend for a
 "backend task", migrations, compatibility, permissions — and work the spec duplicates:
 what was ordered as "new" may already exist in a neighboring repo. Reconnaissance of all
-affected repositories, blast radius, contracts between repos (each with its owning contract test), data migration and rollback, rollout order.
+affected repositories, blast radius, contracts between repos (each complete — fields,
+an example pair, an error table, limits or an explicit "no limits"; a change to an
+existing contract is classified breaking/additive, breaking carries a migration plan;
+each with its owning contract test), data migration and rollback, rollout order. Scout
+prompts carry artifacts cleaned of secrets and personal data — delegation must not
+widen what the git boundary guards.
 
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
@@ -126,8 +135,10 @@ changes from. It also folds the repo's aging docs into the changes.
 - **New means searched first:** an entity declared new (a function, class, endpoint, role,
   setting) is searched for across the repo first; found — extend/reuse; not found —
   `searched: <what, where>` in the spec. Otherwise a duplicate ordered by the spec will pass
-  acceptance as passed. Changes serving a business criterion carry `Verify:`; lateral needs
-  go to `depends-on`; the spec names its ambiguity policy (halt and ask / skip and report).
+acceptance as passed. Changes serving a business criterion carry `Verify:`; lateral needs
+go to `depends-on`; the spec names its ambiguity policy (halt and ask / skip and report).
+UI changes carry an elements table (element | type | visible when | label | behavior) —
+the verifiable shape of UI requirements, walked element by element in spec-review.
 - **When:** "split by repository", "decomposition", "what changes in this repo".
 
 ## implementation-plan — repo spec → a task plan for an agent
@@ -200,7 +211,9 @@ broken until proven otherwise".
   that would pass every criterion — if one exists, the criteria set gets a proposed sharper
   criterion (amendment), so the trap does not survive into the next feature. Proposed
   amendments carry an explicit status — proposed → accepted/rejected with the date; a
-  `proposed` surviving into the next review is carried forward with its age. Outcome: accepted /
+  `proposed` surviving into the next review is carried forward with its age; an
+  amendment changing an existing contract carries its blast-radius class — breaking
+  (a migration note is part of the amendment) / additive. Outcome: accepted /
   accepted with notes / changes required.
 - **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
   derived from the slug dates; no state stored (tech-writer's audit aggregates these
@@ -217,7 +230,8 @@ developer maintain this code a month from now, and does it do its work without n
 effort.
 
 - **Input → output:** diff (branch against base) + the code around each hunk +
-  `CODESTYLE.md` where present → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
+  `CODESTYLE.md` where present + the spec chain's recorded decisions ("Decisions and
+  rationale") where the feature has them → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
 - **Three passes:** quality — intent vs naming, structure, duplication (new symbols
   grepped against the repo; a duplicate is a finding even when the plan ordered it),
   dead weight, error-handling idioms, tautological tests; logic — needless work, N+1,
@@ -252,7 +266,9 @@ must never accept.
 - **Input → output:** diff / branch / code area, traced to its entry points (handlers,
   CLI, cron, consumers, UI events) → `docs/specs/YYYY-MM-DD-<topic>-<repo>-audit.md`
 - **Aiming the hunt:** a 15-minute threat sketch first (assets → who reaches them →
-  through which entries), and the installed analyzers (semgrep, linters) as verifiable
+  through which entries), a session charter (mission / scope boundary / time-box
+  25–45–90 minutes — when the box ends, the report is written with what is in hand),
+  and the installed analyzers (semgrep, linters) as verifiable
   leads — tools propose, the hunter verifies.
 - **Bug checklist:** boundaries (empty/null/one/many/negative/max/unicode/timezone),
   off-by-one, error paths (partial failure midway, swallowed errors, retry without
@@ -270,7 +286,8 @@ must never accept.
   already open in a prior audit links and carries its status, never a duplicate row.
   Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /
-  findings listed / exploitable — fix before merge.
+  findings listed / exploitable — fix before merge. A two-line debrief closes the
+  report — what the charter got right or wrong, where the next hunt should aim first.
 - **Parallel hunters (by explicit permission):** a large target may run 2–3
   independent hunters with distinct checklist foci (same scout permission rule as the
   recon skills); the coordinator deduplicates by scenario and resolves disagreements by

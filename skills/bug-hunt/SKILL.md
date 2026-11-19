@@ -34,6 +34,12 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   guards (data, money, privileges, availability), who can reach each, and through which
   entry. The sketch aims the hunt: checklist items touching an asset get depth, the rest
   get breadth. An audit attacks assets, not patterns.
+- **Session charter** — one line before the checklists: the mission (what this hunt
+  protects), the scope boundary (in / out), and a time-box — 25 minutes for a focused
+  area, 45 for a diff, 90 for a branch. The box forces the trade the sketch already
+  aims: depth on the assets, breadth elsewhere. When it ends, the report is written
+  with what is in hand — an honest partial beats a silent overrun; follow-ups become
+  the next charter, not overtime.
 - **Installed analyzers are inputs**: where installed, run the project's semgrep rules
   and linters over the target — their findings are leads to verify like any other, never
   verdicts (tools propose, the hunter verifies); a lead that cannot earn a trigger
@@ -106,6 +112,9 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   report shares with its predecessor (`Recurring: none` when empty). That line is the
   pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
   anti-pattern proposals.
+- A two-line **debrief** closes it: what the charter got right or wrong, and where a
+  follow-up hunt should aim first — the next hunter inherits the aim, not just the
+  findings.
 - Outcome: **no findings** / **findings listed** / **exploitable — fix before merge**.
 - Fixes go back into the plan (or root-cause — the dev role, if installed — for a single
   confirmed bug); this skill does not fix.

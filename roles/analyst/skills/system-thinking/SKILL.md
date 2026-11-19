@@ -67,7 +67,9 @@ offer to dispatch scout subagents and keep the analysis (stage 4) in the main co
   service, endpoint, or job that could replace a "new build" is called out explicitly.
 - **Report contract**: findings tagged `[found]` with `file:line`; reuse candidates and
   unmentioned work as their own lists; uncertainties separately. The tags survive into the
-  spec — traceability does not break on delegation.
+  spec — traceability does not break on delegation. What leaves for a scout is
+  cleaned of secrets and personal data — delegation must not widen what the git
+  boundary already guards.
 - Stage 4 stays yours: scouts supply material, not conclusions. Verify a scout's
   load-bearing claim in the main context before it drives a decision. Scouts read — never edit.
 
@@ -125,9 +127,18 @@ A diagram of interactions, before → after where helpful.
 - <change> — what changes and why, traced to its source: [spec] / [found] / [assumption: why] / [answer #N]
 
 ## 3. Contracts
-Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning, not code:
-- <contract>: parties, purpose, key semantics, error behavior
-- Compatibility: what breaks for existing consumers, migration notes
+Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning, not code.
+Each contract is complete or visibly incomplete — a gap in it is an unmade decision
+that resurfaces in implementation as the dev role's guess:
+- <contract>: parties, purpose, key semantics
+- Fields/parameters: name, type, meaning (or a schema reference) — every one named
+- Example pair: one request and one successful response, minimal
+- Error table: the failure outcomes (code/status/event) and what each means
+- Limits: pagination, rate, payload size — or an explicit "no limits"
+- Compatibility: what breaks for existing consumers, migration notes; a change to an
+  existing contract is classified **breaking** (some consumer breaks — a migration
+  plan and the user's decision are mandatory) or **additive** (existing consumers
+  unaffected)
 - Verified by: the repository that owns the contract test — a contract nobody tests is a wish, not a contract
 
 ## 4. Data migration and rollback
@@ -159,6 +170,9 @@ itself architecture memory.
 ## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):
 - YYYY-MM-DD: <what and why> (approved by <user>, source: <task or ruling>)
+- An amendment changing an existing contract or public interface carries its
+  blast-radius class — breaking / additive — and a breaking one names its migration
+  plan; the class is part of the record, not of the conversation
 ```
 
 ## Rules

@@ -62,7 +62,9 @@ in the main context:
   is structured", "who consumes module Y". The `searched:` evidence for anything declared
   new is collected with the same rigor whether by you or by a scout.
 - **Report contract**: citable facts with `file:line`; reuse/extend candidates explicit;
-  uncertainties as their own list. No prose retelling.
+  uncertainties as their own list. No prose retelling. What leaves for a scout is
+  cleaned of secrets and personal data — delegation must not widen what the git
+  boundary already guards.
 - Scout findings are hypotheses until verified: every change still cites its source, and a
   scout's word counts as `[found]` only after your check in the main context. Scouts read —
   never edit.
@@ -71,6 +73,7 @@ in the main context:
 
 - Per change: what and why, where — concrete file paths and modules to add or modify, following the repo's conventions. A change that carries a business criterion names its `Verify:` — the command that decides it, or an honest manual check; spec-review runs or inspects exactly that.
 - Add short illustrative snippets where they pin down intent: a signature, a data shape, a reference to the existing pattern to imitate. When a behaviour is subtle (edge cases, ordering, error shapes), pin the change with a 2-3 row example table (input → expected outcome) — examples are the contract the implementer cannot misread.
+- For UI changes, pin the visible surface as an elements table — element | type | visible when | label | behavior. Prose UI requirements cannot be verified element by element; the table is what spec-review walks and the implementer builds against.
 - Note the tests this repo will need, in its conventions.
 - Include the repo's own docs the change invalidates (README, architecture notes, guides) — updating them is part of the change and becomes ordinary plan tasks, not an afterthought.
 - Note ordering: which other repos' changes this one waits for.
@@ -120,6 +123,7 @@ where — file paths and modules to add or modify, and the pattern to follow.
 Each change is reuse / extend / new; `new` carries its `searched:` evidence.
 Short illustrative snippets where they pin down intent.
 A change serving a business criterion carries `Verify:` (command → expected, or "manual — what is observed").
+UI changes carry an elements table (element | type | visible when | label | behavior).
 
 ## 3. Repo-side contracts
 Each contract from the system spec as seen from this repo: what it

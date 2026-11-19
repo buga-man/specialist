@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md where present, and the tests; also maps the diff's stale impact on the existing suite (tests to re-run, tests that may now lie, coverage silently removed); produces findings with file:line evidence and severity, persisted as a report. Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
+description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md and the specs' recorded decisions where present, and the tests; also maps the diff's stale impact on the existing suite (tests to re-run, tests that may now lie, coverage silently removed); produces findings with file:line evidence and severity, persisted as a report. Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
 ---
 
 # Code review
@@ -27,6 +27,12 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
 - `CODESTYLE.md` at the repo root, where present — the documented conventions are the
   oracle for style findings; a style finding cites the rule it breaks. No document —
   style stays a note at most.
+- The spec chain's **recorded decisions** — the "Decisions and rationale" sections of
+  the feature's system/repo specs, where the feature has them. Code that contradicts
+  a recorded decision (a rejected alternative implemented, a reversibility promise
+  broken) is a finding even when it is clean and passes its tests: recorded decisions
+  are load-bearing history, not suggestions. No spec chain — nothing to check here;
+  never hunt for decisions in commit messages instead.
 - The tests the diff carries: code and tests are reviewed as one judgment, not two.
 - A previous `*-quality` report for the topic (one glob: `ls docs/specs/*<topic>*`) →
   open by re-verifying its findings (see §5), then review fresh ground. The old report
@@ -90,10 +96,10 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`, next to the
   specs of the feature — findings must stay navigable, not live in chat.
 - Findings live in a table — one row per finding: `location | class | severity |
-  direction` — classes from the two passes (naming, structure, duplication, dead
+  direction` — classes from the passes (naming, structure, duplication, dead
   weight, error idioms, tests; needless work, data fit, hot path, accidental
-  complexity, premature optimization) — so the next pass and tech-writer's report card
-  can count them.
+  complexity, premature optimization; decisions — a recorded decision contradicted)
+  — so the next pass and tech-writer's report card can count them.
 - Each finding: location (`file:line`), what and why, a proposed direction — a
   direction, not a patch; the reviewer does not fix.
 - Severity per finding:
