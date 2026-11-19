@@ -117,7 +117,7 @@ prior `*-audit` reports — same scenario already open → link and carry its st
 duplicate row. Cheap addition: one line in the destroyer pass for the misuse personas
 (the novice's random input, the power user's shortcuts).
 
-**Source.** `.agent/templates-local/bug.md` ("Критерии исправления"), qa-bug-ticket-creator
+**Source.** `.agent/templates-local/bug.md` ("fix criteria"), qa-bug-ticket-creator
 (Search → Compare → Create), qa-manual-test-designer (personas).
 
 **DoD.** SKILL.md §4; `docs/skills.md` sync.

@@ -830,10 +830,10 @@ export function extractSections(body, bodyStartLine = 1) {
  * @returns {Record<string, number>}
  */
 export function sectionTerms(text) {
-  // Null-prototype: слова текста вроде "constructor" коллидируют с ключами
-  // Object.prototype — (terms[word] || 0) подмешал бы унаследованную функцию,
-  // len стал бы NaN и BM25-скоринг молча опустошал бы весь body-поиск
-  // (воспроизводится на любой секции, где встречается слово "constructor").
+  // Null-prototype: text words like "constructor" collide with the keys of
+  // Object.prototype — (terms[word] || 0) would pick up the inherited function,
+  // len would become NaN, and BM25 scoring would silently empty the whole
+  // body search (reproduces on any section where the word "constructor" occurs).
   const terms = Object.create(null);
   for (const word of wordsOf(text)) {
     if (word.length < 2) continue;
