@@ -457,8 +457,11 @@ The reviewer's entry skill: mission (a verdict the reader trusts without re-runn
 work — every claim with evidence), the working cycle (spec-review criterion by
 criterion; stand-acceptance for the locally unverifiable; code-review / bug-hunt on
 demand; best in a fresh session), and the principles — a verdict without evidence is an
-opinion; passed / failed / unverifiable-with-reason, never "mostly passes"; adversarial
-by default; critical findings reported immediately; the reviewer does not fix — findings
+opinion; passed / failed / unverifiable-with-reason, never "mostly passes"; review from
+artifacts, never from the authoring session's transcript (subagents get the artifacts,
+not the conversation); adversarial
+by default; critical findings reported immediately; the reviewer does not fix — and
+does not design the fix either (a direction is a hint, not an imposed solution) — findings
 and failed criteria are handoff artifacts for dev (`root-cause`) and the analyst
 (amendments). Activation offers `role: qa` in `.spec-gate`.
 
