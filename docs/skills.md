@@ -240,14 +240,18 @@ must never accept.
 - **Bug checklist:** boundaries (empty/null/one/many/negative/max/unicode/timezone),
   off-by-one, error paths (partial failure midway, swallowed errors, retry without
   idempotency), concurrency (shared state, TOCTOU, unawaited promises), resource leaks,
-  unasserted invariants, time arithmetic.
+  unasserted invariants, time arithmetic, misuse personas (the novice's random input,
+  the power user's shortcuts and double submits).
 - **Security checklist:** injection (SQL/command/path traversal/XSS/template/log),
   authn/authz per endpoint (IDOR, privileges from the client), secrets (hardcoded,
   logged, echoed), SSRF, redirects from user input, unsafe deserialization, crypto
   misuse, new dependencies with advisories.
 - **Findings:** `file:line` + the trigger scenario (bugs — a reproduction sketch;
-  security — an exploitation sketch) + severity critical/high/medium/low;
-  **no scenario — no finding**. Critical security findings are reported to the user
+  security — an exploitation sketch) + fix criteria (the observation that proves the
+  bug fixed — the dev role's acceptance check) + severity critical/high/medium/low;
+  **no scenario — no finding**; **dedup on filing** — the same trigger scenario
+  already open in a prior audit links and carries its status, never a duplicate row.
+  Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /
   findings listed / exploitable — fix before merge.
 - **Parallel hunters (by explicit permission):** a large target may run 2–3

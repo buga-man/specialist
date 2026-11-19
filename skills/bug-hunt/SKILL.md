@@ -1,6 +1,6 @@
 ---
 name: bug-hunt
-description: Adversarial review of a diff, branch, or code area — hunt for bugs and security holes before they ship. Bugs — boundary values, off-by-one, error paths, race conditions, resource leaks, broken invariants; security — injection, authn/authz gaps, IDOR, secrets, SSRF, unsafe deserialization, crypto misuse, risky new dependencies. Use when the user asks to find bugs, hunt for defects, or audit the security of the code. Every finding carries a trigger scenario and severity, persisted as a report. A known reproducible bug goes to root-cause instead; spec compliance belongs to spec-review. Runs best in a fresh session; the hunter does not fix.
+description: Adversarial review of a diff, branch, or code area — hunt for bugs and security holes before they ship. Bugs — boundary values, off-by-one, error paths, race conditions, resource leaks, broken invariants, misuse personas (novice, power user); security — injection, authn/authz gaps, IDOR, secrets, SSRF, unsafe deserialization, crypto misuse, risky new dependencies. Use when the user asks to find bugs, hunt for defects, or audit the security of the code. Every finding carries a trigger scenario, fix criteria (the dev role's acceptance check), and severity, persisted as a report deduplicated against prior audits. A known reproducible bug goes to root-cause instead; spec compliance belongs to spec-review. Runs best in a fresh session; the hunter does not fix.
 ---
 
 # Bug hunt
@@ -46,6 +46,10 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
 
 - **Boundaries**: empty / null / none, one, many, negative, zero, max, unicode,
   timezone and DST edges.
+- **Misuse personas**: read the entry points as a novice (random input, ignored hints,
+  the back button mid-flow) and as a power user (shortcuts, bulk actions, double
+  submits, rapid repeats) — the author tested the happy path, not the clumsy or the
+  hurried.
 - **Off-by-one**: `<` vs `<=`, slicing ends, pagination, inclusive ranges.
 - **Error paths**: partial failure midway — what state remains? Swallowed errors; retry
   without idempotency; cleanup skipped on throw.
@@ -79,8 +83,17 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   - Bugs: a reproduction sketch — concrete inputs, observed vs expected outcome.
   - Security: an exploitation sketch — who can send what, and what it yields.
   - Severity: **critical** / **high** / **medium** / **low** — impact × plausibility.
+  - **Fix criteria**: what observation proves the bug fixed — the dev role's acceptance
+    check, written so the fixer needs no further conversation to know they are done
+    ("the retry dialog appears at most once per failure", not "fix the dialog").
 - **No scenario, no finding**: a suspicious pattern without a way to trigger it is a
   note, never a finding.
+- **Dedup on filing** — search, compare, create. Before a finding enters the table,
+  sweep the prior `*-audit` reports (this topic's, and the neighboring areas when they
+  overlap): the same trigger scenario already open there → link that finding and carry
+  its status forward, never a duplicate row. Re-verification (below) re-proves what
+  this report inherited; the dedup sweep is what stops the same bug being "found"
+  twice. Two reports, one scenario, one finding — with both locations named.
 - **Re-verification** (when a previous report exists): its carried findings get a
   status — **closed** (re-proven: the scenario no longer triggers), **not closed**, or
   **fixed with regression** (the old scenario is gone, a new one opened — a fresh
