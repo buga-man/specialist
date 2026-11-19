@@ -1,6 +1,6 @@
 ---
 name: root-cause
-description: Diagnose and fix a bug — reproduce it, trace it to the root cause, prove the fix with a red-then-green test. Use when something does not work as intended — a crash, wrong output, a regression. Not for new features (brainstorm) and not for behavior the system gets deliberately right but nobody wants — those are feature requests too.
+description: Diagnose and fix a bug — triage the failure (product defect / wrong test / environment-data mismatch / spec mismatch), reproduce it, trace it to the root cause, prove the fix with a red-then-green test. Use when something does not work as intended — a crash, wrong output, a failing test, a regression. Not for new features (brainstorm) and not for behavior the system gets deliberately right but nobody wants — those are feature requests too.
 ---
 
 # Root cause
@@ -11,9 +11,26 @@ exists, the user's statement otherwise. The current code is not the oracle; it i
 ## Flow
 
 ```
-1 reproduce (evidence, always) → 2 isolate → 3 root cause (one sentence)
-→ 4 red test → 5 minimal fix → green + full suite → 6 report
+0 triage (which of the four?) → 1 reproduce (evidence, always) → 2 isolate
+→ 3 root cause (one sentence) → 4 red test → 5 minimal fix → green + full suite → 6 report
 ```
+
+## 0. Triage — which of the four is this?
+
+A failing report is one of four things, and only one of them is a product bug. Classify
+before diagnosing — treating the wrong class as a bug produces wrong fixes:
+
+- **product defect** — the code is wrong against its oracle → the full flow below;
+- **wrong test** — the expectation is wrong; the spec, not the test, is the oracle →
+  fix the test and name in the report why the expectation was wrong;
+- **environment / data mismatch** — the failure lives in the stand, the fixtures, the
+  seeded data → not a bug: report exactly what differs and hand it back;
+- **spec mismatch** — the behavior is as built, but the spec says otherwise → not a
+  code fix: the amendment protocol (spec-implementation's tiers), never a quiet change.
+
+Cannot classify without seeing it happen → reproduce first (step 1), then classify —
+evidence over assumption. The report always names the class; "bug" without a class is
+a guess wearing a noun.
 
 ## 1. Reproduce
 
@@ -35,7 +52,8 @@ exists, the user's statement otherwise. The current code is not the oracle; it i
   several call sites. Fix it once in the shared code, not at each symptom.
 - If the code does exactly what it was built to do, and that is not what is wanted — this
   is not a bug. Route it to brainstorm as a feature request (the analyst role; if it is
-  not installed, record the request for that role — do not spec it yourself).
+  not installed, record the request for that role — do not spec it yourself). This is
+  step 0's spec-mismatch class catching up with the diagnosis — the classes hold.
 
 ## 4. Red test
 
@@ -60,6 +78,8 @@ exists, the user's statement otherwise. The current code is not the oracle; it i
 
 ## 6. Report
 
+- The triage class first (product defect / wrong test / environment-data mismatch /
+  spec mismatch) — the reader's first question is "what kind of failure was this?".
 - Root cause in one sentence; the fix in one sentence; the regression test by name.
 - Same-cause call sites checked (list them), and anything left suspicious nearby.
 - Risky fix (shared core, data, security) → send it through spec-review in a fresh session (the qa role; if it is not installed, a fresh review session before merge).

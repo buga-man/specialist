@@ -308,9 +308,14 @@ via browser automation, and building `md → standalone HTML + PDF` with the ski
 **Why:** treats the disease, not the symptom. The oracle is the expected behavior (the spec
 or the user's words); the current code is the suspect, not the truth.
 
-- **Flow:** reproduce (mandatory, otherwise it is not a fix but guessing) → isolate →
+- **Flow:** triage — which of the four is this: product defect / wrong test (the
+  expectation is wrong; the spec, not the test, is the oracle) / environment-data
+  mismatch (not a bug — report what differs) / spec mismatch (the amendment protocol,
+  not a code change); only the product defect walks on → reproduce (mandatory,
+  otherwise it is not a fix but guessing) → isolate →
   the root cause in one sentence → a red test (it stays in the suite as a regression test;
-  deleting it is forbidden) → a minimal fix → green test + full suite → report.
+  deleting it is forbidden) → a minimal fix → green test + full suite → report, naming
+  the triage class first.
 - **Key rule:** if the code does exactly what it was built for and something else is wanted —
   it is not a bug but a feature request → brainstorm. A risky fix (shared core, data,
   security) → spec-review in a fresh session. With an active plan, the fix becomes a plan
