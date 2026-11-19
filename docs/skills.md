@@ -155,7 +155,9 @@ restore the behavior — it turns green. A test that was never red verifies noth
   `- Done: <hash>` in the plan)
 - **Three tiers of deviations:** local (a different way, same behavior) — a ruling in the
   report; behavior/contract/scope — stop, an amendment to the owning spec after approval;
-  changed intent — back to brainstorm.
+  changed intent — back to brainstorm. An open spec question blocks its own slice, not
+  the whole plan — blocked tasks are marked `- Blocked by:` in the plan (destructive,
+  security, and outward operations halt everything, full stop).
 - **Why-comments stay:** context comments (the bug behind a workaround, a business
   constraint, a dated decision, a commit reference) are preserved and updated, never
   stripped as clutter — they are the repo's memory for the next reader, agent included.
