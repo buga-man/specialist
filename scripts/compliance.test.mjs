@@ -91,6 +91,22 @@ test("validateSkill: portability — host variables, absolute paths, template le
   assert.ok(leftover.some((f) => f.includes("checklist")));
 });
 
+test("validateSkill: invisible Unicode — BOM, zero-width, bidi — named with its codepoint", () => {
+  // \uFEFF at byte 0 (the BOM), a bidi isolate inside the quoted description, a
+  // zero-width space mid-body — frontmatter and body are both in scope.
+  const text = "\uFEFF" + fm('name: beta\ndescription: "\u2066looks fine\u2069"\n') + "body\u200Bhere\n";
+  const findings = validateSkill("beta", text);
+  assert.ok(findings.some((f) => f.startsWith("beta:") && f.includes("U+FEFF")));
+  assert.ok(findings.some((f) => f.includes("U+2066")));
+  assert.ok(findings.some((f) => f.includes("U+200B")));
+  assert.ok(findings.some((f) => f.includes("byte-order mark")));
+});
+
+test("validateSkill: visible non-ASCII — em dashes, Cyrillic, CJK — is not flagged", () => {
+  // The homoglyph zone stays out of the scan on purpose; so does everything visible.
+  assert.deepEqual(validateSkill("beta", GOOD("beta", "Проверка — です — visible")), []);
+});
+
 test("validateSkill: a frontmatter parse error surfaces with the skill's name", () => {
   const findings = validateSkill("beta", fm("description: bad: here\n"));
   assert.ok(findings.some((f) => f.startsWith("beta:") && f.includes('": "')));
