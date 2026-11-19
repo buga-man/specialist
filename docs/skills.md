@@ -178,7 +178,12 @@ broken until proven otherwise".
   not as a hope). A criterion with `Verify:` is checked by running exactly that command;
   a must criterion without a runnable `Verify:` is unverifiable by default and flags a
   spec defect, not a code failure. A criterion without a test and observed behavior is
-  unverifiable, never passed.
+  unverifiable, never passed. **A green run is not evidence by itself** — the evidence
+  is the match between the test's assertions and the criterion (a pass ≠ a verified
+  criterion; a green suite over an under-asserting test is unverifiable, and the
+  amendment sharpens the test). **Non-functional criteria must be measurable**:
+  criterion + measurement method + threshold + environment; missing any → unverifiable,
+  and the amendment proposes the four fields.
 - **Plus:** a scan for unsanctioned behavior (what the code does beyond the specs), an audit
   of the executor's report, spec-drift (a divergence without an amendment = failed; a stale
   spec — propose an amendment), and the criteria attack: name a plausible wrong implementation

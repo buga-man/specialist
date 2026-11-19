@@ -45,6 +45,18 @@ review there is.
   - **unverifiable** — cannot be checked from here; name exactly what is needed
     (a live environment, a manual step, a missing test).
 - A criterion with no test and no observable behavior is unverifiable, never passed.
+- **A green run is not evidence by itself — a pass ≠ a verified criterion.** The
+  evidence is the *match* between the test's assertions and the criterion: cite the
+  assertion against the criterion's words. A suite green because the covering test
+  asserts less than the criterion demands (checks the status code, not the payload the
+  criterion names; checks the happy path, not the error contract) is a passed run over
+  an uncovered criterion — verdict unverifiable, and the gap becomes a proposed
+  amendment sharpening the test, not a quiet pass.
+- **Non-functional criteria must be measurable to be verifiable**: performance,
+  availability, capacity, resilience criteria carry **criterion + measurement method +
+  threshold + environment** (e.g. "p95 response ≤ 500 ms — k6 load test, 100 concurrent
+  users, staging"). Missing any of the four → unverifiable, and the amendment proposes
+  the four fields — "fast" and "reliable" are wishes, not criteria.
 - **Attack the criteria.** After the walk, try to name a plausible wrong implementation
   that would pass every criterion — the shape-checks trap from shallow oracles. If one
   exists, the implementation may still be accepted, but the criteria set is weaker than
