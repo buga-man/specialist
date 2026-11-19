@@ -76,6 +76,20 @@ One break may cover several tests in shared logic, but every test needs at least
 that turns it red. For a refactor, the characterization tests must survive the structural
 change — that is the proof nothing changed.
 
+Shapes that survive the break and still test nothing — rewrite or delete on sight:
+
+- **A mock's own echo** — a test asserting what the mock was configured to return checks
+  the setup, not the logic. Mocks sit on the external boundaries only (network, clock,
+  storage); the behavior under test is never mocked.
+- **Duplicates** — the same assertion on the same behavior in a second test adds a green
+  line, not coverage. One behavior, one test; variants must differ in the case they
+  derive from the spec, not in the assertion.
+- **Structure assertions** — a snapshot of an object's shape or the order of internal
+  calls goes red on a refactor that changes no behavior — noise posing as a test. The
+  assertion targets the outcome, from the behaviors list.
+- **Coverage as the goal** — a percentage is a map, not a verdict: an uncovered branch
+  names a behavior without a check; 100% with the shapes above asserts nothing.
+
 ### 6. Verify against the plan, then commit
 
 - Run the task's Verify commands from the plan and compare actual output with the expected
