@@ -201,11 +201,15 @@ effort.
 
 - **Input → output:** diff (branch against base) + the code around each hunk +
   `CODESTYLE.md` where present → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
-- **Two passes:** quality — intent vs naming, structure, duplication (new symbols
+- **Three passes:** quality — intent vs naming, structure, duplication (new symbols
   grepped against the repo; a duplicate is a finding even when the plan ordered it),
   dead weight, error-handling idioms, tautological tests; logic — needless work, N+1,
   data-structure fit judged against real data sizes, hot vs cold paths, accidental
-  complexity — and premature optimization as a finding too.
+  complexity — and premature optimization as a finding too; stale impact — what the
+  diff does to the existing suite: tests to re-run, tests that may now lie (their
+  subject changed under them), coverage silently removed, each tagged
+  Must/Should/Optional. A large diff is read in churn order (git log --follow
+  frequency, shared modules before leaves) — depth goes where change goes.
 - **Findings:** `file:line` + what and why + a proposed direction (not a patch);
   severity blocker / worth fixing / note; outcome clean / worth a pass / rework
   required. Blockers and worth-fixing go back into the plan as tasks.

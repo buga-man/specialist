@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md where present, and the tests; produces findings with file:line evidence and severity, persisted as a report. Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
+description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md where present, and the tests; also maps the diff's stale impact on the existing suite (tests to re-run, tests that may now lie, coverage silently removed); produces findings with file:line evidence and severity, persisted as a report. Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
 ---
 
 # Code review
@@ -15,7 +15,8 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
 ## Flow
 
 ```
-1 scope & context → 2 quality pass → 3 logic pass → 4 findings & report
+1 scope & context → 2 quality pass → 3 logic pass → 4 stale-impact pass
+→ 5 findings & report
 ```
 
 ## 1. Scope and context
@@ -28,8 +29,12 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   style stays a note at most.
 - The tests the diff carries: code and tests are reviewed as one judgment, not two.
 - A previous `*-quality` report for the topic (one glob: `ls docs/specs/*<topic>*`) →
-  open by re-verifying its findings (see §4), then review fresh ground. The old report
+  open by re-verifying its findings (see §5), then review fresh ground. The old report
   is input, never truth: a finding marked fixed is re-proven, not believed.
+- **A large diff gets a review order before it gets a review.** Rank the touched files
+  by churn — `git log --follow` commit frequency — and by centrality (shared modules
+  before leaf code): the hot, widely-imported files get the deep read, the cold leaves
+  get breadth. A flat pass over a big diff spends its depth on files nobody changes.
 
 ## 2. Quality pass — how it reads
 
@@ -61,7 +66,26 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
 - **Premature optimization is also a finding**: complexity bought without a measured
   need — simplicity is the default the change must argue its way out of.
 
-## 4. Findings and report
+## 4. Stale-impact pass — what the diff does to the existing suite
+
+The diff does not end at its edge: it acts on the tests that already exist. A change
+can leave every new test green and still make the suite dumber. Walk the diff against
+the existing suite and produce three lists:
+
+- **Re-run** — existing tests whose subject the diff touches: behavior they pin has
+  moved, they must still hold.
+- **May now lie** — tests whose subject changed *under* them without the test noticing:
+  an assertion hardcoded to the old value, a mock of a signature that grew a parameter,
+  a snapshot drifting. These pass today and are wrong about tomorrow.
+- **No longer covered** — coverage the diff silently removed: deleted tests, weakened
+  assertions (an exact equality relaxed to a substring), a `skip` slipped in. Removing
+  a check is a change like any other — the most consequential ones look like cleanup.
+
+Tag each entry **Must / Should / Optional** by what it protects: a lying test on a hot
+path is a Must; a leaf's coverage gap is Optional. The three lists ride in the report
+(§5) next to the findings — they are the suite's half of the review.
+
+## 5. Findings and report
 
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`, next to the
   specs of the feature — findings must stay navigable, not live in chat.
@@ -81,6 +105,10 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   closed**, or **fixed with regression** (the old problem gone, a new one opened — a
   fresh finding, severity one step up). The header line: `Re-verified: N closed, M not
   closed, K regressions`.
+- The stale-impact lists (§4) close the report: re-run / may-now-lie / no-longer-
+  covered, each entry with its Must/Should/Optional tag. An empty pass is written as
+  empty, not omitted — "the diff leaves the existing suite untouched" is itself a
+  claim the report owns.
 - The report ends with `Recurring: <class>[, <class>…]` — the finding classes this
   report shares with its predecessor (`Recurring: none` when empty). That line is the
   pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
