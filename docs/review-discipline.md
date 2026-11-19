@@ -1,7 +1,7 @@
 # Review discipline — adoption plan (shipped in 0.32.0)
 
-Origin: a survey of an industrial agent-pack (X5 "Автоматизация качества", 2026-11-19 —
-roles, rules, workflows, ~58 archived qa-skills). Most of its machinery the framework
+Origin: a survey of an industrial QA-automation agent-pack (an external organization,
+2026-11-19 — roles, rules, workflows, ~58 archived qa-skills). Most of its machinery the framework
 already has, often in a stricter form (severity tables, re-verification, criterion-by-
 criterion verdicts, reviewer-does-not-fix, skill-gate enforcement). This plan takes only
 the honest delta: practices that fill a real gap here. Rejected candidates are listed at
@@ -111,7 +111,7 @@ dev decides acceptance alone. And a new hunt can re-file a scenario an older rep
 already owns.
 
 **What.** Every finding gains **fix criteria** — the observable check that proves it
-closed (the dev role's acceptance for the fix; per X5's bug template, "the developer
+closed (the dev role's acceptance for the fix; per the source pack's bug template, "the developer
 reads this list like AC"). Filing gets a dedup rule: a new scenario is searched against
 prior `*-audit` reports — same scenario already open → link and carry its status, never a
 duplicate row. Cheap addition: one line in the destroyer pass for the misuse personas
@@ -219,7 +219,7 @@ comparing alternatives"; "does not amend old ADRs retroactively").
 | Expanding the role grid (reviewer / DM / devops / installer as roles) | Their discipline lands inside qa/dev as principles; the enforcement here (skill-gate, relay artifacts) is already stronger than their declarative activation |
 | `tc-to-autotest` skill | Tests-first in spec-implementation is already the pipeline; a separate TC→code generator would fork the oracle |
 | Numbered-ID naming rules (max+1 scans, sub-numbering bans) | This framework's artifacts are date-slug files (`YYYY-MM-DD-<topic>-<repo>.md`); no ID registry exists to guard |
-| X5 severity emoji scale (🔴/🟡/🔵) | Each skill already carries its own severity vocabulary, tuned to its report format |
+| The source pack's severity emoji scale (🔴/🟡/🔵) | Each skill already carries its own severity vocabulary, tuned to its report format |
 | PlantUML self-containment rules | No diagram artifacts in the pipeline today; revisit if system-thinking starts emitting diagrams |
 | Kaiten scripts / tracker workflows | Tool-specific; the generic pattern is captured in the backlog item above |
 
