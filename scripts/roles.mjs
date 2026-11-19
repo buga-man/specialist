@@ -31,6 +31,7 @@ export const ROLE_MAP = {
     ],
     dev: [
       "implementation-plan",
+      "change-impact",
       "spec-implementation",
       "codestyle",
       "lazy",
