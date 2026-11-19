@@ -41,6 +41,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `root-cause` | bug report → root cause (triage first — product defect / wrong test / environment-data mismatch / spec mismatch; reproduction required, red test, minimal fix, full suite; the report names the class) |
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + review memory (recurring finding classes → CODESTYLE anti-patterns; a review report card) + a manual `md → standalone html + pdf` with screenshots from the stand |
+| `trace-audit` | docs/specs + docs/plans → the pipeline's broken promises (`*-trace.md`): must criteria without a runnable `Verify:`, parent/children desync, implementation shipped without a review, findings that never closed across reports, plans blocked on already-resolved questions — every finding routed to its owning role; mechanical, reports only |
 | `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
@@ -217,7 +218,7 @@ one role and the session carries only that role's skills:
 
 | Plugin | The role | Skills |
 |---|---|---|
-| `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `role-analyst` |
+| `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `trace-audit`, `role-analyst` |
 | `specialist-dev` | from a repo spec to spec-driven code | `implementation-plan`, `spec-implementation`, `codestyle`, `lazy`, `root-cause`, `role-dev` |
 | `specialist-qa` | acceptance, review, bug hunting | `spec-review`, `stand-acceptance`, `code-review`, `bug-hunt`, `role-qa` |
 

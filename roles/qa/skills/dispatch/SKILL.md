@@ -15,7 +15,8 @@ Read the task and name the role:
 
 - **analyst** — understanding and specifying. Raw task → business spec → system spec →
   per-repository specs; documentation audits and the user manual. Signals: "what should
-  we build", "write a spec", "decompose across repos", "docs are stale".
+  we build", "write a spec", "decompose across repos", "docs are stale",
+  "audit the pipeline's artifacts".
 - **dev** — making it. Repo spec → plan → code, fixes, refactors, conventions. Signals:
   "implement", "fix", "refactor", "add a dependency", "make it work".
 - **qa** — proving it. Acceptance against the specs, quality review, bug and security

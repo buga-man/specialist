@@ -26,6 +26,7 @@ export const ROLE_MAP = {
       "decompositor",
       "kb-index",
       "tech-writer",
+      "trace-audit",
       "role-analyst",
     ],
     dev: [

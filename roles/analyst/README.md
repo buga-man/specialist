@@ -12,6 +12,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 - `decompositor`
 - `kb-index`
 - `tech-writer`
+- `trace-audit`
 - `role-analyst`
 - `dispatch`
 

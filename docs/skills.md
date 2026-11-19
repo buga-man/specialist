@@ -36,7 +36,7 @@ consent — the options live in `dispatch`.
 
 | Plugin | The role | Skills |
 |---|---|---|
-| `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, `role-analyst` |
+| `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, trace-audit, `role-analyst` |
 | `specialist-dev` | a repo spec to spec-driven code | implementation-plan, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
 | `specialist-qa` | acceptance, review, bug hunting | spec-review, stand-acceptance, code-review, bug-hunt, `role-qa` |
 | `specialist` (full) | the whole cycle + the guards (hooks) | all of the above |
@@ -321,6 +321,33 @@ via browser automation, and building `md → standalone HTML + PDF` with the ski
   marked `[draft: unconfirmed]`; screenshots come only from the dev stand + synthetic data.
 - **When:** "check spec consistency", "sync the specs", "what is undocumented",
   "assemble the user manual", "update the manual".
+
+## trace-audit — the pipeline's own broken promises
+
+**Why:** the pipeline's artifacts promise each other things — every must criterion names
+its `Verify:`, every child appears in its parent's `children`, every implementation gets
+a review, every finding gets closed or carried. Under deadline those promises are what
+gets skipped, silently. The skill walks the artifact tree mechanically and reports every
+broken promise: the pipeline auditing itself.
+
+- **Input → output:** `docs/specs/` + `docs/plans/` → `docs/specs/YYYY-MM-DD-pipeline-trace.md`
+- **The checks:** orphan criteria (must without a runnable `Verify:` — manual checks
+  listed separately, they wait on a person, not on nothing); traceability desync
+  (`parent`/`children` one-way or dead links, id/slug mismatches); implementation
+  without a review (closed plan tasks, no `*-review` — the release-blocking class;
+  mid-flight chains are "working as intended", not findings); findings that never
+  closed (walked report by report, with their age; `Recurring:` classes across
+  consecutive reports become a CODESTYLE proposal for tech-writer); stuck work
+  (`- Blocked by:` tasks whose question the spec no longer lists); status honesty
+  (a draft with closed implementation, an approved without an approval trail).
+- **Routed, not fixed:** every finding names its owner — spec defects → amendments
+  (analyst), missing reviews → qa, open findings → the plan or root-cause, recurring
+  classes → tech-writer. The auditor edits nothing.
+- **Key rules:** mechanical, not judgmental — a finding is a broken promise between
+  artifacts, checkable by re-reading them ("this spec seems thin" is spec-review's
+  judgment); a check with nothing to walk is "nothing to check", never "passed".
+- **When:** "audit the pipeline", "pipeline health", "what's uncovered", "which specs
+  never got reviewed", before a release.
 
 ## root-cause — bug → minimal fix
 
