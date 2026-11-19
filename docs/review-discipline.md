@@ -221,7 +221,7 @@ comparing alternatives"; "does not amend old ADRs retroactively").
 | Numbered-ID naming rules (max+1 scans, sub-numbering bans) | This framework's artifacts are date-slug files (`YYYY-MM-DD-<topic>-<repo>.md`); no ID registry exists to guard |
 | The source pack's severity emoji scale (🔴/🟡/🔵) | Each skill already carries its own severity vocabulary, tuned to its report format |
 | PlantUML self-containment rules | No diagram artifacts in the pipeline today; revisit if system-thinking starts emitting diagrams |
-| Kaiten scripts / tracker workflows | Tool-specific; the generic pattern is captured in the backlog item above |
+| Tracker scripts / tracker workflows | Tool-specific; the generic pattern is captured in the backlog item above |
 
 ## Follow-ups — the second delta (shipped in 0.32.0, after the branch review)
 
