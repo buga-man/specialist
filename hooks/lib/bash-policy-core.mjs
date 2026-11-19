@@ -82,7 +82,9 @@ function stripGitDir(tokens) {
 function segmentAllowed(segment) {
   if (PLUMBING_RE.test(segment)) return false;
   const tokens = segment.split(/\s+/).filter(Boolean);
-  if (tokens.some((t) => t.startsWith("--output")) ) return false; // git … --output=<file> writes
+  // `--output…` writes a file (git's form); checked for every head — a non-git
+  // --output is rejected too, which only ever narrows (fail-closed).
+  if (tokens.some((t) => t.startsWith("--output"))) return false;
   if (tokens.some((t) => !pathTokenIsSafe(t))) return false;
 
   const head = tokens[0];

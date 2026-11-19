@@ -1,8 +1,9 @@
 /**
  * Tests for mutation-guard-core.mjs — the outward-mutation classifier.
  * The bar of every case: pushes, history rewrites, and forced discards are named for
- * the block; commits and ordinary work stay invisible to the guard (fail-open — it is
- * the opt-in adapter that decides when any of this matters).
+ * the block; commits and ordinary work stay invisible to the guard (fail-safe — an
+ * unrecognized shape is the host permission flow's business, and it is the opt-in
+ * adapter that decides when any of this matters).
  * Run: node --test hooks/lib/mutation-guard-core.test.mjs
  */
 import { test } from "node:test";
@@ -34,6 +35,11 @@ test("the outward and history shapes are blocked", () => {
   blocked("git branch -d --force feat/x");
   blocked("git checkout -- .");
   blocked("git checkout -- src/index.ts");
+  blocked("git checkout HEAD~2 -- src/index.ts"); // a ref before -- discards even deeper
+  blocked("git checkout main -- src/");
+  blocked("git stash drop");
+  blocked("git stash drop stash@{2}");
+  blocked("git stash clear");
   blocked("git restore .");
   blocked("git restore src/index.ts");
 });
@@ -56,8 +62,11 @@ test("commits and ordinary work are not the guard's business", () => {
   allowed("git status");
   allowed("git log --oneline -5");
   allowed("git checkout main"); // a branch switch, not a discard
+  allowed("git checkout -b feature/x"); // branch creation carries no paths
   allowed("git branch feature/x"); // create, not delete
   allowed("git branch -d merged-branch"); // plain delete of a merged branch — not here
+  allowed("git stash"); // saving a stash is safe — only drop/clear destroy
+  allowed("git stash pop"); // restores, does not discard
   allowed("git restore --staged src/index.ts"); // unstages, discards nothing
   allowed("git reset --soft HEAD~1"); // moves a pointer, keeps the tree
   allowed("git pull");

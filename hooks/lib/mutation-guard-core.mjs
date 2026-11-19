@@ -8,8 +8,9 @@
  *
  * Recognized shapes (per segment of a && / || / ; chain, `git -C <dir>` prefixes
  * honored): git push, git reset --hard, git rebase, git branch -D / forced delete,
- * git clean, `git checkout -- <paths>` and `git restore <paths>` (without --staged —
- * unstaging discards nothing).
+ * git clean, `git stash drop|clear`, `git checkout [--] <paths>` and
+ * `git checkout <ref> -- <paths>` (both overwrite the working tree from an index or
+ * a ref), and `git restore <paths>` (without --staged — unstaging discards nothing).
  *
  * Fail-safe direction: this core only ever says "block"; the adapter runs it solely
  * when .spec-gate opted in (`mutation-guard: on`), and any parse doubt reads as
@@ -25,7 +26,12 @@ const MUTATION_PATTERNS = [
   { re: /^git(?:\s+-C\s+\S+)?\s+reset\s+(?:-[a-z]+\s+)*--hard\b/, what: "hard-resets history" },
   { re: /^git(?:\s+-C\s+\S+)?\s+rebase\b/, what: "rewrites history (rebase)" },
   { re: /^git(?:\s+-C\s+\S+)?\s+clean\b/, what: "deletes untracked files" },
-  { re: /^git(?:\s+-C\s+\S+)?\s+checkout\s+--\s/, what: "discards working-tree changes" },
+  // `git stash drop|clear` destroys saved work with no working-copy trail — the same
+  // hard-to-undo class as clean. Creating a stash or popping one is safe and not here.
+  { re: /^git(?:\s+-C\s+\S+)?\s+stash\s+(?:drop|clear)\b/, what: "discards stashed work (stash drop/clear)" },
+  // `git checkout -- <paths>` and `git checkout <ref> -- <paths>` both overwrite the
+  // working tree; the optional ref (HEAD~2, a branch) makes the discard even deeper.
+  { re: /^git(?:\s+-C\s+\S+)?\s+checkout\s+(?:\S+\s+)?--\s/, what: "discards working-tree changes" },
 ];
 
 /** `git branch` force-deletes: a `-D` short flag (alone or combined, e.g. `-Dv`) or

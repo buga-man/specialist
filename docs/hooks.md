@@ -237,9 +237,12 @@ gate is the project's decision, not the default). When on, agent-run commands th
 leave the working tree or rewrite history are blocked, in every segment of a chain:
 
 - `git push` (any form), `git reset --hard`, `git rebase`, `git clean`;
+- `git stash drop` / `git stash clear` (destroying saved work with no working-copy
+  trail — the same hard-to-undo class; creating or popping a stash is not gated);
 - `git branch -D` / `--delete --force` (a plain `-d` of a merged branch is not gated);
-- `git checkout -- <paths>` and `git restore <paths>` (without `--staged` — unstaging
-  discards nothing).
+- `git checkout -- <paths>`, `git checkout <ref> -- <paths>` (both overwrite the
+  working tree — the ref form from an older commit even deeper), and
+  `git restore <paths>` (without `--staged` — unstaging discards nothing).
 
 Commits are deliberately **not** gated: one task = one commit is the framework's own
 loop (spec-implementation). The block message says what to do instead — confirm with
