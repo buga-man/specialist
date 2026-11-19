@@ -1,5 +1,5 @@
 {
-  "description": "specialist hooks for Codex: the same cores as the Claude Code adapters, with Codex-specific payload handling (apply_patch edits) and JSON output (additionalContext on PostToolUse/SessionStart, decision:block on Stop). Codex accepts ${CLAUDE_PLUGIN_ROOT} in plugin hook commands.",
+  "description": "specialist hooks for Codex: the same cores as the Claude Code adapters, with Codex-specific payload handling (apply_patch edits) and JSON output (additionalContext on PostToolUse/SessionStart, decision:block on Stop). Codex accepts ${CLAUDE_PLUGIN_ROOT} in plugin hook commands. bash-policy is Claude Code/ZCode only — Codex approval stays with its own config.",
   "hooks": {
     "PreToolUse": [
       {
@@ -15,6 +15,11 @@
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/mutation-guard.mjs\"",
+            "timeout": 30
+          },
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/secrets-guard.mjs\"",

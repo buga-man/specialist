@@ -1,4 +1,4 @@
-# Skills: what each of the eighteen does
+# Skills: what each of the twenty does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
@@ -36,7 +36,7 @@ consent — the options live in `dispatch`.
 
 | Plugin | The role | Skills |
 |---|---|---|
-| `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, `role-analyst` |
+| `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, trace-audit, `role-analyst` |
 | `specialist-dev` | a repo spec to spec-driven code | implementation-plan, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
 | `specialist-qa` | acceptance, review, bug hunting | spec-review, stand-acceptance, code-review, bug-hunt, `role-qa` |
 | `specialist` (full) | the whole cycle + the guards (hooks) | all of the above |
@@ -86,7 +86,14 @@ business spec.
   runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify presence,
   vague wording, the 5–20 must band). Business cases "actor → action → outcome" (each covered
   by at least one criterion), a glossary slot for the terms the criteria rely on, success
-  metrics, open questions with working assumptions and a blocking flag.
+  metrics, open questions with working assumptions and a blocking flag. **Value-first,
+  above the formal bar** — problem, not solution (strip every mention of implementation;
+  the need must still stand on its own) and no gold-plating (every criterion traces to
+  the stated value; a criterion beyond the need is a finding, not a bonus). Amendments
+  to an approved spec are classified by impact — wording / touches a criterion (the
+  user re-confirms) / contradicts a recorded decision (a conflict, raised) — and the
+  spec freezes while an external reviewer holds it: changes land after the verdict,
+  so the text under review stays the text that was reviewed.
 - **When:** any new task/feature; phrases "gather requirements", "make a spec".
 - **Not for:** bugs — those belong to root-cause.
 
@@ -95,12 +102,20 @@ business spec.
 **Why:** the main value is finding work the spec is silent about: a frontend for a
 "backend task", migrations, compatibility, permissions — and work the spec duplicates:
 what was ordered as "new" may already exist in a neighboring repo. Reconnaissance of all
-affected repositories, blast radius, contracts between repos (each with its owning contract test), data migration and rollback, rollout order.
+affected repositories, blast radius, contracts between repos (each complete — fields,
+an example pair, an error table, limits or an explicit "no limits"; a change to an
+existing contract is classified breaking/additive, breaking carries a migration plan;
+each with its owning contract test), data migration and rollback, rollout order. Scout
+prompts carry artifacts cleaned of secrets and personal data — delegation must not
+widen what the git boundary guards.
 
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
   the user explicitly (alternatives + trade-offs + a recommendation) — never slipped in as
-  a "default". Every change is traced with certainty: `[spec]/[found] (file:line)/
+  a "default". Decisions are recorded in a fixed shape — context → decision →
+  alternatives rejected (each with the reason it lost) → consequences — and are
+  **append-only** (a superseded decision gets a new record referencing the old, never an
+  edit). Every change is traced with certainty: `[spec]/[found] (file:line)/
   [assumption: why]/[ambiguous]`; sibling-spec needs go to `depends-on` with a reason.
 - **Irreversible decisions** (public contracts, schemas, migrations, removals) are a
   separate sub-list in Decisions — each with the date, the rejected reversible
@@ -120,8 +135,10 @@ changes from. It also folds the repo's aging docs into the changes.
 - **New means searched first:** an entity declared new (a function, class, endpoint, role,
   setting) is searched for across the repo first; found — extend/reuse; not found —
   `searched: <what, where>` in the spec. Otherwise a duplicate ordered by the spec will pass
-  acceptance as passed. Changes serving a business criterion carry `Verify:`; lateral needs
-  go to `depends-on`; the spec names its ambiguity policy (halt and ask / skip and report).
+acceptance as passed. Changes serving a business criterion carry `Verify:`; lateral needs
+go to `depends-on`; the spec names its ambiguity policy (halt and ask / skip and report).
+UI changes carry an elements table (element | type | visible when | label | behavior) —
+the verifiable shape of UI requirements, walked element by element in spec-review.
 - **When:** "split by repository", "decomposition", "what changes in this repo".
 
 ## implementation-plan — repo spec → a task plan for an agent
@@ -155,14 +172,18 @@ restore the behavior — it turns green. A test that was never red verifies noth
   `- Done: <hash>` in the plan)
 - **Three tiers of deviations:** local (a different way, same behavior) — a ruling in the
   report; behavior/contract/scope — stop, an amendment to the owning spec after approval;
-  changed intent — back to brainstorm.
+  changed intent — back to brainstorm. An open spec question blocks its own slice, not
+  the whole plan — blocked tasks are marked `- Blocked by:` in the plan (destructive,
+  security, and outward operations halt everything, full stop).
 - **Why-comments stay:** context comments (the bug behind a workaround, a business
   constraint, a dated decision, a commit reference) are preserved and updated, never
   stripped as clutter — they are the repo's memory for the next reader, agent included.
 - **Self-review (after the last task):** the branch diff walked against the reviewers'
   checklists (bug-hunt's, code-review's) — the trivial fixed on the spot, the
   unresolved edges carried into the report as the reviewer's starting points.
-- **Final report:** decisions the specs did not cover; ambiguous readings (the one place a
+- **Final report:** touched surface first — what the change reaches beyond its obvious
+  paths and where regression risk sits (the reviewer's starting map); then decisions the
+  specs did not cover; ambiguous readings (the one place a
   human is genuinely needed); rulings; spec amendments; unproven tests; self-review notes.
 - **When:** "implement", "execute the plan", "implement per the spec".
 
@@ -178,12 +199,21 @@ broken until proven otherwise".
   not as a hope). A criterion with `Verify:` is checked by running exactly that command;
   a must criterion without a runnable `Verify:` is unverifiable by default and flags a
   spec defect, not a code failure. A criterion without a test and observed behavior is
-  unverifiable, never passed.
+  unverifiable, never passed. **A green run is not evidence by itself** — the evidence
+  is the match between the test's assertions and the criterion (a pass ≠ a verified
+  criterion; a green suite over an under-asserting test is unverifiable, and the
+  amendment sharpens the test). **Non-functional criteria must be measurable**:
+  criterion + measurement method + threshold + environment; missing any → unverifiable,
+  and the amendment proposes the four fields.
 - **Plus:** a scan for unsanctioned behavior (what the code does beyond the specs), an audit
   of the executor's report, spec-drift (a divergence without an amendment = failed; a stale
   spec — propose an amendment), and the criteria attack: name a plausible wrong implementation
   that would pass every criterion — if one exists, the criteria set gets a proposed sharper
-  criterion (amendment), so the trap does not survive into the next feature. Outcome: accepted /
+  criterion (amendment), so the trap does not survive into the next feature. Proposed
+  amendments carry an explicit status — proposed → accepted/rejected with the date; a
+  `proposed` surviving into the next review is carried forward with its age; an
+  amendment changing an existing contract carries its blast-radius class — breaking
+  (a migration note is part of the amendment) / additive. Outcome: accepted /
   accepted with notes / changes required.
 - **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
   derived from the slug dates; no state stored (tech-writer's audit aggregates these
@@ -200,12 +230,17 @@ developer maintain this code a month from now, and does it do its work without n
 effort.
 
 - **Input → output:** diff (branch against base) + the code around each hunk +
-  `CODESTYLE.md` where present → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
-- **Two passes:** quality — intent vs naming, structure, duplication (new symbols
+  `CODESTYLE.md` where present + the spec chain's recorded decisions ("Decisions and
+  rationale") where the feature has them → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
+- **Three passes:** quality — intent vs naming, structure, duplication (new symbols
   grepped against the repo; a duplicate is a finding even when the plan ordered it),
   dead weight, error-handling idioms, tautological tests; logic — needless work, N+1,
   data-structure fit judged against real data sizes, hot vs cold paths, accidental
-  complexity — and premature optimization as a finding too.
+  complexity — and premature optimization as a finding too; stale impact — what the
+  diff does to the existing suite: tests to re-run, tests that may now lie (their
+  subject changed under them), coverage silently removed, each tagged
+  Must/Should/Optional. A large diff is read in churn order (git log --follow
+  frequency, shared modules before leaves) — depth goes where change goes.
 - **Findings:** `file:line` + what and why + a proposed direction (not a patch);
   severity blocker / worth fixing / note; outcome clean / worth a pass / rework
   required. Blockers and worth-fixing go back into the plan as tasks.
@@ -231,21 +266,28 @@ must never accept.
 - **Input → output:** diff / branch / code area, traced to its entry points (handlers,
   CLI, cron, consumers, UI events) → `docs/specs/YYYY-MM-DD-<topic>-<repo>-audit.md`
 - **Aiming the hunt:** a 15-minute threat sketch first (assets → who reaches them →
-  through which entries), and the installed analyzers (semgrep, linters) as verifiable
+  through which entries), a session charter (mission / scope boundary / time-box
+  25–45–90 minutes — when the box ends, the report is written with what is in hand),
+  and the installed analyzers (semgrep, linters) as verifiable
   leads — tools propose, the hunter verifies.
 - **Bug checklist:** boundaries (empty/null/one/many/negative/max/unicode/timezone),
   off-by-one, error paths (partial failure midway, swallowed errors, retry without
   idempotency), concurrency (shared state, TOCTOU, unawaited promises), resource leaks,
-  unasserted invariants, time arithmetic.
+  unasserted invariants, time arithmetic, misuse personas (the novice's random input,
+  the power user's shortcuts and double submits).
 - **Security checklist:** injection (SQL/command/path traversal/XSS/template/log),
   authn/authz per endpoint (IDOR, privileges from the client), secrets (hardcoded,
   logged, echoed), SSRF, redirects from user input, unsafe deserialization, crypto
   misuse, new dependencies with advisories.
 - **Findings:** `file:line` + the trigger scenario (bugs — a reproduction sketch;
-  security — an exploitation sketch) + severity critical/high/medium/low;
-  **no scenario — no finding**. Critical security findings are reported to the user
+  security — an exploitation sketch) + fix criteria (the observation that proves the
+  bug fixed — the dev role's acceptance check) + severity critical/high/medium/low;
+  **no scenario — no finding**; **dedup on filing** — the same trigger scenario
+  already open in a prior audit links and carries its status, never a duplicate row.
+  Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /
-  findings listed / exploitable — fix before merge.
+  findings listed / exploitable — fix before merge. A two-line debrief closes the
+  report — what the charter got right or wrong, where the next hunt should aim first.
 - **Parallel hunters (by explicit permission):** a large target may run 2–3
   independent hunters with distinct checklist foci (same scout permission rule as the
   recon skills); the coordinator deduplicates by scenario and resolves disagreements by
@@ -299,14 +341,46 @@ via browser automation, and building `md → standalone HTML + PDF` with the ski
 - **When:** "check spec consistency", "sync the specs", "what is undocumented",
   "assemble the user manual", "update the manual".
 
+## trace-audit — the pipeline's own broken promises
+
+**Why:** the pipeline's artifacts promise each other things — every must criterion names
+its `Verify:`, every child appears in its parent's `children`, every implementation gets
+a review, every finding gets closed or carried. Under deadline those promises are what
+gets skipped, silently. The skill walks the artifact tree mechanically and reports every
+broken promise: the pipeline auditing itself.
+
+- **Input → output:** `docs/specs/` + `docs/plans/` → `docs/specs/YYYY-MM-DD-pipeline-trace.md`
+- **The checks:** orphan criteria (must without a runnable `Verify:` — manual checks
+  listed separately, they wait on a person, not on nothing); traceability desync
+  (`parent`/`children` one-way or dead links, id/slug mismatches); implementation
+  without a review (closed plan tasks, no `*-review` — the release-blocking class;
+  mid-flight chains are "working as intended", not findings); findings that never
+  closed (walked report by report, with their age; `Recurring:` classes across
+  consecutive reports become a CODESTYLE proposal for tech-writer); stuck work
+  (`- Blocked by:` tasks whose question the spec no longer lists); status honesty
+  (a draft with closed implementation, an approved without an approval trail).
+- **Routed, not fixed:** every finding names its owner — spec defects → amendments
+  (analyst), missing reviews → qa, open findings → the plan or root-cause, recurring
+  classes → tech-writer. The auditor edits nothing.
+- **Key rules:** mechanical, not judgmental — a finding is a broken promise between
+  artifacts, checkable by re-reading them ("this spec seems thin" is spec-review's
+  judgment); a check with nothing to walk is "nothing to check", never "passed".
+- **When:** "audit the pipeline", "pipeline health", "what's uncovered", "which specs
+  never got reviewed", before a release.
+
 ## root-cause — bug → minimal fix
 
 **Why:** treats the disease, not the symptom. The oracle is the expected behavior (the spec
 or the user's words); the current code is the suspect, not the truth.
 
-- **Flow:** reproduce (mandatory, otherwise it is not a fix but guessing) → isolate →
+- **Flow:** triage — which of the four is this: product defect / wrong test (the
+  expectation is wrong; the spec, not the test, is the oracle) / environment-data
+  mismatch (not a bug — report what differs) / spec mismatch (the amendment protocol,
+  not a code change); only the product defect walks on → reproduce (mandatory,
+  otherwise it is not a fix but guessing) → isolate →
   the root cause in one sentence → a red test (it stays in the suite as a regression test;
-  deleting it is forbidden) → a minimal fix → green test + full suite → report.
+  deleting it is forbidden) → a minimal fix → green test + full suite → report, naming
+  the triage class first.
 - **Key rule:** if the code does exactly what it was built for and something else is wanted —
   it is not a bug but a feature request → brainstorm. A risky fix (shared core, data,
   security) → spec-review in a fresh session. With an active plan, the fix becomes a plan
@@ -405,6 +479,25 @@ produces the wrong artifacts.
   calls with a pointer here; on pi, Codex CLI, and OpenCode the skill is advisory —
   follow it honestly.
 
+## bootstrap — set a repository up for the framework
+
+**Why:** the framework reads config files and writes to known directories; a fresh
+repository has none of them. The skill surveys what exists, proposes the gap list,
+creates the confirmed pieces — and migrates legacy documentation under one rule:
+port the content, never rewrite its meaning.
+
+- **Input → output:** a repository → `.spec-gate`, `docs/specs/` + `docs/plans/`,
+  `CODESTYLE.md` (via codestyle), optionally `.suite-gate` and `.kbindex/`.
+- **Idempotent and confirmed:** a second run creates nothing; every piece is proposed
+  with a one-line why and created only after the user confirms; existing files are
+  echoed, never overwritten; no commits — files land in the working tree.
+- **Migration rule:** the source is primary until the migration is accepted — content
+  moves verbatim (no rephrasing, no invented gaps filled), missing sections become
+  `Requires filling in`, one pilot document is reviewed by the user before the batch
+  runs. Metadata (id/parent/children) is scaffolding added around the ported content.
+- **When:** "set up specialist here", "initialize this repo for the framework",
+  onboarding a repository; ends by pointing at `dispatch` for the first real task.
+
 ## role-analyst — enter the analyst role
 
 The analyst's entry skill: mission (understanding, written down — specs a business person
@@ -423,7 +516,11 @@ proven by tests that fail without it), the working cycle (implementation-plan �
 spec-implementation; `lazy` always on; `codestyle` first in an unfamiliar repo;
 `root-cause` for bugs), and the principles — spec > test > code, tests first, vertical
 slices, one task = one commit, the smallest change that fully satisfies the spec, a bug
-fixed once at the cause behind a red-then-green test. The self-review pass is part of
+fixed once at the cause behind a red-then-green test, quality guards are load-bearing
+(never remove or weaken a test/hook/lint gate to make work pass — that is a change
+needing explicit justification). The handoff to qa carries the
+touched-surface map (what the change reaches beyond the diff, where regression risk
+sits). The self-review pass is part of
 the work; the acceptance verdict is qa's. Out of role: specs, verdicts, reviews — the
 dispatch protocol. Activation offers `role: dev` in `.spec-gate`.
 
@@ -433,8 +530,11 @@ The reviewer's entry skill: mission (a verdict the reader trusts without re-runn
 work — every claim with evidence), the working cycle (spec-review criterion by
 criterion; stand-acceptance for the locally unverifiable; code-review / bug-hunt on
 demand; best in a fresh session), and the principles — a verdict without evidence is an
-opinion; passed / failed / unverifiable-with-reason, never "mostly passes"; adversarial
-by default; critical findings reported immediately; the reviewer does not fix — findings
+opinion; passed / failed / unverifiable-with-reason, never "mostly passes"; review from
+artifacts, never from the authoring session's transcript (subagents get the artifacts,
+not the conversation); adversarial
+by default; critical findings reported immediately; the reviewer does not fix — and
+does not design the fix either (a direction is a hint, not an imposed solution) — findings
 and failed criteria are handoff artifacts for dev (`root-cause`) and the analyst
 (amendments). Activation offers `role: qa` in `.spec-gate`.
 

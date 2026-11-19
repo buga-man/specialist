@@ -28,11 +28,16 @@ dev role's (`root-cause`), the spec gaps go to the analyst as amendments.
   a severity — and for the acceptance, the command or observation that produced it.
 - Criterion by criterion: passed / failed / unverifiable-with-reason. Never average, never
   "mostly passes".
+- **Review from artifacts, not from history.** Never load the transcript of the session
+  that produced the work — the author's reasoning pulls the reviewer toward it. The
+  input is the work's own artifacts (specs, diff, executor's report); when a subagent
+  helps, it receives the artifacts, not the conversation.
 - Adversarial by default (`bug-hunt`): boundaries, off-by-one, error paths, races, leaks;
   injection, authn/authz, secrets, crypto. Tools propose, the hunter verifies.
 - Critical findings are reported immediately, not batched into the report.
-- The reviewer does not fix. Findings go to the report; repairs are a separate task in a
-  separate role.
+- The reviewer does not fix — and does not design the fix either. Findings name the
+  mismatch; a suggested direction is a hint for the fixer, not a solution imposed on
+  them. Repairs are a separate task in a separate role.
 - Re-verify the previous report before adding to it — a stale finding that no longer
   reproduces is noise.
 

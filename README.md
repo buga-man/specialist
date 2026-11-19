@@ -31,19 +31,21 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | Skill | Input → Output |
 |---|---|
 | `brainstorm` | raw task → business spec (no code; ≤10 questions, acceptance criteria, business cases) |
-| `system-thinking` | business spec → system spec (which repositories change, contracts, blast radius; architecture changes are always explicit) |
+| `system-thinking` | business spec → system spec (which repositories change, contracts, blast radius; architecture changes are always explicit; contracts carry a completeness checklist and breaking/additive classification) |
 | `decompositor` | system spec → repo spec (change sites, repo patterns, anchor snippets) |
 | `implementation-plan` | repo spec → task plan for the agent (vertical slices, Verify "command → expected result", one task = one commit) |
 | `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; a self-review pass against the reviewers' checklists before the report) |
-| `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; best in a fresh session) |
-| `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity — findings with file:line evidence and severity, re-verification of the previous report, a `Recurring:` memory line; the reviewer does not fix) |
-| `bug-hunt` | diff/branch/area → adversarial audit report `*-audit.md` (threat-sketch-aimed, analyzer-assisted — tools propose, the hunter verifies; parallel hunters by explicit permission; bugs: boundaries, off-by-one, error paths, races, leaks; security: injection, authn/authz, secrets, crypto; every finding with a trigger scenario, re-verification of the previous report; critical — reported immediately) |
-| `root-cause` | bug report → root cause (reproduction required, red test, minimal fix, full suite) |
+| `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; a green run is not evidence by itself — the assertion must match the criterion; non-functional criteria need criterion + method + threshold + environment; best in a fresh session) |
+| `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity; the stale-impact pass — what the diff does to the existing suite: tests to re-run, tests that may now lie, coverage silently removed; the spec chain's recorded decisions checked where present — a contradicted decision is a finding; a large diff read in churn order — findings with file:line evidence and severity, re-verification of the previous report, a `Recurring:` memory line; the reviewer does not fix) |
+| `bug-hunt` | diff/branch/area → adversarial audit report `*-audit.md` (threat-sketch-aimed, analyzer-assisted — tools propose, the hunter verifies; parallel hunters by explicit permission; bugs: boundaries, off-by-one, error paths, races, leaks, misuse personas; security: injection, authn/authz, secrets, crypto; every finding with a trigger scenario + fix criteria (the dev role's acceptance check), deduplicated against prior audits, re-verification of the previous report; critical — reported immediately) |
+| `root-cause` | bug report → root cause (triage first — product defect / wrong test / environment-data mismatch / spec mismatch; reproduction required, red test, minimal fix, full suite; the report names the class) |
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + review memory (recurring finding classes → CODESTYLE anti-patterns; a review report card) + a manual `md → standalone html + pdf` with screenshots from the stand |
+| `trace-audit` | docs/specs + docs/plans → the pipeline's broken promises (`*-trace.md`): must criteria without a runnable `Verify:`, parent/children desync, implementation shipped without a review, findings that never closed across reports, plans blocked on already-resolved questions — every finding routed to its owning role; mechanical, reports only |
 | `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
+| `bootstrap` *(cross-cutting)* | repository → framework-ready: surveys what exists, proposes and creates the confirmed pieces (`.spec-gate`, `docs/specs/` + `docs/plans/`, `CODESTYLE.md` via codestyle, optional `.suite-gate` / `.kbindex/`); legacy documentation migrates under the port-never-rewrite rule (pilot first, the user reviews); idempotent, confirm-before-create, no commits |
 
 **Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
 `specialist-dev`, `specialist-qa` — alongside the full bundle. `dispatch` classifies a
@@ -106,6 +108,8 @@ API — [extensions/README.md](extensions/README.md).
 | `secrets-guard` | before Bash | blocks `git add` of sensitive files (`.env`, keys, credentials; `git add .`/`-A`, bare directories and wildcard paths are checked against the index with untracked files expanded, quoted non-ASCII paths unescaped, `.env.example` is allowed) and `git commit`/`git push` with secrets in the diff (two pattern tiers: definite/likely; a push without an upstream — the first push of a branch — scans the commits the remote does not hold); legitimate fixtures — a regex in `.secrets-allow` at the root; a finding never echoes the secret's value; `git -C <dir>` is checked against the given directory |
 | `vuln-guard` | before Bash (git commit) | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too (inside edit-guard), `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
 | `suite-gate` | before Bash (git commit) | the project's own test command from `.suite-gate` (first line) runs at the commit boundary — a non-zero exit blocks with the tail of the output; spawn error/timeout — no block (fail-safe). Opt-in: no `.suite-gate` — the hook is silent; `off`/empty — disabled |
+| `bash-policy` | before Bash | auto-approves the provably read-only commands (`git status/log/diff/show/blame`, listing `git branch`/`git remote`, `ls`, `cat`, `pwd`, `test -e`) — read-only head, workspace-bound paths, no redirection/pipes/substitution, every segment of a `&&`/`;` chain checked; everything else gets no decision and the host's permission flow decides (fail-closed: a parse doubt never widens what is auto-approved; never blocks) |
+| `mutation-guard` | before Bash | blocks agent-run `git push`, `reset --hard`, `rebase`, `clean`, `stash drop/clear`, `branch -D`, `checkout --`/`checkout <ref> --`/`restore` discards — outward and history-mutating operations run on the user's explicit command, not the agent's initiative. Commits are not gated (one task = one commit is the framework's loop). Opt-in: silent until `.spec-gate` carries `mutation-guard: on`; unknown shapes and errors — silent (fail-safe) |
 | `git-watch` | after Bash | after tree-changing git operations (commit/checkout/merge/rebase/pull/reset/cherry-pick/stash pop) it reconciles derived artifacts with the disk: the kb-index index — a signal to rebuild (a data derivative), CODESTYLE.md — a signal to ask the user (the document is committed); silent when everything is fine |
 | `edit-guard` | after Edit/Write | one adapter, one deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:` scope line or of `.secrets-allow`/`.vuln-allow` is called out), the project's formatter (prettier / ruff), the project's linter (eslint / ruff / ktlint, each `--fix`-ing what it can), and — under `.vuln-guard = always` — a semgrep scan; unfixable errors and violations are returned to the agent to repair |
 | `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; with the `fast` profile — also the profile block, even without a plan; with a role pin (`role:` in `.spec-gate`) — the pin line, even in mode `off` (the pin gates skills, not files); with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; with no open tasks — the spec-chain line: the newest incomplete chain in `docs/specs/`, its stage and the skill to resume with (derived from the slugs and `status:` metadata — no state file; no marker needed — a `docs/specs/` tree is itself the opt-in); silent at `off` (without a pin), and in soft/hard when no chain is mid-flight and onboarding has nothing to report |
@@ -137,7 +141,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all eighteen skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all eleven hooks and extensions: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -215,7 +219,7 @@ one role and the session carries only that role's skills:
 
 | Plugin | The role | Skills |
 |---|---|---|
-| `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `role-analyst` |
+| `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `trace-audit`, `role-analyst` |
 | `specialist-dev` | from a repo spec to spec-driven code | `implementation-plan`, `spec-implementation`, `codestyle`, `lazy`, `root-cause`, `role-dev` |
 | `specialist-qa` | acceptance, review, bug hunting | `spec-review`, `stand-acceptance`, `code-review`, `bug-hunt`, `role-qa` |
 
@@ -261,7 +265,10 @@ In this mode hooks and extensions are **not** installed — skills only.
 1. Copy `docs/skill-template/` to `skills/<skill-name>/`.
 2. Fill in `SKILL.md`: `name` — matches the folder name (kebab-case, up to 64 characters);
    `description` — up to 1024 characters, the main autoload trigger ("what it does and
-   when to apply it").
+   when to apply it"). The template carries two optional sections — **Boundaries**
+   (can do autonomously / requires confirmation / will not do) and **Troubleshooting**
+   (symptom → likely cause → what to do) — add them when the skill's scope is easy to
+   overstep or it has known failure shapes.
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
    Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in

@@ -21,6 +21,22 @@ The agent knows the basics — do not explain the obvious. A good size is 1–2 
 
 - What is easy to break and how to avoid it.
 
+## Boundaries (optional — when the skill's scope is easy to overstep)
+
+Two short lists, only when the skill needs them:
+
+- **Can do autonomously** — actions needing no one's confirmation.
+- **Requires confirmation / will not do** — neighbor skills' territory, outward
+  operations, anything to hand off instead of doing.
+
+## Troubleshooting (optional — when the skill has known failure shapes)
+
+A table of the skill's own known ways to go wrong:
+
+| Symptom | Likely cause | What to do |
+|---|---|---|
+| The output looks right but nobody can act on it | A step skipped its verification | Re-run from the last verified point |
+
 <!--
 Checklist for adding a new skill:
 1. Copy this directory to skills/<skill-name>/ — the folder name == the name field

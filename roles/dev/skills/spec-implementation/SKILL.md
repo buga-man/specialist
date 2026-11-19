@@ -89,6 +89,12 @@ change — that is the proof nothing changed.
 - **Stop and ask the user** before destructive operations, security-sensitive changes, or
   outward side effects (push, deploy, migrations on shared environments) — and when a task
   cannot be executed as written or needs a decision the specs do not make.
+- **An open spec question blocks its own slice, not the whole plan.** A blocking open
+  question in a spec stops exactly the tasks that depend on it; the rest of the plan
+  proceeds. Mark the blocked tasks in the plan — `- Blocked by: open question #N in
+  <spec>` — so the blockage lives in the plan, not only in the conversation. The
+  stop-and-ask cases above are never granular: destructive, security, and outward
+  operations halt the work, full stop.
 - Deviations come in three tiers. **Local** — a different way within the task, same
   behavior and contracts: make the minimal deviation and record a ruling in the report,
   `what — why — cost if wrong`; the specs stay untouched. **Behavior, contract, or scope
@@ -122,6 +128,11 @@ surface.
 State what was implemented (tasks, commits), then the review points — a human or the next
 session reads only this list:
 
+- **Touched surface** — what the change reaches beyond its obvious paths, and where
+  regression risk now sits: shared modules and helpers touched, contracts their
+  consumers depend on, fixtures/config/data the change moved. The reviewer's starting
+  map — so a fresh session starts at the deep end, not by re-discovering the blast
+  radius. Empty is a claim too: "the change reaches nothing beyond its diff".
 - **Decisions the specs did not cover** — behavior you added, and why.
 - **Ambiguous readings** — where a spec admits several readings: which one you implemented,
   and what the alternative was. This is the one place a human is genuinely needed: the

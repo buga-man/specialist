@@ -21,8 +21,9 @@ surprises.
 | debug | `root-cause` | a bug → reproduction → root cause → red test → minimal fix |
 
 The handoff artifact to the qa role is the implemented branch plus the plan's `Verify:`
-commands. Your self-review pass is part of the work; the acceptance verdict is not — that
-is qa's.
+commands and the final report with its **touched-surface** map — what the change reaches
+beyond its diff and where regression risk sits. Your self-review pass is part of the work;
+the acceptance verdict is not — that is qa's.
 
 ## Principles
 
@@ -35,6 +36,10 @@ is qa's.
   callers, tests, fixtures, config.
 - A bug is fixed once, at the cause, behind a red-then-green test (`root-cause`); a risky
   fix goes to a fresh review session.
+- **Quality guards are load-bearing.** Never remove or weaken a test, hook, or lint gate
+  to make work pass — a guard that blocks the work is a finding to understand (the work
+  is wrong, or the guard is — either way it is a decision, not an obstacle); removing a
+  guard is itself a change requiring explicit justification.
 - Write code the way the repo already writes it — `codestyle` first in a repo you do not
   know, the session-start reminder keeps CODESTYLE.md honest.
 

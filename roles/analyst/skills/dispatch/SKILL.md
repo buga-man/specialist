@@ -15,7 +15,8 @@ Read the task and name the role:
 
 - **analyst** — understanding and specifying. Raw task → business spec → system spec →
   per-repository specs; documentation audits and the user manual. Signals: "what should
-  we build", "write a spec", "decompose across repos", "docs are stale".
+  we build", "write a spec", "decompose across repos", "docs are stale",
+  "audit the pipeline's artifacts".
 - **dev** — making it. Repo spec → plan → code, fixes, refactors, conventions. Signals:
   "implement", "fix", "refactor", "add a dependency", "make it work".
 - **qa** — proving it. Acceptance against the specs, quality review, bug and security
@@ -66,7 +67,7 @@ even if the producing role's skills are not installed on that side.
 | Transition | The artifact |
 |---|---|
 | analyst → dev | the repo specs (`docs/specs/*-<repo>.md`): changes, patterns, criteria |
-| dev → qa | the executed plan — tasks with `Verify:` commands — plus the executor's report |
+| dev → qa | the executed plan — tasks with `Verify:` commands — plus the executor's report with its touched-surface map (what the change reaches beyond the diff, where regression risk sits) |
 | qa → dev | the findings report (`*-review` / `-quality` / `-audit`): every finding with a trigger scenario |
 | qa → analyst | proposed amendments (spec gaps) inside the same report — the user approves them |
 | any → user | decisions only a human makes: changed intent, risk, scope |

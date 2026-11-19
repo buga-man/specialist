@@ -64,24 +64,35 @@ test("readMode: fast is accepted, case-insensitively", () => {
 
 test("readGateConfig: the legacy bare word is the mode, role stays null", () => {
   const dir = project({ ".spec-gate": "fast\n" });
-  assert.deepEqual(readGateConfig(dir), { mode: "fast", role: null });
+  assert.deepEqual(readGateConfig(dir), { mode: "fast", role: null, mutationGuard: false });
 });
 
 test("readGateConfig: the line format carries mode and role, with comments and case-insensitivity", () => {
   const dir = project({ ".spec-gate": "# pinned via dispatch\nmode: Hard\nrole: QA\n" });
-  assert.deepEqual(readGateConfig(dir), { mode: "hard", role: "qa" });
+  assert.deepEqual(readGateConfig(dir), { mode: "hard", role: "qa", mutationGuard: false });
 });
 
 test("readGateConfig: role without mode — the mode defaults to soft", () => {
   const dir = project({ ".spec-gate": "role: analyst\n" });
-  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "analyst" });
+  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "analyst", mutationGuard: false });
+});
+
+test("readGateConfig: mutation-guard opts in only on an explicit on", () => {
+  const dir = project({ ".spec-gate": "mutation-guard: on\n" });
+  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: null, mutationGuard: true });
+  writeFileSync(join(dir, ".spec-gate"), "mutation-guard: ON\n"); // case-insensitive
+  assert.equal(readGateConfig(dir).mutationGuard, true);
+  writeFileSync(join(dir, ".spec-gate"), "mode: hard\nmutation-guard: off\n");
+  assert.equal(readGateConfig(dir).mutationGuard, false);
+  writeFileSync(join(dir, ".spec-gate"), "mutation-guard: maybe\n"); // unknown value — off
+  assert.equal(readGateConfig(dir).mutationGuard, false);
 });
 
 test("readGateConfig: unknown keys and values are ignored, never restrictive", () => {
   // role validation is the consumer's job (skill-gate-core knows the roles map) —
   // the parser stays generic and preserves the word it was given.
   const dir = project({ ".spec-gate": "mode: sometimes\nrole: develop\ntempo: fast\n" });
-  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "develop" });
+  assert.deepEqual(readGateConfig(dir), { mode: "soft", role: "develop", mutationGuard: false });
 });
 
 test("decide (fast): file gate behaves exactly like soft", () => {

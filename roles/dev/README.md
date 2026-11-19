@@ -14,6 +14,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 - `root-cause`
 - `role-dev`
 - `dispatch`
+- `bootstrap`
 
 ## Install
 

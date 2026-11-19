@@ -45,6 +45,18 @@ review there is.
   - **unverifiable** — cannot be checked from here; name exactly what is needed
     (a live environment, a manual step, a missing test).
 - A criterion with no test and no observable behavior is unverifiable, never passed.
+- **A green run is not evidence by itself — a pass ≠ a verified criterion.** The
+  evidence is the *match* between the test's assertions and the criterion: cite the
+  assertion against the criterion's words. A suite green because the covering test
+  asserts less than the criterion demands (checks the status code, not the payload the
+  criterion names; checks the happy path, not the error contract) is a passed run over
+  an uncovered criterion — verdict unverifiable, and the gap becomes a proposed
+  amendment sharpening the test, not a quiet pass.
+- **Non-functional criteria must be measurable to be verifiable**: performance,
+  availability, capacity, resilience criteria carry **criterion + measurement method +
+  threshold + environment** (e.g. "p95 response ≤ 500 ms — k6 load test, 100 concurrent
+  users, staging"). Missing any of the four → unverifiable, and the amendment proposes
+  the four fields — "fast" and "reliable" are wishes, not criteria.
 - **Attack the criteria.** After the walk, try to name a plausible wrong implementation
   that would pass every criterion — the shape-checks trap from shallow oracles. If one
   exists, the implementation may still be accepted, but the criteria set is weaker than
@@ -92,6 +104,15 @@ review there is.
 - Then: deviations found, proposed spec amendments, questions for the user, what remains
   unverifiable — "check on a live environment" is a legitimate verdict, hand it over as a
   task, not a hope.
+- **Proposed amendments carry an explicit status** — `proposed` when written; the user's
+  decision updates it to `accepted YYYY-MM-DD` or `rejected YYYY-MM-DD (<reason in one
+  line>)`. The reviewer records the decision, never makes it. An amendment left
+  `proposed` stays open across reports: the next review re-verifies the gap and carries
+  the amendment forward with its age — a proposal nobody decided on is a debt the
+  pipeline owes, visible until paid. An amendment that changes an existing contract or
+  public interface carries its blast-radius class — **breaking** (some existing
+  consumer breaks; a migration note is part of the amendment) or **additive** — so the
+  user decides on the blast radius, not just the wording.
 - **Changes required** items go back into the plan as tasks; a finding that is a plain
   bug rather than a spec deviation goes to root-cause (a known failing case — the dev
   role, if installed) or bug-hunt (a wider adversarial sweep of the area). This skill

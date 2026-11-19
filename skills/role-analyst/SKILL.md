@@ -19,6 +19,7 @@ closed.
 | decompose | `decompositor` | system spec → per-repository specs |
 | navigate | `kb-index` | find the way in the project's documentation corpus |
 | document | `tech-writer` | after merge — docs audit, amendments, the user manual |
+| audit | `trace-audit` | the pipeline's own artifacts → the broken-promises report |
 
 The handoff artifact to the dev role is the set of repo specs (and for small tasks, a
 mini-spec). Everything downstream reads those files — their quality is this role's product.

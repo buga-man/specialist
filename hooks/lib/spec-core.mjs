@@ -26,18 +26,22 @@ import { isAbsolute, join, relative } from "node:path";
  *     "fast" is soft for the file gate but changes process orientation (skill-gate
  *     blocks the stage skills, plan-context advertises the fast lane), "off" disables
  *     the gate, anything else reads as the default "soft";
- *   - line-based — `mode: <soft|hard|fast|off>` and `role: <analyst|dev|qa>` directives,
- *     one per line, blank lines and "#" comments allowed. `role` pins the session to one
- *     role plugin: skill-gate then blocks the other roles' skills until the user
- *     consents to a switch (the dispatch protocol). null when unset.
+ *   - line-based — `mode: <soft|hard|fast|off>`, `role: <analyst|dev|qa>`, and
+ *     `mutation-guard: on|off` directives, one per line, blank lines and "#"
+ *     comments allowed. `role` pins the session to one role plugin: skill-gate then
+ *     blocks the other roles' skills until the user consents to a switch (the
+ *     dispatch protocol). `mutation-guard: on` opts the project into mutation-guard:
+ *     agent-run pushes and history rewrites are blocked (outward mutations run on
+ *     the user's explicit command); null/false when unset.
  *  Unknown keys and values are ignored — the file never turns restrictive by accident. */
 const GATE_MODES = new Set(["soft", "hard", "fast", "off"]);
 
-/** Reads the whole .spec-gate config: { mode, role }. Fail-safe: a missing or
- *  unparsable file is the defaults, never a restriction. */
+/** Reads the whole .spec-gate config: { mode, role, mutationGuard }. Fail-safe: a
+ *  missing or unparsable file is the defaults, never a restriction. */
 export function readGateConfig(projectDir) {
   let mode = "soft";
   let role = null;
+  let mutationGuard = false;
   try {
     const p = join(projectDir, ".spec-gate");
     if (existsSync(p)) {
@@ -48,6 +52,7 @@ export function readGateConfig(projectDir) {
         if (m) {
           if (m[1] === "mode" && GATE_MODES.has(m[2])) mode = m[2];
           else if (m[1] === "role" && /^[a-z][a-z-]*$/.test(m[2])) role = m[2];
+          else if (m[1] === "mutation-guard") mutationGuard = m[2] === "on";
           continue;
         }
         if (GATE_MODES.has(line) && line !== "soft") mode = line; // legacy bare word
@@ -56,7 +61,7 @@ export function readGateConfig(projectDir) {
   } catch {
     /* fall through to the defaults */
   }
-  return { mode, role };
+  return { mode, role, mutationGuard };
 }
 
 /** The gate mode alone — spec-gate and plan-context orient by it. */
