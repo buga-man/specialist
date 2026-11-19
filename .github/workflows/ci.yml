@@ -16,4 +16,5 @@ jobs:
           node-version: 22
       # No dependencies and no lockfile — the suite is plain node --test plus the
       # compliance audit (npm test runs both; there is nothing to install).
+      - run: ls -la && find . -maxdepth 1 -type d | sort
       - run: npm test
