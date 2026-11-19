@@ -36,6 +36,10 @@ the acceptance verdict is not — that is qa's.
   callers, tests, fixtures, config.
 - A bug is fixed once, at the cause, behind a red-then-green test (`root-cause`); a risky
   fix goes to a fresh review session.
+- **Quality guards are load-bearing.** Never remove or weaken a test, hook, or lint gate
+  to make work pass — a guard that blocks the work is a finding to understand (the work
+  is wrong, or the guard is — either way it is a decision, not an obstacle); removing a
+  guard is itself a change requiring explicit justification.
 - Write code the way the repo already writes it — `codestyle` first in a repo you do not
   know, the session-start reminder keeps CODESTYLE.md honest.
 

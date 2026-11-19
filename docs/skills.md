@@ -445,7 +445,9 @@ proven by tests that fail without it), the working cycle (implementation-plan �
 spec-implementation; `lazy` always on; `codestyle` first in an unfamiliar repo;
 `root-cause` for bugs), and the principles — spec > test > code, tests first, vertical
 slices, one task = one commit, the smallest change that fully satisfies the spec, a bug
-fixed once at the cause behind a red-then-green test. The handoff to qa carries the
+fixed once at the cause behind a red-then-green test, quality guards are load-bearing
+(never remove or weaken a test/hook/lint gate to make work pass — that is a change
+needing explicit justification). The handoff to qa carries the
 touched-surface map (what the change reaches beyond the diff, where regression risk
 sits). The self-review pass is part of
 the work; the acceptance verdict is qa's. Out of role: specs, verdicts, reviews — the
