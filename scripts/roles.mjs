@@ -39,7 +39,7 @@ export const ROLE_MAP = {
     ],
     qa: ["spec-review", "stand-acceptance", "code-review", "bug-hunt", "role-qa"],
   },
-  shared: ["dispatch"],
+  shared: ["dispatch", "bootstrap"],
 };
 
 /** The marketplace/plugin manifest description of each role plugin. Also the

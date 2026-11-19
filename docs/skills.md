@@ -460,6 +460,25 @@ produces the wrong artifacts.
   calls with a pointer here; on pi, Codex CLI, and OpenCode the skill is advisory —
   follow it honestly.
 
+## bootstrap — set a repository up for the framework
+
+**Why:** the framework reads config files and writes to known directories; a fresh
+repository has none of them. The skill surveys what exists, proposes the gap list,
+creates the confirmed pieces — and migrates legacy documentation under one rule:
+port the content, never rewrite its meaning.
+
+- **Input → output:** a repository → `.spec-gate`, `docs/specs/` + `docs/plans/`,
+  `CODESTYLE.md` (via codestyle), optionally `.suite-gate` and `.kbindex/`.
+- **Idempotent and confirmed:** a second run creates nothing; every piece is proposed
+  with a one-line why and created only after the user confirms; existing files are
+  echoed, never overwritten; no commits — files land in the working tree.
+- **Migration rule:** the source is primary until the migration is accepted — content
+  moves verbatim (no rephrasing, no invented gaps filled), missing sections become
+  `Requires filling in`, one pilot document is reviewed by the user before the batch
+  runs. Metadata (id/parent/children) is scaffolding added around the ported content.
+- **When:** "set up specialist here", "initialize this repo for the framework",
+  onboarding a repository; ends by pointing at `dispatch` for the first real task.
+
 ## role-analyst — enter the analyst role
 
 The analyst's entry skill: mission (understanding, written down — specs a business person

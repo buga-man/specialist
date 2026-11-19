@@ -15,6 +15,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 - `trace-audit`
 - `role-analyst`
 - `dispatch`
+- `bootstrap`
 
 ## Install
 

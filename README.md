@@ -45,6 +45,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
+| `bootstrap` *(cross-cutting)* | repository → framework-ready: surveys what exists, proposes and creates the confirmed pieces (`.spec-gate`, `docs/specs/` + `docs/plans/`, `CODESTYLE.md` via codestyle, optional `.suite-gate` / `.kbindex/`); legacy documentation migrates under the port-never-rewrite rule (pilot first, the user reviews); idempotent, confirm-before-create, no commits |
 
 **Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
 `specialist-dev`, `specialist-qa` — alongside the full bundle. `dispatch` classifies a

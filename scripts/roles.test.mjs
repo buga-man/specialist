@@ -57,21 +57,24 @@ test("validateRoleMap: names the three defect classes", () => {
 test("pluginSkills: the role's skills in cycle order + shared; unknown role → null", () => {
   for (const role of roleNames()) {
     const skills = pluginSkills(role);
-    assert.ok(skills.includes("dispatch"), `${role}: shared rides along`);
+    for (const shared of ROLE_MAP.shared) {
+      assert.ok(skills.includes(shared), `${role}: shared "${shared}" rides along`);
+    }
     assert.ok(skills.includes(`role-${role}`), `${role}: its own entry skill`);
-    assert.equal(skills[skills.length - 1], "dispatch", "shared appended last");
+    assert.deepEqual(skills.slice(-ROLE_MAP.shared.length), ROLE_MAP.shared, "shared appended last");
   }
   assert.equal(pluginSkills("nope"), null);
 });
 
 test("pluginSkills: no role ships another role's entry skill or its skills", () => {
+  const shared = new Set(ROLE_MAP.shared);
   for (const role of roleNames()) {
     const mine = new Set(pluginSkills(role));
     for (const other of roleNames()) {
       if (other === role) continue;
       assert.ok(!mine.has(`role-${other}`), `${role} must not ship role-${other}`);
       for (const skill of pluginSkills(other)) {
-        if (skill === "dispatch") continue;
+        if (shared.has(skill)) continue;
         assert.ok(!mine.has(skill), `${role} must not ship ${skill} (${other}'s)`);
       }
     }
