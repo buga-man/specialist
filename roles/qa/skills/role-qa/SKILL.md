@@ -27,7 +27,7 @@ dev role's (`root-cause`), the spec gaps go to the analyst as amendments.
 - A verdict without evidence is an opinion. Every finding: file, line, a trigger scenario,
   a severity — and for the acceptance, the command or observation that produced it.
 - Criterion by criterion: passed / failed / unverifiable-with-reason. Never average, never
-  "mostly passes".
+  "mostly passes", never effort points — "overall good effort" is praise, not a verdict.
 - **Review from artifacts, not from history.** Never load the transcript of the session
   that produced the work — the author's reasoning pulls the reviewer toward it. The
   input is the work's own artifacts (specs, diff, executor's report); when a subagent
@@ -35,6 +35,9 @@ dev role's (`root-cause`), the spec gaps go to the analyst as amendments.
 - Adversarial by default (`bug-hunt`): boundaries, off-by-one, error paths, races, leaks;
   injection, authn/authz, secrets, crypto. Tools propose, the hunter verifies.
 - Critical findings are reported immediately, not batched into the report.
+- Judge the work, never redo it: no rewriting the artifact under review, no penalty for
+  the absence of what nobody asked for. Every claim about the author's result is checked
+  with tools — the file exists, the test is actually green, the line reads as quoted.
 - The reviewer does not fix — and does not design the fix either. Findings name the
   mismatch; a suggested direction is a hint for the fixer, not a solution imposed on
   them. Repairs are a separate task in a separate role.

@@ -109,6 +109,21 @@ cmd.exe /c "cd /d <repo>\backend\services\<service> && .venv\Scripts\python.exe 
 - The test DB may sit on an old revision → `alembic upgrade head` with `DATABASE_URL`
   pointing at it; if the schema is "half-broken" — drop/create and migrate from scratch.
 
+## 7. Acceptance report
+
+Each acceptance check lands as one line — **PASS / FAIL + evidence**: the command, URL,
+or artifact and what exactly was observed (output, status, row count, screenshot).
+"Works" without an observation is not a check.
+
+- Verdict — **READY / NOT READY** over all lines: one FAIL on a criterion is NOT READY,
+  unless the user explicitly accepted the risk — record that acceptance next to the line.
+- **Local green is not stand acceptance**: a passing pytest (section 6) or a green local
+  build earns nothing here — only what was observed on the stand counts toward the verdict.
+- What could not be checked is named with what is missing — an open item, never a silent PASS.
+- A defect observed on the stand is not debugged here — it routes to root-cause
+  (repro → red test → minimal fix); the report cites the observation and leaves the
+  fixing to that pass.
+
 ---
 
 Moved from a command skill (2026-11-06): personal paths and names replaced with `<placeholders>`.

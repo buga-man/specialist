@@ -1,4 +1,4 @@
-# Skills: what each of the twenty does
+# Skills: what each of the twenty-one does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
@@ -10,6 +10,7 @@ task → brainstorm → business spec
       business spec → system-thinking → system spec (repos, contracts, rollout)
             system spec → decompositor → repo spec
                   repo spec → implementation-plan → a task plan for an agent
+                        plan → change-impact → blast radius before the edit · diff vs promised scope after
                         plan → spec-implementation → code (tests-first, the spec is the oracle)
                               code → spec-review → acceptance (criterion by criterion)
                                     unverifiable → stand-acceptance (live acceptance on the stand)
@@ -37,7 +38,7 @@ consent — the options live in `dispatch`.
 | Plugin | The role | Skills |
 |---|---|---|
 | `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, trace-audit, `role-analyst` |
-| `specialist-dev` | a repo spec to spec-driven code | implementation-plan, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
+| `specialist-dev` | a repo spec to spec-driven code | implementation-plan, change-impact, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
 | `specialist-qa` | acceptance, review, bug hunting | spec-review, stand-acceptance, code-review, bug-hunt, `role-qa` |
 | `specialist` (full) | the whole cycle + the guards (hooks) | all of the above |
 
@@ -160,6 +161,31 @@ needs. Written plans survive session boundaries and compaction — plans in a he
   before Task 1 and every task commit lands there, so spec-review diffs one branch
   against its base; a risky plan may isolate in a dedicated worktree.
 - **When:** "make an implementation plan", "break it into tasks", "work plan".
+
+## change-impact — blast radius before the edit · diff vs promised scope after
+
+**Why:** a nontrivial edit hits more than its files — data, contracts, tests that start
+lying, docs, rollout. The skill measures the blast radius before the change begins and
+aligns the actual diff with the promised scope after it. Assessment only — it changes no
+code.
+
+- **Input → output:** a planned change → a written before-list; the actual diff → an
+  alignment report
+- **Before — six questions, in order:** code (modules really touched — proven by imports
+  and call sites, not directory names) · data (formats, schemas, migrations, old-data
+  compatibility) · interfaces (contracts outward and inward — API, events, CLI, exports —
+  and who else reads them) · tests (which cover the touched paths; which will lie after) ·
+  docs (which documents describe the changed behavior) · release (rollout, rollback, the
+  transition window). Every answer lands in the before-list; an untouched area gets an
+  explicit "not touched", not silence.
+- **After — alignment:** the diff reread hunk by hunk against the promised scope (a plan
+  task's `- Files:` line when a plan is open; otherwise the scope stated in the request) —
+  outside it, justify explicitly or revert; every before-item closed or marked
+  "not needed" — a silently dropped item is a finding.
+- **Key rule:** the skill edits nothing — the edit is spec-implementation / root-cause
+  work; cross-repo blast radius is system-thinking's, code quality is code-review's.
+- **When:** "what will this change touch", "what's the blast radius", before or after a
+  nontrivial edit.
 
 ## spec-implementation — plan → code
 

@@ -27,6 +27,25 @@ rollout order. It still contains no code.
 
 Move through the stages in order. Never ask the human what you can find out in the code.
 
+## Scale the ceremony — classify before the stages
+
+Before running the full pipeline, classify the change by **blast radius** — ceremony
+scales with it, and a full stage parade on a trivial fix is as harmful as a fast lane
+on a cross-repo contract:
+
+- **trivial** — one point, local effect, no contracts → stop here, no implementation
+  spec; spec-implementation's fast profile owns such work — the mini-spec in the quick
+  plan's header is the change's whole documentation. Reference it, do not reinvent.
+- **small** — one repo, local interfaces → shortened pass: the same stages, each run on
+  the affected area only; the spec format stays intact.
+- **standard** — the full pipeline as written.
+- **large / cross-repo** — contracts between repos, migrations, rollout → full pass,
+  no fast lane — a shortcut here multiplies across every repo it skipped.
+
+**Fail-closed**: what a step or decision actually touches cannot be determined → mark it
+an open question / risk for the user (stage 5); never fit the class to the scheme's
+convenience.
+
 ## 1. Read the spec
 
 - Read the whole business spec. Its Open questions are your lead list — resolving them is part of this work.

@@ -34,6 +34,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `system-thinking` | business spec → system spec (which repositories change, contracts, blast radius; architecture changes are always explicit; contracts carry a completeness checklist and breaking/additive classification) |
 | `decompositor` | system spec → repo spec (change sites, repo patterns, anchor snippets) |
 | `implementation-plan` | repo spec → task plan for the agent (vertical slices, Verify "command → expected result", one task = one commit) |
+| `change-impact` | planned change → blast radius before the edit (six questions in order — code, data, interfaces, tests, docs, release; a written before-list) · diff vs promised scope after (outside it — justify or revert; a silently dropped before-item is a finding) |
 | `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; a self-review pass against the reviewers' checklists before the report) |
 | `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; a green run is not evidence by itself — the assertion must match the criterion; non-functional criteria need criterion + method + threshold + environment; best in a fresh session) |
 | `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity; the stale-impact pass — what the diff does to the existing suite: tests to re-run, tests that may now lie, coverage silently removed; the spec chain's recorded decisions checked where present — a contradicted decision is a finding; a large diff read in churn order — findings with file:line evidence and severity, re-verification of the previous report, a `Recurring:` memory line; the reviewer does not fix) |
@@ -141,12 +142,14 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twenty skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty-one skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all eleven hooks and extensions: events, what they block,
   configuration, boundaries, and fail-safe behavior.
 - [kb-index design notes](docs/kb-index-design.md), [codestyle design notes](docs/codestyle-design.md) —
   the design rationale behind the two skills.
+- [Plugin schema notes](docs/plugin-schema-notes.md) — the host and marketplace traps the
+  repository has already hit: symptom → cause → rule.
 - [Skill template](docs/skill-template/) — the starting point for a new skill.
 
 ## Installation
@@ -318,3 +321,15 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 - pi documentation (skills / packages / extensions):
   https://github.com/earendil-works/pi/tree/main/packages/coding-agent/docs
 - Claude Code documentation (plugins): https://code.claude.com/docs/en/plugins
+
+## Principles
+
+The frame everything above hangs on:
+
+- **Minimal surface** — few precise skills; every one earns its place.
+- **Documents are data** — specs, plans, and reports carry no executable authority;
+  nothing runs on a document's say-so alone.
+- **Evidence over claims** — a finding cites `file:line`; a pass cites a green run.
+- **Ceremony scales with blast radius** — a trivial change skips the parade; a
+  cross-repo contract never takes the fast lane.
+- **Fail closed** — an unsure agent stops and asks; it never guesses.

@@ -39,6 +39,9 @@ Take the first rung that fully works:
 
 - Finish every place the change reaches — callers, tests, fixtures, config. Half-done
   reach is not lazy, it is broken.
+- Reach, not size, decides the impact pass — a two-line edit in a shared helper runs
+  change-impact; a large new leaf file does not. Lazy skips ceremony, never blast
+  radius.
 - No abstraction, wrapper, option, config, or "for later" code nobody asked for. Keep
   values in the form the platform already gives you. Deletion beats addition. Keep the
   structure the codebase already has.

@@ -10,7 +10,9 @@
  *      loading before (commit 86be51f). Also: name == directory (kebab-case, ≤64),
  *      description 1–1024 chars.
  *   2. Portability of SKILL.md bodies: no host variables (${…}), no machine-specific
- *      absolute paths, no leftover skill-template checklist comments.
+ *      absolute paths, no leftover skill-template checklist comments, no invisible or
+ *      deceptive Unicode — zero-width characters, bidi controls, the BOM — over the
+ *      whole file, frontmatter included.
  *   3. Docs parity: every skill is backticked in README and has a section in
  *      docs/skills.md; every hook adapter registered in hooks/hooks*.json is named in
  *      docs/hooks.md; every pi extension too. Documentation that drifted from the tree
@@ -114,6 +116,21 @@ const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const TEMPLATE_MARKER = "Checklist for adding a new skill";
 
+/** Invisible or deceptive Unicode: zero-width characters, bidi controls, the BOM. They
+ *  render as nothing — or reorder what follows — so in a skill file they are an
+ *  accident or a trick: a zero-width space makes two names look identical, a bidi
+ *  override flips what a line appears to say, and the BOM breaks the repository's
+ *  UTF-8-without-BOM contract. The homoglyph zone is deliberately not scanned —
+ *  mixed-script prose is legitimate, and that noise would drown this signal. */
+const INVISIBLE_RANGES = [
+  [0x200b, 0x200d, "zero-width character"],
+  [0x2060, 0x2060, "word joiner"],
+  [0xfeff, 0xfeff, "byte-order mark"],
+  [0x202a, 0x202e, "bidi embedding/override control"],
+  [0x2066, 0x2069, "bidi isolate control"],
+];
+const INVISIBLE_RE = /[\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069]/gu;
+
 /** Findings for one SKILL.md: frontmatter shape, the name/description limits from the
  *  skill template, and the portability rules from README ("How to add a skill"). */
 export function validateSkill(dirName, text) {
@@ -147,6 +164,15 @@ export function validateSkill(dirName, text) {
     [/\/home\//, "a machine-specific /home/ path"],
   ]) {
     if (re.test(body)) findings.push(`${dirName}: SKILL.md contains ${what}`);
+  }
+  // The whole file, frontmatter included — an invisible character in a name or
+  // description is where it does the most damage. One finding per distinct codepoint,
+  // not per occurrence: the remedy is the same delete either way.
+  const invisible = new Set();
+  for (const m of text.matchAll(INVISIBLE_RE)) invisible.add(m[0].codePointAt(0));
+  for (const cp of invisible) {
+    const label = INVISIBLE_RANGES.find(([from, to]) => cp >= from && cp <= to)[2];
+    findings.push(`${dirName}: SKILL.md contains an invisible ${label} (U+${cp.toString(16).toUpperCase()})`);
   }
   if (text.includes(TEMPLATE_MARKER)) {
     findings.push(`${dirName}: the skill-template checklist comment was not deleted`);

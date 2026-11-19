@@ -8,6 +8,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 ## Skills
 
 - `implementation-plan`
+- `change-impact`
 - `spec-implementation`
 - `codestyle`
 - `lazy`

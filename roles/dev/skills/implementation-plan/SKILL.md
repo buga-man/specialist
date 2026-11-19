@@ -11,7 +11,9 @@ the plan only arranges the work.
 
 The plan is written for an executor with fresh context: the task plus the repo spec must
 be all it needs. Written plans survive session boundaries and context compaction — plans
-in a head do not.
+in a head do not. The plan also outlives its session: the next agent — or this one after
+a compact — resumes from the file alone, so task status, the next step, and open
+questions live in the plan, never in conversation.
 
 ## Flow
 

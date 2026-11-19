@@ -1,5 +1,5 @@
 {
-  "description": "specialist hooks for Codex: the same cores as the Claude Code adapters, with Codex-specific payload handling (apply_patch edits) and JSON output (additionalContext on PostToolUse/SessionStart, decision:block on Stop). Codex accepts ${CLAUDE_PLUGIN_ROOT} in plugin hook commands. bash-policy is Claude Code/ZCode only — Codex approval stays with its own config.",
+  "description": "specialist hooks for Codex: the same cores as the Claude Code adapters, with Codex-specific payload handling (apply_patch edits) and JSON output (additionalContext on PostToolUse/SessionStart, decision:block on Stop). Codex accepts ${CLAUDE_PLUGIN_ROOT} in plugin hook commands. bash-policy is Claude Code/ZCode only — Codex approval stays with its own config. config-guard blocks an edit of an existing linter/formatter config or its ignore file (apply_patch payloads checked file by file; creation stays free). mutation-guard also blocks the hook bypasses (--no-verify, core.hooksPath) — opt-in via .spec-gate.",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,11 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/spec-gate.mjs\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/config-guard-codex.mjs\"",
             "timeout": 30
           }
         ]

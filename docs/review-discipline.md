@@ -243,6 +243,19 @@ already carry verdicts), scheduler-style event tables for dispatch (phrase routi
 suffices today), drift rotation of "worn-out" checks (trace-audit is too young to
 retire checks).
 
+## Third delta — the review-mode question (feat/precision-guards)
+
+**Gap.** The scout sections ask permission for headcount only; the loop's other costs —
+whether to parallelize the review at all, and how many review→fix→review rounds it
+runs — were spent by default.
+
+**What.** Before scouts deploy, the reviewer asks the user explicitly: (a) a plain
+review in this session or subagents; (b) if subagents — the budget: how many scouts
+and how many review→fix→review iterations (default recommendation ≤3); (c) every
+iteration runs fresh scouts with no context from the previous one — inherited
+arguments anchor the new eyes. The operational line lives in bug-hunt's scout
+section; this doc holds the discipline.
+
 ## Common definition of done
 
 Every item: the SKILL.md / hook edit, tests where a hook or script changed
