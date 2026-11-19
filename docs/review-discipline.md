@@ -1,4 +1,4 @@
-# Review discipline — adoption plan
+# Review discipline — adoption plan (shipped in 0.32.0)
 
 Origin: a survey of an industrial agent-pack (X5 "Автоматизация качества", 2026-11-19 —
 roles, rules, workflows, ~58 archived qa-skills). Most of its machinery the framework
@@ -7,8 +7,11 @@ criterion verdicts, reviewer-does-not-fix, skill-gate enforcement). This plan ta
 the honest delta: practices that fill a real gap here. Rejected candidates are listed at
 the end so they are not re-litigated.
 
-Waves follow the release flow: work lands on a feature branch, merges to main via PR, the
-merge tip is tagged. Wave 1 targets 0.32.0, wave 2 — 0.33.0, wave 3 is backlog.
+**Status: all three waves shipped in 0.32.0** (originally waves 2–3 targeted 0.33.0 and
+the backlog — the work landed together). One rename along the way: the planned
+`specialist init` skill shipped as `bootstrap` — `/init` is a built-in command on some
+hosts. The tracker-adapter backlog item stayed a backlog item (no tracker integration
+exists yet).
 
 ## Wave 1 — 0.32.0
 

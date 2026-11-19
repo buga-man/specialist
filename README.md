@@ -141,7 +141,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all eighteen skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all eleven hooks and extensions: events, what they block,
   configuration, boundaries, and fail-safe behavior.

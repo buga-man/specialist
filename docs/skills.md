@@ -1,4 +1,4 @@
-# Skills: what each of the eighteen does
+# Skills: what each of the twenty does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
