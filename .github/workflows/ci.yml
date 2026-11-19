@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: 22
       # No dependencies and no lockfile — the suite is plain node --test plus the
-      # compliance audit (npm test runs both; there is nothing to install).
-      - run: ls -la && find . -maxdepth 1 -type d | sort
+      # compliance audit (npm test runs both; there is nothing to install). The
+      # argumentless run also covers the roles/ mirrors — the derived trees are
+      # tested, not just their sources.
       - run: npm test

@@ -7,7 +7,7 @@
   ],
   "private": true,
   "scripts": {
-    "test": "node --test hooks scripts skills && node scripts/compliance.mjs",
+    "test": "node --test && node scripts/compliance.mjs",
     "compliance": "node scripts/compliance.mjs"
   },
   "pi": {
