@@ -87,6 +87,14 @@ subagents and keep the main context for judgment, not for reading raw material:
   really several features — split it with the user. The mechanical part of the bar — Verify
   presence on must, unmeasurable wording, the count band — is checked by
   `node "<skill-dir>/scripts/check-criteria.mjs" <spec-path>` before saving; fix what it names.
+- **Value-first, above the formal bar**: a formally perfect spec describing the wrong problem
+  is worse than a rough spec describing the right one. Two checks before anything else passes:
+  - **Problem, not solution** — strip every mention of implementation from the summary and
+    criteria; the need must still stand on its own. If the "problem" collapses without the
+    how, the spec described a solution looking for a problem — go back and name the pain.
+  - **No gold-plating** — every criterion traces to the stated value. A criterion beyond
+    what the value needs is a finding (cost without a customer), not a bonus; cut it or
+    split it into its own feature.
 - Save as `docs/specs/YYYY-MM-DD-<topic>.md` in the main repository of the task; if the location is unclear, ask once.
 - After the user approves the spec, this skill is done. Planning and implementation are separate work.
 

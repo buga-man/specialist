@@ -86,7 +86,10 @@ business spec.
   runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify presence,
   vague wording, the 5–20 must band). Business cases "actor → action → outcome" (each covered
   by at least one criterion), a glossary slot for the terms the criteria rely on, success
-  metrics, open questions with working assumptions and a blocking flag.
+  metrics, open questions with working assumptions and a blocking flag. **Value-first,
+  above the formal bar** — problem, not solution (strip every mention of implementation;
+  the need must still stand on its own) and no gold-plating (every criterion traces to
+  the stated value; a criterion beyond the need is a finding, not a bonus).
 - **When:** any new task/feature; phrases "gather requirements", "make a spec".
 - **Not for:** bugs — those belong to root-cause.
 
