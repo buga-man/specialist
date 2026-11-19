@@ -143,7 +143,9 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   budget covers (default ≤3); the granted counts are the hard budget. Every iteration
   runs fresh scouts with no context from the previous one — inherited arguments anchor
   the new eyes (docs/review-discipline.md). Without subagents (denied or unsupported)
-  the same foci run sequentially in one session.
+  the same foci run sequentially in one session. The fix inside the loop belongs to
+  the dev role when roles are pinned (the hunter does not fix); without a pin the same
+  session fixes between hunts.
 - The coordinator deduplicates by scenario, not by location: two hunters naming the
   same trigger scenario is one finding. Disagreement (one calls it a bug, the other
   does not) is resolved by building the scenario out, never by vote.

@@ -120,6 +120,9 @@ or artifact and what exactly was observed (output, status, row count, screenshot
 - **Local green is not stand acceptance**: a passing pytest (section 6) or a green local
   build earns nothing here — only what was observed on the stand counts toward the verdict.
 - What could not be checked is named with what is missing — an open item, never a silent PASS.
+- A defect observed on the stand is not debugged here — it routes to root-cause
+  (repro → red test → minimal fix); the report cites the observation and leaves the
+  fixing to that pass.
 
 ---
 

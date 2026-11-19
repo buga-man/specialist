@@ -33,6 +33,9 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   broken) is a finding even when it is clean and passes its tests: recorded decisions
   are load-bearing history, not suggestions. No spec chain — nothing to check here;
   never hunt for decisions in commit messages instead.
+- The change-impact **before-list**, when the dev role left one in the plan task or the
+  report — it is the promised scope: the diff is read against it, and a before-item
+  that got neither its change nor a "not needed" mark is a finding.
 - The tests the diff carries: code and tests are reviewed as one judgment, not two.
 - A previous `*-quality` report for the topic (one glob: `ls docs/specs/*<topic>*`) →
   open by re-verifying its findings (see §5), then review fresh ground. The old report
