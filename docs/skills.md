@@ -198,7 +198,9 @@ broken until proven otherwise".
   of the executor's report, spec-drift (a divergence without an amendment = failed; a stale
   spec — propose an amendment), and the criteria attack: name a plausible wrong implementation
   that would pass every criterion — if one exists, the criteria set gets a proposed sharper
-  criterion (amendment), so the trap does not survive into the next feature. Outcome: accepted /
+  criterion (amendment), so the trap does not survive into the next feature. Proposed
+  amendments carry an explicit status — proposed → accepted/rejected with the date; a
+  `proposed` surviving into the next review is carried forward with its age. Outcome: accepted /
   accepted with notes / changes required.
 - **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
   derived from the slug dates; no state stored (tech-writer's audit aggregates these

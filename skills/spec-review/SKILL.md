@@ -104,6 +104,12 @@ review there is.
 - Then: deviations found, proposed spec amendments, questions for the user, what remains
   unverifiable — "check on a live environment" is a legitimate verdict, hand it over as a
   task, not a hope.
+- **Proposed amendments carry an explicit status** — `proposed` when written; the user's
+  decision updates it to `accepted YYYY-MM-DD` or `rejected YYYY-MM-DD (<reason in one
+  line>)`. The reviewer records the decision, never makes it. An amendment left
+  `proposed` stays open across reports: the next review re-verifies the gap and carries
+  the amendment forward with its age — a proposal nobody decided on is a debt the
+  pipeline owes, visible until paid.
 - **Changes required** items go back into the plan as tasks; a finding that is a plain
   bug rather than a spec deviation goes to root-cause (a known failing case — the dev
   role, if installed) or bug-hunt (a wider adversarial sweep of the area). This skill

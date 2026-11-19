@@ -74,7 +74,10 @@ is not a verdict — same bar as spec-review.
   where a successor report exists. The confirmation rate (closed ÷ re-verified) is the
   review's own metric: a rate stuck low means findings do not survive — either the
   fixes are cosmetic or the hunt cries wolf; a class that keeps regressing means the
-  fixes treated the symptom.
+  fixes treated the symptom. **Amendment ledger:** the proposed amendments across the
+  reports, by status — accepted / rejected / still proposed with their age; an
+  amendment proposed in one review and still `proposed` in the next is re-raised to the
+  user by name: the pipeline's undecided debts, not lost in old files.
 - Present the findings to the user. Approved amendments go into the owning spec's
   **Amendments** section — the writer proposes, the user approves, nothing is silent.
   Unowned features go back upstream: the user decides between a brainstorm run and
