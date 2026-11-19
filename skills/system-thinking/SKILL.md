@@ -144,11 +144,17 @@ Contracts crossing repo boundaries (API endpoints, events, schemas) — meaning,
 | # | Question | Working assumption | Risk if wrong | Blocking |
 
 ## 7. Decisions and rationale
-Architectural decisions — each discussed with the user — and the alternatives rejected.
+Architectural decisions — each discussed with the user — recorded as decision records in
+a fixed shape: **context → decision → alternatives rejected (with the reason each lost)
+→ consequences**. A decision without compared alternatives is not a decision but a
+default; it earns its record only when the comparison exists.
 Decisions that are hard to reverse (public contracts, schemas, migrations, removals of
 existing behavior) are listed as a separate sub-list, each with the date, the rejected
 reversible alternative, and the revert cost: these outlive the feature, and every
 downstream skill — and tech-writer's audit — reads them first.
+Records are **append-only**: a superseded decision is never edited away — a new record
+is appended, referencing the one it replaces and naming why; the history of decisions is
+itself architecture memory.
 
 ## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):

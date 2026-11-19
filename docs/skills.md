@@ -103,7 +103,10 @@ affected repositories, blast radius, contracts between repos (each with its owni
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
   the user explicitly (alternatives + trade-offs + a recommendation) — never slipped in as
-  a "default". Every change is traced with certainty: `[spec]/[found] (file:line)/
+  a "default". Decisions are recorded in a fixed shape — context → decision →
+  alternatives rejected (each with the reason it lost) → consequences — and are
+  **append-only** (a superseded decision gets a new record referencing the old, never an
+  edit). Every change is traced with certainty: `[spec]/[found] (file:line)/
   [assumption: why]/[ambiguous]`; sibling-spec needs go to `depends-on` with a reason.
 - **Irreversible decisions** (public contracts, schemas, migrations, removals) are a
   separate sub-list in Decisions — each with the date, the rejected reversible
