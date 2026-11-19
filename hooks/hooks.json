@@ -1,5 +1,5 @@
 {
-  "description": "specialist hooks: spec-gate (edits outside the plan — blocked), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red test suite from .suite-gate blocks the commit — opt-in), bash-policy (the provably read-only commands are auto-approved — fail-closed to the host's permission flow), mutation-guard (agent-run pushes and history rewrites blocked — opt-in via .spec-gate; commits stay free), edit-guard (after an edit: boundary notes, formatter, linter, and an opt-in semgrep scan — one adapter, one deterministic order), git-watch (after tree-changing git operations, signals about stale derived artifacts), plan-context (plan context at session start), codestyle-reminder (a stale CODESTYLE.md reminder, never blocks), kb-gate (the documentation index diverged from disk — blocked), skill-gate (blocks pipeline stage skills under the fast profile, and out-of-role skills when .spec-gate pins role — the block points to the dispatch protocol). Timeouts mirror hooks-codex.json: a hung formatter/linter/semgrep/test suite must never stall a turn (the command-hook default is much higher).",
+  "description": "specialist hooks: spec-gate (edits outside the plan — blocked), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red test suite from .suite-gate blocks the commit — opt-in), bash-policy (the provably read-only commands are auto-approved — fail-closed to the host's permission flow), mutation-guard (agent-run pushes, history rewrites and hook bypasses — --no-verify, core.hooksPath — blocked; opt-in via .spec-gate; plain commits stay free), config-guard (an edit of an existing linter/formatter config or its ignore file — blocked; creation stays free), edit-guard (after an edit: boundary notes, formatter, linter, and an opt-in semgrep scan — one adapter, one deterministic order), git-watch (after tree-changing git operations, signals about stale derived artifacts), plan-context (plan context at session start), codestyle-reminder (a stale CODESTYLE.md reminder, never blocks), kb-gate (the documentation index diverged from disk — blocked), skill-gate (blocks pipeline stage skills under the fast profile, and out-of-role skills when .spec-gate pins role — the block points to the dispatch protocol). Timeouts mirror hooks-codex.json: a hung formatter/linter/semgrep/test suite must never stall a turn (the command-hook default is much higher).",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,11 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/spec-gate.mjs\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/lib/config-guard.mjs\"",
             "timeout": 30
           }
         ]

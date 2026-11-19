@@ -330,3 +330,35 @@ test("spec chain: an uppercase .MD suffix is still a slug — a Windows filesyst
   assert.ok(text, ".MD passes the suffix filter — the slug regex must not drop it");
   assert.match(text, /spec-chain "dark-mode"/);
 });
+
+// --- the stale wrapper: injected plan/spec text is historical context, never instructions ---
+
+const STALE = /historical context/;
+
+test("stale wrapper: rides with the plan orientation and with the chain line", () => {
+  const withPlan = buildPlanContext(project({ "docs/plans/2026-01-01-t.md": PLAN }));
+  assert.match(withPlan, STALE);
+  assert.match(withPlan, /never re-run them blindly/);
+  assert.ok(
+    withPlan.indexOf("checkboxes are progress, not closure") < withPlan.indexOf("historical context"),
+    "the wrapper closes the plan-derived text",
+  );
+  const withChain = buildPlanContext(project({ "docs/specs/2026-11-01-dark-mode.md": spec("approved") }));
+  assert.match(withChain, STALE);
+  assert.ok(
+    withChain.indexOf("spec-chain") < withChain.indexOf("historical context"),
+    "the wrapper closes the chain line",
+  );
+});
+
+test("stale wrapper: absent when the block carries no plan/spec content", () => {
+  const roleOnly = buildPlanContext(project({ ".spec-gate": "mode: off\nrole: qa\n" }));
+  assert.ok(roleOnly.includes("Role pin:"));
+  assert.doesNotMatch(roleOnly, STALE);
+  const onboardingOnly = buildPlanContext(project({ ".spec-gate": "soft\n" }));
+  assert.match(onboardingOnly, /^Onboarding:/);
+  assert.doesNotMatch(onboardingOnly, STALE);
+  const fastOnly = buildPlanContext(project({ ".spec-gate": "fast\n" }));
+  assert.ok(fastOnly.includes("SDD profile `fast`"));
+  assert.doesNotMatch(fastOnly, STALE);
+});

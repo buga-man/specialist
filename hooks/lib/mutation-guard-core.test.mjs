@@ -1,9 +1,10 @@
 /**
  * Tests for mutation-guard-core.mjs — the outward-mutation classifier.
- * The bar of every case: pushes, history rewrites, and forced discards are named for
- * the block; commits and ordinary work stay invisible to the guard (fail-safe — an
- * unrecognized shape is the host permission flow's business, and it is the opt-in
- * adapter that decides when any of this matters).
+ * The bar of every case: pushes, history rewrites, forced discards, and the hook
+ * bypasses (--no-verify, a displaced core.hooksPath) are named for the block; plain
+ * commits and ordinary work stay invisible to the guard (fail-safe — an unrecognized
+ * shape is the host permission flow's business, and it is the opt-in adapter that
+ * decides when any of this matters).
  * Run: node --test hooks/lib/mutation-guard-core.test.mjs
  */
 import { test } from "node:test";
@@ -17,6 +18,16 @@ const blocked = (cmd) => {
   assert.equal(r.reason.includes("\n"), false, "reason must be a single line");
   assert.match(r.reason, /^mutation-guard: "/);
   assert.match(r.reason, /user's explicit command/);
+  return r;
+};
+const blockedBypass = (cmd) => {
+  const r = decideMutation(cmd);
+  assert.ok(r, cmd);
+  assert.equal(r.action, "block", cmd);
+  assert.equal(r.reason.includes("\n"), false, "reason must be a single line");
+  assert.match(r.reason, /^mutation-guard: "/);
+  assert.match(r.reason, /git hooks — this shape skips them/);
+  assert.match(r.reason, /user's decision/);
   return r;
 };
 const allowed = (cmd) => assert.equal(decideMutation(cmd), null, cmd);
@@ -75,4 +86,50 @@ test("commits and ordinary work are not the guard's business", () => {
   allowed("");
   allowed(null);
   allowed(undefined);
+});
+
+test("hook bypasses: --no-verify commits and pushes are blocked", () => {
+  blockedBypass("git commit --no-verify");
+  blockedBypass("git commit --no-verify -m 'x'");
+  blockedBypass("git commit -m 'x' --no-verify");
+  blockedBypass("git commit --amend --no-verify");
+  blockedBypass("git commit -n"); // the short form
+  blockedBypass("git commit -n -m 'x'");
+  blockedBypass("git commit -nm 'x'"); // -n inside a cluster, before the message flag
+  blockedBypass("git commit -qnm 'x'"); // deeper into the cluster
+  blockedBypass("git -C ../other commit --no-verify");
+  blockedBypass("git push --no-verify");
+  blockedBypass("git push --no-verify origin main");
+});
+
+test("hook bypasses: a displaced core.hooksPath is blocked on any command", () => {
+  blockedBypass("git -c core.hooksPath=/tmp/x commit");
+  blockedBypass("git -c core.hooksPath= commit"); // empty — hooks disabled outright
+  blockedBypass("git -c core.hookspath=/tmp/x push"); // git normalizes config keys to lowercase
+  blockedBypass('git -c "core.hooksPath=/tmp/my hooks" commit'); // quoted value
+  blockedBypass("git -C .. -c core.hooksPath=/x push"); // global options interleave
+  blockedBypass("git -c user.name=y -c core.hooksPath=/x commit"); // and repeat
+  blockedBypass("git -c core.hooksPath=/x rebase main"); // the command itself is irrelevant
+});
+
+test("hook bypasses: the block carries the bypass reason, not the push reason", () => {
+  const r = decideMutation("git push --no-verify origin main");
+  assert.match(r.reason, /bypasses the push hooks/);
+  assert.doesNotMatch(r.reason, /pushes to a remote/, "the sharper reading wins");
+  const inChain = decideMutation("git add . && git commit --no-verify -m 'ship it'");
+  assert.match(inChain.reason, /"git commit --no-verify -m 'ship it'"/, "the segment is named");
+  assert.match(inChain.reason, /bypasses the commit hooks/);
+});
+
+test("plain commits with -m/-c and dry-run pushes are not bypass reads", () => {
+  allowed('git commit -m "mention --no-verify in the docs"'); // a quoted message is one token
+  allowed("git commit -am 'x'"); // a cluster without an n
+  allowed("git commit -amn"); // -m swallows the rest: -a -m"n", not a no-verify
+  allowed("git commit --amend -m 'y'");
+  allowed("git -c user.name=y commit"); // ordinary inline configuration
+  allowed("git -c user.email=a@b.c commit -m 'x'");
+  allowed("git -c core.pager=cat log");
+  // A push's `-n` is --dry-run, not a bypass — but the plain push still blocks as a push.
+  const dryRun = decideMutation("git push -n");
+  assert.match(dryRun.reason, /pushes to a remote/);
 });

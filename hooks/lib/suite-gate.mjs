@@ -5,6 +5,9 @@
  * Opt-in: without a `.suite-gate` file the hook is silent.
  * No staged changes / green suite / spawn error / timeout / any internal error →
  * exit 0 silently (fail-safe: the hook never blocks legitimate work).
+ *
+ * Naming reminder: a hook file never starts with "test-" — npm test runs node --test
+ * over hooks/ and would adopt it as a test file (docs/plugin-schema-notes.md).
  */
 import { checkGitCommit } from "./suite-core.mjs";
 import { readHookPayload, resolveProjectDir, run, runShell } from "./hook-kit.mjs";
