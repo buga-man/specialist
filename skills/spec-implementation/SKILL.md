@@ -122,6 +122,11 @@ surface.
 State what was implemented (tasks, commits), then the review points — a human or the next
 session reads only this list:
 
+- **Touched surface** — what the change reaches beyond its obvious paths, and where
+  regression risk now sits: shared modules and helpers touched, contracts their
+  consumers depend on, fixtures/config/data the change moved. The reviewer's starting
+  map — so a fresh session starts at the deep end, not by re-discovering the blast
+  radius. Empty is a claim too: "the change reaches nothing beyond its diff".
 - **Decisions the specs did not cover** — behavior you added, and why.
 - **Ambiguous readings** — where a spec admits several readings: which one you implemented,
   and what the alternative was. This is the one place a human is genuinely needed: the

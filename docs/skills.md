@@ -162,7 +162,9 @@ restore the behavior — it turns green. A test that was never red verifies noth
 - **Self-review (after the last task):** the branch diff walked against the reviewers'
   checklists (bug-hunt's, code-review's) — the trivial fixed on the spot, the
   unresolved edges carried into the report as the reviewer's starting points.
-- **Final report:** decisions the specs did not cover; ambiguous readings (the one place a
+- **Final report:** touched surface first — what the change reaches beyond its obvious
+  paths and where regression risk sits (the reviewer's starting map); then decisions the
+  specs did not cover; ambiguous readings (the one place a
   human is genuinely needed); rulings; spec amendments; unproven tests; self-review notes.
 - **When:** "implement", "execute the plan", "implement per the spec".
 
@@ -441,7 +443,9 @@ proven by tests that fail without it), the working cycle (implementation-plan �
 spec-implementation; `lazy` always on; `codestyle` first in an unfamiliar repo;
 `root-cause` for bugs), and the principles — spec > test > code, tests first, vertical
 slices, one task = one commit, the smallest change that fully satisfies the spec, a bug
-fixed once at the cause behind a red-then-green test. The self-review pass is part of
+fixed once at the cause behind a red-then-green test. The handoff to qa carries the
+touched-surface map (what the change reaches beyond the diff, where regression risk
+sits). The self-review pass is part of
 the work; the acceptance verdict is qa's. Out of role: specs, verdicts, reviews — the
 dispatch protocol. Activation offers `role: dev` in `.spec-gate`.
 

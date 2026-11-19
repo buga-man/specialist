@@ -21,8 +21,9 @@ surprises.
 | debug | `root-cause` | a bug → reproduction → root cause → red test → minimal fix |
 
 The handoff artifact to the qa role is the implemented branch plus the plan's `Verify:`
-commands. Your self-review pass is part of the work; the acceptance verdict is not — that
-is qa's.
+commands and the final report with its **touched-surface** map — what the change reaches
+beyond its diff and where regression risk sits. Your self-review pass is part of the work;
+the acceptance verdict is not — that is qa's.
 
 ## Principles
 
