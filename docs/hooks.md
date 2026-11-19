@@ -20,6 +20,7 @@ protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 | `vuln-guard` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
 | `suite-gate` | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks | ✅ commit blocks |
 | `bash-policy` | ✅ read-only auto-approve | ✅ read-only auto-approve | — (own approval config) | — (own permission prompts) | — (own approval config) |
+| `mutation-guard` | ✅ block (opt-in) | ✅ block (opt-in) | ✅ block (opt-in) | — (no interception point) | — (no interception point) |
 | `edit-guard` | ✅ failures return to the agent | ✅ failures return to the agent | ✅ findings via `additionalContext` | ✅ failures flag the result | ✅ failures throw |
 | `git-watch` | ✅ signal (exit 2) | ✅ signal (exit 2) | ✅ signal (`additionalContext`) | ✅ signal appended to the tool result | ✅ signal appended to the output |
 | `plan-context` | ✅ session start | ✅ session start | ✅ session start | ✅ first prompt | ✅ once per session |
@@ -56,6 +57,7 @@ five hosts.
 | `vuln-guard` | PreToolUse: Bash (commit) | `tool_call` bash | semgrep at the commit boundary | Node, git, **semgrep** | `.vuln-guard`, `.vuln-allow`, `semgrep.yml` |
 | `suite-gate` | PreToolUse: Bash (commit) | `tool_call` bash | the `.suite-gate` test command must be green before a commit | Node, git + the project's own test runner | `.suite-gate` |
 | `bash-policy` | PreToolUse: Bash | — | the provably read-only commands are auto-approved | Node | — |
+| `mutation-guard` | PreToolUse: Bash | — | agent-run pushes and history rewrites are blocked — outward mutations are the user's command | Node | `.spec-gate` (`mutation-guard: on`) |
 | `git-watch` | PostToolUse: Bash | `tool_result` bash | after tree-changing git operations, a signal about stale derived artifacts | Node, git | — |
 | `edit-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order | Node + the project's prettier/eslint/ruff/ktlint | — |
 | `plan-context` | SessionStart (startup/resume/clear/compact) | `before_agent_start` | orients a fresh session to the plan | Node | — |
@@ -227,6 +229,28 @@ are not on it, however harmless they usually look, because reading them for proo
 read-only-ness is not mechanical. Where the host supports its own allow-list config
 (Codex prefixes, pi prompts), that is the place for a wider list.
 
+## mutation-guard — outward mutations are the user's command (opt-in)
+
+`PreToolUse` on `Bash` (Claude Code, ZCode, Codex). **Opt-in**: the hook is silent until
+`.spec-gate` carries `mutation-guard: on` (the suite-gate pattern — a behavior-changing
+gate is the project's decision, not the default). When on, agent-run commands that
+leave the working tree or rewrite history are blocked, in every segment of a chain:
+
+- `git push` (any form), `git reset --hard`, `git rebase`, `git clean`;
+- `git branch -D` / `--delete --force` (a plain `-d` of a merged branch is not gated);
+- `git checkout -- <paths>` and `git restore <paths>` (without `--staged` — unstaging
+  discards nothing).
+
+Commits are deliberately **not** gated: one task = one commit is the framework's own
+loop (spec-implementation). The block message says what to do instead — confirm with
+the user in chat; if they already approved, they run it themselves or set
+`mutation-guard: off`. Encodes the rule the skills already state ("stop and ask before
+outward side effects") as a barrier rather than a request.
+
+**Boundaries:** the same best-effort command parsing as the other Bash guards — a push
+behind a pipe, `bash -c`, or a git alias is not seen; `git -C <dir>` is. Fail-safe:
+without the opt-in, on unknown shapes, and on any error — silent.
+
 ## git-watch — git changed the tree under the agent
 
 `PostToolUse` on `Bash` (Claude Code only). After a tree-changing git operation
@@ -387,6 +411,10 @@ echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"cwd":"<pro
 # bash-policy: a provably read-only command → the allow decision on stdout
 echo '{"tool_name":"Bash","tool_input":{"command":"git log --oneline -5"},"cwd":"."}' \
   | node "<plugin>/hooks/lib/bash-policy.mjs"; echo "exit=$?"
+
+# mutation-guard: a push in a project with `mutation-guard: on` → exit 2
+echo '{"tool_name":"Bash","tool_input":{"command":"git push"},"cwd":"<project with the opt-in>"}' \
+  | node "<plugin>/hooks/lib/mutation-guard.mjs"; echo "exit=$?"
 
 # edit-guard: an edit widening a plan's - Files: scope → exit 2 with the boundary note
 echo '{"tool_name":"Edit","tool_input":{"file_path":"docs/plans/p.md","old_string":"- Files: \`src/a.ts\`","new_string":"- Files: \`src/a.ts\`, \`src/b.ts\`"},"cwd":"."}' \
