@@ -39,8 +39,11 @@ The scripts live in the skill itself: the CLI is `<skill-dir>/scripts/kb.mjs`.
    document.
 
    The corpus can be narrowed before the search: `--status draft`,
-   `--type br`, `--service qc` (the frontmatter fields of the face). For a
-   machine consumer — another hook — `--json` on `search`, `map` and `related`
+   `--type br`, `--service qc` (the frontmatter fields of the face) and
+   `--updated-since 2026-11-01` (by the frontmatter's last-updated, else the
+   file's modification day). A word with a leading `-` must not appear:
+   `search gate -install` cuts the installation documents. For a machine
+   consumer — another hook — `--json` on `search`, `map`, `path` and `audit`
    returns the same data as structured JSON, no table parsing.
 
 2. Map of a directory — when the request is wider than one document:
@@ -105,6 +108,14 @@ The index is not versioned and lives in `.kbindex/` of the project. The plugin's
 gates keep it in sync: in Claude Code and Codex the Stop hook blocks the end of the
 turn until the index is rebuilt; in pi a settle-time follow-up demands the same. In
 hosts without a gate, run `build` by hand after editing documentation.
+
+## When a document is searched by other words
+
+The face searches what the document says about itself. When the words of the
+task differ — a Russian term for an English id — add `aliases` to the
+document's frontmatter (a list or a single string); the next `build` searches
+them with the weight of the gist. Manual synonyms beat vector magic in a
+corpus of exact identifiers.
 
 ## When a document has no gist
 

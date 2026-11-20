@@ -72,6 +72,7 @@ to the foreign `.gitignore`.
   "owner": "BA",
   "service": "product-docs",
   "docType": "br",
+  "aliases": ["пропускной пункт"],
   "created": "2026-10-19",
   "lastUpdated": "2026-10-29",
   "gist": "Placement and factory are separated; the SKU list is cut by point binding.",
@@ -420,3 +421,24 @@ index already holds:
 4. A body hit is marked `~` in the search output; the default `--limit` is 10.
 5. `audit` is now a report object with two renderings — text and `--json`; `path`
    learned `--json` too (steps with relations and directions).
+
+**Evolution 2026-11-20 (0.35.0).** The query language and the weighted graph.
+The record gains one field — `aliases` (§4) — everything else is behavior:
+
+1. `parseQuery` in `kb-core.mjs`: a word with a leading `-` must not appear, on the
+   face or in the sections (`gate -install`); a lone dash is not a word. Negatives
+   never join did-you-mean.
+2. `aliases` frontmatter (a list or a string) joins the face with the weight of the
+   gist — manual synonyms for "the words of the task differ from the words of the
+   document". An excluded document gives them up with the rest of its text.
+3. `switchLayout`: did-you-mean retypes a word in the other keyboard layout —
+   `ghbdtn-001` is exactly `привет-001`, the classic mixed-layout typo of a
+   Russian-English corpus.
+4. `shortestPath` is Dijkstra now: a resolved relation costs 1, a markdown link 2 —
+   a chain through real dependencies beats a shorter chain through incidental links.
+5. `--updated-since <date>` narrows by last-updated, else by the file's modification
+   day; `status` reconciles two-stage like the gate (mtime+size, hash only the
+   suspects).
+6. Stop words of both languages leave `sections.json`; `INDEX_SHAPE_VERSION` rides
+   in the config fingerprint, so an incremental rebuild never reuses records of an
+   older shape (the `aliases` bump proved the need).
