@@ -229,11 +229,13 @@ test("related: no neighbors — empty, but no error", () => {
   assert.match(out, /no related documents/);
 });
 
-test("path: a chain between documents with the link direction", () => {
+test("path: a chain between documents with the relation direction", () => {
   const dir = project({ "docs/rel-a.md": LINK_A, "docs/rel-b.md": LINK_B });
   const out = kb(dir, "path", "REL-A", "REL-B");
   assert.match(out, /docs\/rel-a\.md/);
-  assert.match(out, /→ link → docs\/rel-b\.md/);
+  // rel-b also points back at rel-a by a resolved parent — a real relation,
+  // cheaper than the link, and the weighted chain walks it.
+  assert.match(out, /← parent ← docs\/rel-b\.md/);
   assert.match(out, /1 hop/);
   const back = kb(dir, "path", "REL-B", "REL-A");
   assert.match(back, /→ parent → docs\/rel-a\.md/);
@@ -432,6 +434,60 @@ test("path: --json carries the steps with their relations", () => {
   const parsed = JSON.parse(kb(dir, "path", "REL-A", "REL-B", "--json"));
   assert.equal(parsed.from, "docs/rel-a.md");
   assert.equal(parsed.hops, 1);
-  assert.equal(parsed.steps[0].relation, "link");
-  assert.equal(parsed.steps[0].direction, "out");
+  // The weighted chain prefers the resolved parent of rel-b over the plain link.
+  assert.equal(parsed.steps[0].relation, "parent");
+  assert.equal(parsed.steps[0].direction, "in");
+});
+
+test("search: a negative word strikes the hits that carry it", () => {
+  const intake = ["---", "id: N-1", "title: Warehouse intake", "---", "", "## S", "text"].join("\n");
+  const audit = ["---", "id: N-2", "title: Warehouse audit", "---", "", "## S", "text"].join("\n");
+  const dir = project({ "docs/a.md": intake, "docs/b.md": audit });
+  kb(dir, "build");
+  const out = kb(dir, "search", "warehouse -audit");
+  assert.match(out, /N-1/);
+  assert.doesNotMatch(out, /N-2/);
+});
+
+test("search: aliases of the frontmatter are found", () => {
+  const doc = [
+    "---", "id: AL-1", "title: Inspection", "aliases: [пропускной пункт]",
+    "---", "", "## S", "text",
+  ].join("\n");
+  const dir = project({ "docs/al.md": doc });
+  const out = kb(dir, "search", "пропускной");
+  assert.match(out, /AL-1/);
+});
+
+test("search: --updated-since keeps the touched documents", () => {
+  const fresh = ["---", "id: U-1", "title: Recent", "last-updated: 2026-11-20", "---", "", "## S", "warehouse text"].join("\n");
+  const old = ["---", "id: U-2", "title: Ancient", "last-updated: 2026-01-01", "---", "", "## S", "warehouse text"].join("\n");
+  const dir = project({ "docs/fresh.md": fresh, "docs/old.md": old });
+  kb(dir, "build");
+  const out = kb(dir, "search", "warehouse", "--updated-since", "2026-11-01");
+  assert.match(out, /U-1/);
+  assert.doesNotMatch(out, /U-2/);
+});
+
+test("search: --updated-since with a malformed date is a usage error", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  const r = spawnSync(process.execPath, [KB, "search", "x", "--updated-since", "november", "--project", dir], { encoding: "utf8" });
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /--updated-since needs a date YYYY-MM-DD/);
+});
+
+test("build: after the shape bump the previous index is not reused", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  kb(dir, "build");
+  // A stale 0.34-style index (no aliases, no shape in the fingerprint) must not
+  // leak records forward: the first 0.35 build refuses to reuse it.
+  const indexFile = join(dir, ".kbindex", "index.json");
+  const stale = JSON.parse(readFileSync(indexFile, "utf8"));
+  delete stale.config; // the old fingerprint — gone
+  for (const record of stale.records) delete record.aliases;
+  writeFileSync(indexFile, JSON.stringify(stale));
+  const out = kb(dir, "build");
+  assert.doesNotMatch(out, /incremental:/); // rebuilt in full, nothing reused
+  const rebuilt = JSON.parse(readFileSync(indexFile, "utf8"));
+  assert.deepEqual(rebuilt.records[0].aliases, []);
 });

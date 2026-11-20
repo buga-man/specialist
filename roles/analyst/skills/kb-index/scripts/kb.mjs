@@ -5,7 +5,8 @@
  * Usage:
  *   node kb.mjs build   [--project <dir>]
  *   node kb.mjs search  <query> [--project <dir>] [--limit <n>]
- *                       [--status <s>] [--type <t>] [--service <s>] [--json]
+ *                       [--status <s>] [--type <t>] [--service <s>]
+ *                       [--updated-since <date>] [--json]
  *   node kb.mjs map     <dir> [--project <dir>] [--json]
  *   node kb.mjs related <path|id> [--project <dir>] [--json]
  *   node kb.mjs path    <path|id> <path|id> [--project <dir>] [--json]
@@ -39,6 +40,7 @@ import {
   dependencyCycles,
   didYouMean,
   hubDocuments,
+  INDEX_SHAPE_VERSION,
   isExcluded,
   relatedOf,
   RELATION_FIELDS,
@@ -85,6 +87,10 @@ export function parseArgs(argv) {
       else args.limit = Math.floor(value);
     } else if (arg === "--json") {
       args.json = true;
+    } else if (arg === "--updated-since") {
+      const value = argv[++i];
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) args.error = "--updated-since needs a date YYYY-MM-DD";
+      else args.updatedSince = value;
     } else if (arg === "--status" || arg === "--type" || arg === "--service") {
       const value = argv[++i];
       if (!value) args.error = `${arg} needs a value`;
@@ -131,7 +137,9 @@ function buildIndex(projectDir) {
   const config = readConfig(projectDir);
   const files = selectPaths(listMarkdownFiles(projectDir), config);
   const knownPaths = new Set(files);
-  const fingerprint = computeHash(JSON.stringify(config));
+  // The record shape rides in the fingerprint: after a shape bump (aliases,
+  // stop-words) the incremental path refuses the previous index and rebuilds.
+  const fingerprint = computeHash(JSON.stringify({ ...config, shape: INDEX_SHAPE_VERSION }));
   const previousMeta = readIndexMeta(projectDir);
   const previous = new Map((previousMeta?.records ?? []).map((record) => [record.path, record]));
   const prevSections = new Map((readSections(projectDir)?.docs ?? []).map((entry) => [entry.path, entry]));
@@ -299,15 +307,29 @@ function bodySnippet(projectDir, hit, query) {
   return snippetOf(readDoc(projectDir, hit.path), hit.anchor.line, query);
 }
 
+/** Keeps the documents touched on or after a date — by the frontmatter's
+ *  last-updated, else by the file's modification day. "What changed since the
+ *  release", without opening anything. */
+function filterUpdated(records, since) {
+  if (!since) return records;
+  const dayOf = (record) =>
+    record.lastUpdated ||
+    (record.mtime > 0 ? new Date(record.mtime).toISOString().slice(0, 10) : "");
+  return records.filter((record) => dayOf(record) >= since);
+}
+
 function cmdSearch(projectDir, query, limit, options = {}) {
-  const records = filterByFace(recordsOf(projectDir), options.face || {});
+  const records = filterUpdated(
+    filterByFace(recordsOf(projectDir), options.face || {}),
+    options.updatedSince,
+  );
   const { face, body } = searchWithBody(records, readSections(projectDir), query);
 
   if (options.json) {
     out(
       `${JSON.stringify({
         query,
-        filters: options.face || {},
+        filters: { ...(options.face || {}), ...(options.updatedSince ? { updatedSince: options.updatedSince } : {}) },
         face,
         body: body.map((hit) => ({ ...hit, snippet: bodySnippet(projectDir, hit, query) })),
         ...(face.length + body.length === 0 ? { didYouMean: didYouMean(records, query) } : {}),
@@ -638,7 +660,9 @@ function cmdAudit(projectDir, options = {}) {
 }
 
 /** The index-vs-disk divergence on demand — what a Stop block would say, printed
- *  without blocking. Answers "why does the gate complain" in one command. */
+ *  without blocking. Answers "why does the gate complain" in one command. Two-stage
+ *  like the gate: a file whose mtime and size still match is trusted from the index,
+ *  only the suspects are re-read and hashed. */
 function cmdStatus(projectDir) {
   const index = readIndex(projectDir);
   if (!index) {
@@ -647,7 +671,20 @@ function cmdStatus(projectDir) {
   }
   const config = readConfig(projectDir);
   const files = selectPaths(listMarkdownFiles(projectDir), config);
-  const disk = files.map((path) => ({ path, hash: computeHash(readDoc(projectDir, path)) }));
+  const byPath = new Map(index.map((record) => [record.path, record]));
+  const disk = files.map((path) => {
+    const record = byPath.get(path);
+    if (
+      record &&
+      Number.isFinite(record.mtime) &&
+      record.mtime > 0 &&
+      record.mtime === mtimeOf(projectDir, path) &&
+      record.bytes === sizeOf(projectDir, path)
+    ) {
+      return { path, hash: record.hash }; // mtime+size match — trust the recorded hash
+    }
+    return { path, hash: computeHash(readDoc(projectDir, path)) };
+  });
   const { changed, added, missing } = compareIndex(index, disk);
 
   const lines = [`kb-index: ${index.length} documents indexed, ${files.length} on disk`];
@@ -679,10 +716,12 @@ function main(argv) {
     note(
       [
         "usage: kb.mjs build|search|map|related|path|status|audit|clean [--project <dir>] [--limit <n>]",
-        "        search [--status <s>] [--type <t>] [--service <s>]   map|related|path|audit [--json]",
+        "        search [--status <s>] [--type <t>] [--service <s>] [--updated-since <date>]",
+        "        map|related|path|audit [--json]",
         "  build              — rebuild the index, the sections and the maps, print the report",
         "  search <query>     — find documents by their face, then by their body sections;",
-        "                       the filters narrow the corpus before the search",
+        "                       a word with a leading - must not appear; the filters narrow",
+        "                       the corpus before the search",
         "  map <dir>          — print the map of a directory",
         "  related <path|id>  — the documents linked to and from one document",
         "  path <a> <b>       — the shortest chain of documents between two documents",
@@ -707,7 +746,11 @@ function main(argv) {
         note("kb-index: search needs a query\n");
         process.exit(2);
       }
-      cmdSearch(args.project, query, args.limit, { json: args.json, face: args.face });
+      cmdSearch(args.project, query, args.limit, {
+        json: args.json,
+        face: args.face,
+        updatedSince: args.updatedSince,
+      });
       break;
     }
     case "map": {

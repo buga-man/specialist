@@ -445,8 +445,11 @@ not the whole file.
   questions are answered without opening the file at all. The first five hits carry the
   full face, the tail is paths only; a typo in an identifier (`REQ-081` for `REQ-018`)
   gets a `did you mean:` line with the identifiers within small edit distance.
-  `--status` / `--type` / `--service` narrow the corpus before the search;
-  `--json` turns search, map and related into machine output for other hooks;
+  `--status` / `--type` / `--service` / `--updated-since <date>` narrow the corpus before
+  the search; a word with a leading `-` must not appear (`gate -install`); a frontmatter
+  `aliases` list is searched with the weight of the gist — manual synonyms for when the
+  words of the task differ from the words of the document; `--json` turns search, map,
+  path, related and audit into machine output for other hooks;
   `kb.mjs map <directory>` — the composition of a directory.
 - **Graph:** `kb.mjs related <path|id>` — a document's neighbors (incoming/outgoing links
   and resolved `parent`/`depends_on`/… relations) with the gist of each neighbor — the

@@ -399,6 +399,15 @@ export function buildRecord({ path, content, knownPaths, mtime, excluded }) {
   const { data, body, bodyStartLine } = parseFrontmatter(content);
   const str = (value) => (typeof value === "string" ? value : "");
   const anchor = excluded ? null : extractAnchor(body);
+  // Aliases — the search words of the task, not of the document. A manual,
+  // frontmatter-defined synonym: "пропускной пункт" on REQ-015 is found without
+  // any vector magic. An excluded document gives them up with the rest of its text.
+  const rawAliases = data.aliases;
+  const aliases = Array.isArray(rawAliases)
+    ? rawAliases.map((item) => String(item).trim()).filter(Boolean)
+    : typeof rawAliases === "string" && rawAliases.trim()
+      ? [rawAliases.trim()]
+      : [];
 
   const record = {
     path,
@@ -408,6 +417,7 @@ export function buildRecord({ path, content, knownPaths, mtime, excluded }) {
     owner: str(data.owner),
     service: str(data.service),
     docType: str(data["doc-type"]) || str(data.type),
+    aliases: excluded ? [] : aliases,
     created: str(data.created),
     lastUpdated: str(data["last-updated"]),
     gist: excluded ? "" : extractGist(body, data),
@@ -700,6 +710,7 @@ const SEARCH_FIELDS = [
   ["id", 5],
   ["title", 4],
   ["gist", 3],
+  ["aliases", 3],
   ["heading", 2],
   ["path", 1],
 ];
@@ -709,7 +720,23 @@ function fieldText(record, field) {
   if (field === "heading") {
     return record.anchor && typeof record.anchor.heading === "string" ? record.anchor.heading : "";
   }
-  return typeof record[field] === "string" ? record[field] : "";
+  const value = record[field];
+  if (Array.isArray(value)) return value.map(String).join(" ");
+  return typeof value === "string" ? value : "";
+}
+
+/** The words of a query, split by intent: a word with a leading `-` must not
+ *  appear (on the face or in the sections), every other word must be found.
+ *  A lone `-` is not a word. */
+export function parseQuery(query) {
+  const include = [];
+  const exclude = [];
+  for (const raw of String(query ?? "").split(/\s+/)) {
+    if (!raw || raw === "-") continue; // a lone dash is not a word
+    if (raw.length > 1 && raw.startsWith("-")) exclude.push(raw.slice(1).toLowerCase());
+    else include.push(raw.toLowerCase());
+  }
+  return { include, exclude };
 }
 
 /** The words of a text; hyphens stay inside a word, so "REQ-018" is one word. */
@@ -745,10 +772,15 @@ function wordWeight(record, word) {
  * @param {string} query — the query.
  * @returns {Array<{ path: string, id: string, title: string, gist: string, anchor: unknown, score: number }>}
  */
+/** Bumped whenever the shape of a record or of the section statistics changes
+ *  (a new field such as `aliases`, the stop-word filter, splitting, limits):
+ *  the CLI folds it into the config fingerprint, so an incremental rebuild
+ *  never reuses artifacts produced by an older shape.
+ *  2 — the `aliases` field and the stop-word filter. */
+export const INDEX_SHAPE_VERSION = 2;
+
 export function searchIndex(records, query) {
-  const terms = String(query ?? "")
-    .split(/\s+/)
-    .filter(Boolean);
+  const { include: terms, exclude } = parseQuery(query);
   const hits = [];
 
   for (const record of records) {
@@ -763,6 +795,9 @@ export function searchIndex(records, query) {
       score += weight;
     }
     if (!matched) continue;
+    // An excluded word anywhere on the face strikes the document — negatives
+    // apply to both tiers, or they would not narrow anything.
+    if (exclude.some((term) => wordWeight(record, term) > 0)) continue;
     hits.push({
       path: record.path,
       id: record.id,
@@ -821,10 +856,23 @@ export function extractSections(body, bodyStartLine = 1) {
   return sections;
 }
 
+/** Closed-class service words of both corpus languages: they carry no
+ *  retrieval signal — IDF suppressed them anyway — and only occupied the
+ *  sections artifact. Not counted, not stored, not searched. */
+const STOP_WORDS = new Set([
+  "и", "в", "во", "не", "что", "он", "на", "я", "с", "со", "как", "а", "то",
+  "все", "она", "так", "его", "но", "да", "ты", "к", "у", "же", "вы", "за",
+  "бы", "по", "только", "её", "мне", "было", "вот", "от", "меня", "ещё",
+  "этот", "эта", "эти", "из", "у", "для",
+  "the", "a", "an", "of", "to", "in", "on", "and", "or", "is", "are", "was",
+  "were", "be", "been", "for", "with", "as", "by", "at", "from", "that",
+  "this", "it", "its", "not",
+]);
+
 /**
  * The term frequencies of a text: the words of `wordsOf` that are two
- * characters or longer. No stop-word list — the rare words rank themselves
- * through IDF.
+ * characters or longer and are not stop words. The rare words rank themselves
+ * through IDF; the stop-word filter only stops them from being stored.
  *
  * @param {string} text
  * @returns {Record<string, number>}
@@ -836,7 +884,7 @@ export function sectionTerms(text) {
   // body search (reproduces on any section where the word "constructor" occurs).
   const terms = Object.create(null);
   for (const word of wordsOf(text)) {
-    if (word.length < 2) continue;
+    if (word.length < 2 || STOP_WORDS.has(word)) continue;
     terms[word] = (terms[word] || 0) + 1;
   }
   return terms;
@@ -921,13 +969,18 @@ const BM25_B = 0.75;
 export function searchWithBody(records, stats, query) {
   const face = searchIndex(records, query);
 
-  const terms = [...new Set(String(query ?? "").split(/\s+/).filter(Boolean))];
+  const { include, exclude } = parseQuery(query);
+  const terms = [...new Set(include)];
   if (!stats || !Array.isArray(stats.docs) || !stats.docs.length || !terms.length) {
     return { face, body: [] };
   }
   const queryTerms = terms.map((term) => ({
-    term: term.toLowerCase(),
-    stem: term.length >= 4 ? term.toLowerCase().slice(0, -1) : "",
+    term,
+    stem: term.length >= 4 ? term.slice(0, -1) : "",
+  }));
+  const excludeTerms = exclude.map((term) => ({
+    term,
+    stem: term.length >= 4 ? term.slice(0, -1) : "",
   }));
 
   const byPath = new Map(records.map((record) => [record.path, record]));
@@ -973,6 +1026,13 @@ export function searchWithBody(records, stats, query) {
   // holds every query word. Ranked by the best section score.
   for (const doc of docs) {
     if (faceSet.has(doc.record.path)) continue;
+
+    // An excluded word in the sections or on the face strikes the document.
+    const struck = excludeTerms.some(({ term, stem }) => {
+      if (wordWeight(doc.record, term) > 0) return true;
+      return doc.sections.some((section) => sectionTf(section.terms, term, stem) > 0);
+    });
+    if (struck) continue;
 
     let allFound = true;
     for (const { term } of queryTerms) {
@@ -1133,9 +1193,12 @@ function adjacencyOf(graph) {
 }
 
 /**
- * The shortest chain of documents between two nodes of the graph, breadth
- * first over the undirected edges. Each step keeps the edge it used, so the
- * caller can show the relation and its direction.
+ * The cheapest chain of documents between two nodes of the graph, Dijkstra
+ * over the undirected edges. An edge costs 1 for a resolved relation — a real
+ * dependency — and 2 for a markdown link, a weaker tie: a chain through real
+ * dependencies wins over a shorter chain through incidental links. Each step
+ * keeps the edge it used, so the caller can show the relation and its
+ * direction.
  *
  * @param {string} fromPath
  * @param {string} toPath
@@ -1146,28 +1209,39 @@ function adjacencyOf(graph) {
 export function shortestPath(fromPath, toPath, graph) {
   if (fromPath === toPath) return [];
   const adj = adjacencyOf(graph);
-  const prev = new Map([[fromPath, null]]);
-  const queue = [fromPath];
+  const dist = new Map([[fromPath, 0]]);
+  const prev = new Map();
+  const settled = new Set();
+  const weight = (edge) => (edge.kind === "ref" ? 1 : 2);
 
-  while (queue.length) {
-    const current = queue.shift();
-    for (const { neighbor, edge } of adj.get(current) || []) {
-      if (prev.has(neighbor)) continue;
-      prev.set(neighbor, { from: current, edge });
-      if (neighbor === toPath) {
-        const steps = [];
-        let node = toPath;
-        while (prev.get(node)) {
-          const step = prev.get(node);
-          steps.unshift({ from: step.from, to: node, edge: step.edge });
-          node = step.from;
-        }
-        return steps;
+  for (;;) {
+    // The nearest unsettled node; the graphs here are small, a linear scan
+    // beats a priority queue on clarity.
+    let node = null;
+    for (const candidate of dist.keys()) {
+      if (settled.has(candidate)) continue;
+      if (node === null || dist.get(candidate) < dist.get(node)) node = candidate;
+    }
+    if (node === null || node === toPath) break; // reached the target at its best cost
+    settled.add(node);
+    for (const { neighbor, edge } of adj.get(node) || []) {
+      const cost = dist.get(node) + weight(edge);
+      if (!dist.has(neighbor) || cost < dist.get(neighbor)) {
+        dist.set(neighbor, cost);
+        prev.set(neighbor, { from: node, edge });
       }
-      queue.push(neighbor);
     }
   }
-  return null;
+
+  if (!prev.has(toPath)) return null;
+  const steps = [];
+  let node = toPath;
+  while (prev.get(node)) {
+    const step = prev.get(node);
+    steps.unshift({ from: step.from, to: node, edge: step.edge });
+    node = step.from;
+  }
+  return steps;
 }
 
 /** The edit distance of two words, with an early exit: anything above `max`
@@ -1209,10 +1283,7 @@ function levenshteinWithin(a, b, max) {
  *   documents carries a null path (the caller shows the list, it never guesses).
  */
 export function didYouMean(records, query) {
-  const terms = String(query ?? "")
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
+  const terms = parseQuery(query).include;
   if (!terms.length) return [];
 
   // A candidate key is lowercase (the query is too); the display keeps the
@@ -1230,6 +1301,7 @@ export function didYouMean(records, query) {
   }
 
   const suggestions = [];
+  const suggestedFor = new Set();
   for (const term of terms) {
     if (term.length < 3) continue;
     const max = term.length >= 5 ? 2 : 1;
@@ -1239,6 +1311,16 @@ export function didYouMean(records, query) {
     for (const [key, candidate] of candidates) {
       if (key === term) continue; // an exact match would have been a hit
       const distance = levenshteinWithin(term, key, max);
+      if (distance > max) continue;
+      suggestions.push({ term, suggestion: candidate.display, distance, path: candidate.path });
+      suggestedFor.add(term);
+    }
+    // Nothing within edit reach — maybe the word was typed in the other
+    // keyboard layout: "ghbdtn" is one layout flip away from a real id.
+    const flipped = switchLayout(term);
+    if (suggestedFor.has(term) || flipped === term) continue;
+    for (const [key, candidate] of candidates) {
+      const distance = levenshteinWithin(flipped, key, max);
       if (distance > max) continue;
       suggestions.push({ term, suggestion: candidate.display, distance, path: candidate.path });
     }
@@ -1258,6 +1340,32 @@ function wordMatches(word, term, stem) {
   return word === term || (stem !== "" && word.startsWith(stem));
 }
 
+/** The Russian letter sharing a physical key with each Latin one (йцукен on
+ *  qwerty); punctuation positions included, digits and the hyphen are common. */
+const LAYOUT_EN_TO_RU = {
+  q: "й", w: "ц", e: "у", r: "к", t: "е", y: "н", u: "г", i: "ш", o: "щ", p: "з",
+  "[": "х", "]": "ъ", a: "ф", s: "ы", d: "в", f: "а", g: "п", h: "р", j: "о",
+  k: "л", l: "д", ";": "ж", "'": "э", z: "я", x: "ч", c: "с", v: "м", b: "и",
+  n: "т", m: "ь", ",": "б", ".": "ю",
+};
+const LAYOUT_RU_TO_EN = Object.fromEntries(
+  Object.entries(LAYOUT_EN_TO_RU).map(([latin, russian]) => [russian, latin]),
+);
+
+/** The word retyped in the other keyboard layout — "ghbdtn" becomes "привет",
+ *  the classic mixed-layout typo of a Russian-English corpus. A word that
+ *  mixes alphabets (or holds neither) comes back unchanged. */
+export function switchLayout(word) {
+  const lower = String(word ?? "").toLowerCase();
+  const hasLatin = /[a-z]/.test(lower);
+  const hasCyrillic = /[\u0430-\u044f]/.test(lower);
+  if (hasLatin === hasCyrillic) return lower; // mixed, or nothing to remap
+  const map = hasLatin ? LAYOUT_EN_TO_RU : LAYOUT_RU_TO_EN;
+  let out = "";
+  for (const char of lower) out += map[char] ?? char; // digits, hyphens pass through
+  return out;
+}
+
 /**
  * The line of a section that answers the query: the first line from the anchor
  * down to the next heading that holds a query word. A body hit shows this
@@ -1275,11 +1383,8 @@ function wordMatches(word, term, stem) {
 export function snippetOf(content, anchorLine, query, limit = 160) {
   const lines = String(content ?? "").split("\n");
   const start = Math.max(1, Number(anchorLine) || 1);
-  const terms = String(query ?? "")
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((term) => ({ term, stem: term.length >= 4 ? term.slice(0, -1) : "" }));
+  const terms = parseQuery(query)
+    .include.map((term) => ({ term, stem: term.length >= 4 ? term.slice(0, -1) : "" }));
   if (!terms.length) return null;
 
   for (let i = start - 1; i < lines.length; i++) {

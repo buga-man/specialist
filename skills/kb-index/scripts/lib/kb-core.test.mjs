@@ -30,6 +30,7 @@ import {
   sectionTerms,
   shortestPath,
   snippetOf,
+  switchLayout,
 } from "./kb-core.mjs";
 
 test("frontmatter: flat scalars, quotes are stripped", () => {
@@ -775,4 +776,106 @@ test("hubs: in-degree over links and refs, ties alphabetical", () => {
       ["docs/other.md", 1],
     ],
   );
+});
+
+test("negation: a word with a leading - strikes the document off the face", () => {
+  const records = [
+    { path: "a.md", id: "", title: "Warehouse intake", gist: "", anchor: null },
+    { path: "b.md", id: "", title: "Warehouse audit", gist: "", anchor: null },
+  ];
+  const hits = searchIndex(records, "warehouse -audit");
+  assert.deepEqual(
+    hits.map((hit) => hit.path),
+    ["a.md"],
+  );
+});
+
+test("negation: an excluded word strikes the body tier too", () => {
+  const records = [
+    { path: "a.md", id: "", title: "", gist: "", anchor: null },
+    { path: "b.md", id: "", title: "", gist: "", anchor: null },
+  ];
+  const stats = {
+    schema: 1,
+    docs: [
+      { path: "a.md", sections: [{ h: "S", line: 1, terms: { pallet: 2 } }] },
+      { path: "b.md", sections: [{ h: "S", line: 1, terms: { pallet: 2, night: 4 } }] },
+    ],
+  };
+  const { face, body } = searchWithBody(records, stats, "pallet -night");
+  assert.equal(face.length, 0);
+  assert.deepEqual(
+    body.map((hit) => hit.path),
+    ["a.md"],
+  );
+});
+
+test("negation: a lone dash is not a word, negatives never join did-you-mean", () => {
+  const records = [{ path: "a.md", id: "REQ-018", title: "", gist: "", anchor: null }];
+  assert.equal(searchIndex(records, "- REQ-018").length, 1); // "-" alone is noise
+  assert.deepEqual(didYouMean(records, "REQ-081 -typo"), didYouMean(records, "REQ-081"));
+});
+
+test("aliases: frontmatter aliases are searched with the weight of a gist", () => {
+  const content = [
+    "---", "id: REQ-015", "title: Inspection point", "aliases: [пропускной пункт, checkpoint]",
+    "---", "", "## Section", "text",
+  ].join("\n");
+  const record = buildRecord({ path: "docs/REQ-015.md", content, knownPaths: new Set(), mtime: 1 });
+  assert.deepEqual(record.aliases, ["пропускной пункт", "checkpoint"]);
+  assert.equal(searchIndex([record], "пропускной").length, 1);
+  assert.equal(searchIndex([record], "checkpoint").length, 1);
+});
+
+test("aliases: a single string works, an excluded document gives them up", () => {
+  const content = ["---", "id: X-1", "aliases: zanzibar", "---", "", "## S", "text"].join("\n");
+  const plain = buildRecord({ path: "a.md", content, knownPaths: new Set(), mtime: 1 });
+  assert.deepEqual(plain.aliases, ["zanzibar"]);
+  const excluded = buildRecord({ path: "a.md", content, knownPaths: new Set(), mtime: 1, excluded: true });
+  assert.deepEqual(excluded.aliases, []);
+});
+
+test("layout: a word typed in the other layout is remapped", () => {
+  assert.equal(switchLayout("ghbdtn"), "привет");
+  assert.equal(switchLayout("привет"), "ghbdtn");
+  assert.equal(switchLayout("req-018"), "куй-018"); // digits and the hyphen pass through
+  assert.equal(switchLayout("REQ-зфкт"), "req-зфкт"); // mixed alphabets — unchanged
+});
+
+test("did-you-mean: a layout flip finds a Cyrillic id from a Latin typo", () => {
+  const records = [{ path: "docs/privet.md", id: "привет-001", title: "", gist: "", anchor: null }];
+  // "ghbdtn-001" is far from everything by edit distance; flipped it is exactly
+  // the id — the classic mixed-layout typo of a Russian-English corpus.
+  const out = didYouMean(records, "ghbdtn-001");
+  assert.deepEqual(out, [
+    { term: "ghbdtn-001", suggestion: "привет-001", distance: 0, path: "docs/privet.md" },
+  ]);
+});
+
+test("path: a chain through relations beats a shorter chain through links", () => {
+  // a =L= d (one link, cost 2); a =R= b =R= c =R= d (three relations, cost 3):
+  // the link wins on hops, loses on weight — the weighted run still picks the
+  // link here (2 < 3), so the test uses costs where the relations win.
+  const records = [
+    { path: "a.md", id: "A", refs: [], links: ["b.md", "d.md"] },
+    { path: "b.md", id: "B", refs: [ref("parent", "c.md")], links: ["a.md"] },
+    { path: "c.md", id: "C", refs: [ref("parent", "d.md")], links: [] },
+    { path: "d.md", id: "D", refs: [], links: [] },
+  ];
+  const graph = buildGraph(records);
+  const steps = shortestPath("b.md", "d.md", graph);
+  // b → c → d over relations (1+1) beats b → a → d over links (2+2).
+  assert.deepEqual(
+    steps.map((step) => step.to),
+    ["c.md", "d.md"],
+  );
+  assert.ok(steps.every((step) => step.edge.kind === "ref"));
+});
+
+test("terms: stop words of both languages are not stored", () => {
+  const terms = sectionTerms("The pallets и the boxes в the warehouse");
+  assert.equal(terms["the"], undefined);
+  assert.equal(terms["и"], undefined);
+  assert.equal(terms["в"], undefined);
+  assert.equal(terms["pallets"], 1);
 });
