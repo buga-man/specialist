@@ -380,10 +380,28 @@ untouched (`"schema": 1` unchanged):
 
 1. `kb-core.mjs`: `extractSections`, `sectionTerms`, `buildSections`, `searchWithBody`
    (two-tier), the graph — `buildGraph`, `relatedOf`, `resolveTarget`, `shortestPath`.
-2. `kb-fs.mjs`: `writeSections` / `readSections` (compact writing), `bodySearch` in
-   the config.
+2. `kb-fs.mjs`: `writeSections` / `readSections` (compact writing), `bodySearch` in the
+   config.
 3. `kb.mjs`: `build` writes `sections.json` and prints `sections: N`; `search`
    is two-tier; the new commands `related` and `path`.
 4. Tests — into the existing files (create no new ones, `package.json` untouched).
 5. `SKILL.md` rewritten: the search → related/path → read-from-section-anchor workflow,
    where the scripts live, a note about the Stop hook (Claude Code only).
+
+**Evolution 2026-11-20.** Search quality, fewer re-reads, a smaller context bill —
+no artifact changes, `index.json` and `sections.json` untouched:
+
+1. `didYouMean` in `kb-core.mjs`: an empty result prints the ids and slugs within a
+   small edit distance (one edit for words of 3–4 characters, two for longer) — the
+   transposed digits of the design's own example, `REQ-081` for `REQ-018`, are the
+   exact case. Up to three suggestions; an ambiguous one carries no path (no guessing).
+2. `snippetOf` in `kb-core.mjs`: a body hit shows the answering line of its best
+   section, read from the file at query time and cut to a window around the query
+   word — bodies still live only in the files, never in the index.
+3. The `search` output is compact: the first five hits carry the full face (gist or
+   snippet), the tail is paths only, the cut announces itself (`… and N more`).
+4. `--status` / `--type` / `--service` narrow the corpus before both tiers;
+   `--json` on `search`, `map` and `related` is machine output for other hooks
+   (the §13 API, now also over the CLI).
+5. `related` shows the gist of every neighbour — the follow-up decision without
+   opening the neighbour.

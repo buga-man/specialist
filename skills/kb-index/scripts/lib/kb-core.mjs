@@ -1170,6 +1170,146 @@ export function shortestPath(fromPath, toPath, graph) {
   return null;
 }
 
+/** The edit distance of two words, with an early exit: anything above `max`
+ *  already returns max + 1 — the caller only asks "is it within reach", never
+ *  for the exact distance beyond the threshold. */
+function levenshteinWithin(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  if (a === b) return 0;
+
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const value = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
+      current.push(value);
+      if (value < rowMin) rowMin = value;
+    }
+    if (rowMin > max) return max + 1; // no path through this row stays in reach
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+/**
+ * What an empty search result probably meant: for every query word, the closest
+ * `id` or file slug of the corpus within a small edit distance — a transposed
+ * digit pair in an identifier ("REQ-081" for "REQ-018") is otherwise an
+ * unsuspicious "no such document".
+ *
+ * A word of three or four characters tolerates one edit, a longer one two;
+ * shorter words are skipped — everything is within reach of them.
+ *
+ * @param {Record<string, unknown>[]} records — every record of the corpus.
+ * @param {string} query — the query that returned nothing.
+ * @returns {Array<{ term: string, suggestion: string, distance: number, path: string }>}
+ *   at most three suggestions, closest first; a suggestion matching several
+ *   documents carries a null path (the caller shows the list, it never guesses).
+ */
+export function didYouMean(records, query) {
+  const terms = String(query ?? "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!terms.length) return [];
+
+  // A candidate key is lowercase (the query is too); the display keeps the
+  // corpus spelling — "REQ-018", not "req-018".
+  const candidates = new Map();
+  const add = (display, path) => {
+    const key = display.toLowerCase();
+    const known = candidates.get(key);
+    if (known === undefined) candidates.set(key, { display, path });
+    else if (known.path !== path) known.path = null; // ambiguous — no path
+  };
+  for (const record of records) {
+    if (typeof record.id === "string" && record.id) add(record.id, record.path);
+    add(slugOf(record.path), record.path);
+  }
+
+  const suggestions = [];
+  for (const term of terms) {
+    if (term.length < 3) continue;
+    const max = term.length >= 5 ? 2 : 1;
+    // All candidates within reach, not just the closest: two identifiers that
+    // sit one transposition apart ("REQ-018" and "REQ-008") are equally what
+    // the query probably meant.
+    for (const [key, candidate] of candidates) {
+      if (key === term) continue; // an exact match would have been a hit
+      const distance = levenshteinWithin(term, key, max);
+      if (distance > max) continue;
+      suggestions.push({ term, suggestion: candidate.display, distance, path: candidate.path });
+    }
+  }
+
+  suggestions.sort((a, b) => {
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    if (a.term !== b.term) return a.term < b.term ? -1 : 1;
+    return a.suggestion < b.suggestion ? -1 : a.suggestion > b.suggestion ? 1 : 0;
+  });
+  return suggestions.slice(0, 3);
+}
+
+/** Whether a word of a line matches a query term: the exact word, or — as in
+ *  the search — a word starting with the term without its last character. */
+function wordMatches(word, term, stem) {
+  return word === term || (stem !== "" && word.startsWith(stem));
+}
+
+/**
+ * The line of a section that answers the query: the first line from the anchor
+ * down to the next heading that holds a query word. A body hit shows this
+ * instead of making the agent open the document to see why it matched.
+ *
+ * A line longer than the limit is cut to a window around the first matching
+ * term, so the answer stays visible without opening the file.
+ *
+ * @param {string} content — the whole document.
+ * @param {number} anchorLine — the 1-based line of the section heading.
+ * @param {string} query — the query.
+ * @param {number} limit — how long the returned text may be.
+ * @returns {{ line: number, text: string } | null} null when no line of the section matches.
+ */
+export function snippetOf(content, anchorLine, query, limit = 160) {
+  const lines = String(content ?? "").split("\n");
+  const start = Math.max(1, Number(anchorLine) || 1);
+  const terms = String(query ?? "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((term) => ({ term, stem: term.length >= 4 ? term.slice(0, -1) : "" }));
+  if (!terms.length) return null;
+
+  for (let i = start - 1; i < lines.length; i++) {
+    const line = stripCr(lines[i]);
+    if (i > start - 1 && /^#{1,6}\s/.test(line.trim())) break; // the next section begins
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const words = wordsOf(trimmed);
+    const matched = terms.some(({ term, stem }) => words.some((word) => wordMatches(word, term, stem)));
+    if (!matched) continue;
+
+    if (trimmed.length <= limit) return { line: i + 1, text: trimmed };
+    // A window around the first matching term: a third of the budget before it,
+    // the rest after — the context reads better in front of the term.
+    let at = -1;
+    for (const { term } of terms) {
+      at = trimmed.toLowerCase().indexOf(term);
+      if (at !== -1) break;
+    }
+    if (at === -1) at = 0;
+    const from = Math.max(0, at - Math.floor(limit / 3));
+    const window = trimmed.slice(from, from + limit);
+    const prefix = from > 0 ? "…" : "";
+    const suffix = from + limit < trimmed.length ? "…" : "";
+    return { line: i + 1, text: `${prefix}${window}${suffix}` };
+  }
+  return null;
+}
+
 /**
  * Compares the index with the disk: what changed, what was added, what is
  * missing from the disk.
