@@ -77,7 +77,11 @@ appears, its aspect moves out of the document into that table.
   repository, a real task from the skill's domain. Judge what the agent does, not
   what the text says — a skill is instructions an agent executes, and only the
   execution is the test (live precedent: the 0.38.0 scouts fan-out found 12 wording
-  fixes before the release).
+  fixes before the release). The run audits the negative too: findings the skill
+  produces that a senior would not act on are false positives, and they land in the
+  skill's known-false-positives list — the list grows from measurement, not from its
+  author's expectations (filed under three states: false positive / real miss /
+  right signal, wrong weight).
 
 ## 7. Comments and language
 
