@@ -129,6 +129,7 @@ outside the project must understand what and why from this section alone.
 Numbered, verifiable statements; a business person can check each one.
 Mark every criterion's source: [request], [docs], [answer #N].
 Mark each must (the feature fails without it) or should (valuable, negotiable) — plans and reviews lean on the difference.
+The markers and the Verify label are bilingual — `(обязательно)` carries exactly the weight of `(must)`, the should class is `(should)`/`(желательно)`/`(опционально)`/`(необязательно)`, and `Проверка:` is `Verify:` (the gates read them all; a should-class marker never reads as must).
 Shape each criterion with an EARS pattern (see references/ears-patterns.md) so a fresh
 agent parses it without guessing: a fixed stem — "When <trigger>, the system shall …",
 "While <state>, …", "If <condition>, … shall not …", or a plain always-true property.

@@ -30,7 +30,8 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
   not a source.
 - An empty `docs/specs/` — say so and stop: there is nothing to audit.
 - Parse what each check needs: frontmatter (`id`, `parent`, `children`, `status`),
-  numbered criteria with their must/should mark and `Verify:` field, plan tasks with
+  numbered criteria with their must/should mark and `Verify:` field (markers and label
+  read bilingually, like the heading), plan tasks with
   `- Done:` / `- Blocked by:` lines, report findings tables and `Re-verified:` /
   `Recurring:` lines.
 

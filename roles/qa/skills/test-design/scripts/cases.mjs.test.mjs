@@ -141,6 +141,26 @@ test("parseCriteria: a wrapped criterion keeps its (must) marker across lines", 
   assert.equal(r.errors.filter((e) => /criterion 1 \(must\) is exercised by no case/.test(e)).length, 1);
 });
 
+test("parseCriteria: the must marker is bilingual — a Cyrillic must still governs coverage", () => {
+  const ru = [
+    "# Спека", "",
+    "## Критерии приёмки", "",
+    "1. При отправке система сохраняет запись. (обязательно) — Проверка: save.sh → exit 0",
+    "2. При пустом списке система показывает подсказку. (желательно)",
+    "3. Отчёт можно выгрузить. (необязательно)",
+  ].join("\n");
+  const cs = parseCriteria([ru]);
+  assert.equal(cs.get(1).must, true);
+  assert.equal(cs.get(2).must, false);
+  assert.equal(cs.get(3).must, false); // paren anchoring: (необязательно) is optional, not must
+
+  const r = checkCases(casesTable([
+    "| TEST-FEA-001 | 2 | main | command | empty list | the hint shows |",
+  ]), [ru]);
+  assert.equal(r.errors.filter((e) => /criterion 1 \(must\) is exercised by no case/.test(e)).length, 1);
+  assert.equal(r.notes.filter((n) => /criterion 3 \(should\)/.test(n)).length, 1); // (необязательно) is labeled should, not unmarked
+});
+
 test("a number carried by more than one spec is a collision note; must still governs coverage", () => {
   const other = [
     "# Repo spec", "",

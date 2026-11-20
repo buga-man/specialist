@@ -113,6 +113,20 @@ test("a wrapped criterion keeps its marker, Verify, and dedupe text across lines
   assert.match(r.errors[1], /criterion 3 \(must\) has no Verify/);
 });
 
+test("the markers are bilingual — Cyrillic musts are counted, deduped, and Verify-checked", () => {
+  const text = criteria(
+    "1. При отправке система сохраняет запись. (обязательно) — Проверка: save.sh → exit 0",
+    "2. При отправке система сохраняет запись! (обязательно) — Проверка: save.sh → exit 0",
+    "3. При пустом списке система показывает подсказку. (желательно)",
+    "4. Отчёт можно выгрузить. (необязательно)",
+  );
+  const r = probeSpec(text);
+  assert.equal(r.mustCount, 2); // (желательно) and (необязательно) are not musts
+  assert.equal(r.shouldCount, 2); // they are the should class
+  assert.equal(r.errors.filter((e) => /^criterion 2 repeats criterion 1/).length, 1); // Cyrillic markers and tails stripped before comparing
+  assert.equal(r.errors.filter((e) => /has no Verify/.test(e)).length, 0); // Проверка: counts
+});
+
 test("a spec without an acceptance-criteria section is nothing to probe", () => {
   const r = probeSpec("# Notes\n\nJust prose.\n");
   assert.equal(r.found, false);

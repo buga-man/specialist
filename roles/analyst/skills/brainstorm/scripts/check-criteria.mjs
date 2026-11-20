@@ -40,6 +40,21 @@ const STEM_RE = /^(?:when |while |if |where |the system (?:shall|should) |untrus
 const CRITERIA_HEADING_RE =
   /^#{1,6}\s*(?:\d+[.\s]*)?\s*(?:acceptance criteria\b|критери[а-яё]*\s+при[ёе]мк|при[ёе]мочн[а-яё]*\s+критери[а-яё]*)/i;
 
+/** The must marker, bilingual: the team's working language may be either.
+ *  Cyrillic branches are paren-anchored stems, not \b-bounded words — JS \b is
+ *  ASCII-only and never fires around Cyrillic letters; the anchoring also keeps
+ *  (необязательно) — optional — from reading as must. */
+const MUST_RE = /\(\s*(?:must|обязательн[а-яё]*)\s*\)/i;
+
+/** The should marker, bilingual: the should-class spellings — (should),
+ *  (желательно), (опционально), (необязательно) — negotiable, never owed a
+ *  Verify; paren-anchored for the same reason as MUST_RE. */
+const SHOULD_RE = /\(\s*(?:should|желательн[а-яё]*|опциональн[а-яё]*|необязательн[а-яё]*)\s*\)/i;
+
+/** The Verify label, bilingual: the stem matches through a leading non-letter —
+ *  \b is ASCII-only, and «перепроверка:» must not count as a Verify. */
+const VERIFY_RE = /(?:^|[^\p{L}])(?:verify|провер[а-яё]*)\s*:/iu;
+
 const criteriaSection = (lines) => {
   let start = -1;
   for (let i = 0; i < lines.length; i++) {
@@ -78,19 +93,21 @@ const splitCriteria = (lines) => {
 export function checkCriteria(text) {
   const lines = String(text ?? "").split(/\r?\n/);
   const section = criteriaSection(lines);
-  if (!section) return { found: false, errors: [], warnings: [], infos: [], mustCount: 0 };
+  if (!section) return { found: false, errors: [], warnings: [], infos: [], mustCount: 0, shouldCount: 0 };
 
   const errors = [];
   const warnings = [];
   const infos = [];
   let mustCount = 0;
+  let shouldCount = 0;
   let criterionNo = 0;
 
   for (const body of splitCriteria(section)) {
     criterionNo++;
-    const isMust = /\(must\)/i.test(body);
+    const isMust = MUST_RE.test(body);
     if (isMust) mustCount++;
-    if (isMust && !/\bverify\s*:/i.test(body)) {
+    if (!isMust && SHOULD_RE.test(body)) shouldCount++;
+    if (isMust && !VERIFY_RE.test(body)) {
       errors.push(`criterion ${criterionNo} (must) has no Verify — every must criterion names the command or the manual check that decides it`);
     }
     const vague = VAGUE_RE.exec(body);
@@ -108,7 +125,7 @@ export function checkCriteria(text) {
   if (mustCount > MUST_BAND_HIGH) {
     warnings.push(`${mustCount} must criteria — more than ~${MUST_BAND_HIGH} means the scope is really several features; split it with the user`);
   }
-  return { found: true, errors, warnings, infos, mustCount };
+  return { found: true, errors, warnings, infos, mustCount, shouldCount };
 }
 
 function main(argv) {
@@ -131,7 +148,7 @@ function main(argv) {
     process.exit(0);
   }
 
-  console.log(`check-criteria: ${file} — ${report.mustCount} must criteria`);
+  console.log(`check-criteria: ${file} — ${report.mustCount} must criteria${report.shouldCount ? `, ${report.shouldCount} should` : ""}`);
   for (const line of report.errors) console.log(`  error: ${line}`);
   for (const line of report.warnings) console.log(`  warning: ${line}`);
   for (const line of report.infos) console.log(`  info: ${line}`);

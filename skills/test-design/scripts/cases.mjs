@@ -81,11 +81,17 @@ export function parseCases(casesText) {
 const CRITERIA_HEADING_RE =
   /(?:acceptance criteria\b|критери[а-яё]*\s+при[ёе]мк|при[ёе]мочн[а-яё]*\s+критери[а-яё]*)/i;
 
+/** The must/should markers, bilingual: paren-anchored Cyrillic stems (no \b —
+ *  ASCII-only; the anchoring keeps (необязательно) in the should class, never
+ *  reading it as must). */
+const MUST_RE = /\(\s*(?:must|обязательн[а-яё]*)\s*\)/i;
+const SHOULD_RE = /\(\s*(?:should|желательн[а-яё]*|опциональн[а-яё]*|необязательн[а-яё]*)\s*\)/i;
+
 /** The numbered acceptance criteria of the given specs, merged:
- *  Map<number, { must, sources }>. Numbered rows of any criteria section count —
- *  the business spec is the usual home. Numbers share one space across the given
- *  specs: a number found in more than one spec (sources > 1) is a collision the
- *  caller reports, not silently merges. */
+ *  Map<number, { must, should, sources }>. Numbered rows of any criteria section
+ *  count — the business spec is the usual home. Numbers share one space across the
+ *  given specs: a number found in more than one spec (sources > 1) is a collision
+ *  the caller reports, not silently merges. */
 export function parseCriteria(specTexts) {
   const out = new Map();
   for (const text of specTexts) {
@@ -97,13 +103,15 @@ export function parseCriteria(specTexts) {
     // long criteria wrap, and the (must) marker may land on the wrap.
     const flush = () => {
       if (no === null) return;
-      const must = /\(must\)/i.test(body);
+      const must = MUST_RE.test(body);
+      const should = SHOULD_RE.test(body);
       const existing = out.get(no);
       if (existing) {
         existing.must = existing.must || must;
+        existing.should = existing.should || should;
         existing.sources += 1;
       } else {
-        out.set(no, { must, sources: 1 });
+        out.set(no, { must, should, sources: 1 });
       }
     };
     for (const line of lines) {
@@ -180,10 +188,10 @@ export function checkCases(casesText, specTexts) {
       notes.push(`criterion ${no} is numbered in ${sources} of the given specs — numbers share one space here; pass only the specs whose numbering is global, or renumber`);
     }
   }
-  for (const [no, { must }] of [...criteria.entries()].sort((a, b) => a[0] - b[0])) {
+  for (const [no, { must, should }] of [...criteria.entries()].sort((a, b) => a[0] - b[0])) {
     if (covered.has(no)) continue;
     if (must) errors.push(`criterion ${no} (must) is exercised by no case — the artifact's whole point`);
-    else notes.push(`criterion ${no} (should) has no case — deliberate or an oversight, say which`);
+    else notes.push(`criterion ${no} (${should ? "should" : "unmarked"}) has no case — deliberate or an oversight, say which`);
   }
 
   return { rows, errors, notes };
