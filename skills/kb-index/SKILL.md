@@ -27,9 +27,19 @@ The scripts live in the skill itself: the CLI is `<skill-dir>/scripts/kb.mjs`.
    identifier like `REQ-018` mentioned in passing, a term from the middle of a
    section — is found by the second tier.
 
-   Output per hit: `id`, path, anchor (`§<heading>:<line>`), gist line. At most
-   20 hits (`--limit <n>` changes that). The anchor of a body hit is its best
-   matching section — a finer entry point than the document anchor.
+   Output per hit: `id`, path, anchor (`§<heading>:<line>`), and a content line
+   — the gist for a face hit, the **answering line** of the best section for a
+   body hit (read straight from the file, cut around the query word). A snippet
+   often answers the question without opening the document at all. The first
+   five hits carry the full face; the rest of the list is paths only — widen it
+   with `--limit <n>` (20 by default). A query that returns nothing prints
+   `did you mean:` with the ids and slugs a small edit away — a transposed
+   digit pair (`REQ-081` for `REQ-018`) is a typo, not a missing document.
+
+   The corpus can be narrowed before the search: `--status draft`,
+   `--type br`, `--service qc` (the frontmatter fields of the face). For a
+   machine consumer — another hook — `--json` on `search`, `map` and `related`
+   returns the same data as structured JSON, no table parsing.
 
 2. Map of a directory — when the request is wider than one document:
 
@@ -47,15 +57,18 @@ The scripts live in the skill itself: the CLI is `<skill-dir>/scripts/kb.mjs`.
 The index holds the links between documents: markdown links and the resolved
 relation fields (`parent`, `depends_on`, `children`, `br`, `us`).
 
-- Neighbours of a document — what it points at and what points at it:
+- Neighbours of a document — what it points at and what points at it, each
+  with its gist on the line below:
 
   ```bash
   node "<skill-dir>/scripts/kb.mjs" related "docs/req/REQ-015.md"
   ```
 
-  Arguments resolve to a path, a unique `id` or a unique file slug
-  (`related REQ-015` works too). An ambiguous `id` comes back with the list of
-  candidates — pick one, do not guess.
+  The gist decides the follow-up: most neighbours are visited only to be
+  ruled out, and now they are ruled out from the output. Arguments resolve to
+  a path, a unique `id` or a unique file slug (`related REQ-015` works too).
+  An ambiguous `id` comes back with the list of candidates — pick one, do not
+  guess.
 
 - Chain between two documents — the shortest path across the corpus:
 

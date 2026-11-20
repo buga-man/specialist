@@ -10,6 +10,7 @@ import {
   buildRecord,
   buildSections,
   compareIndex,
+  didYouMean,
   extractAnchor,
   extractGist,
   brokenLinks,
@@ -26,6 +27,7 @@ import {
   selectPaths,
   sectionTerms,
   shortestPath,
+  snippetOf,
 } from "./kb-core.mjs";
 
 test("frontmatter: flat scalars, quotes are stripped", () => {
@@ -623,4 +625,106 @@ test("brokenLinks: corpus-external link targets are reported, internal ones are 
     "docs/req/REQ-001.md",
   ]);
   assert.deepEqual(brokenLinks("", "docs/a.md", known), []);
+});
+
+const TYPO_RECORDS = [
+  { path: "docs/req/REQ-018-inspection.md", id: "REQ-018" },
+  { path: "docs/req/REQ-008.md", id: "REQ-008" },
+  { path: "docs/br/BR-001-sku.md", id: "" },
+];
+
+test("did-you-mean: every identifier within reach is offered", () => {
+  // "REQ-018" and "REQ-008" are both two edits away from "REQ-081" — the exact
+  // pair from the design document; both are shown, closest-first, alphabetical
+  // at equal distance.
+  const out = didYouMean(TYPO_RECORDS, "REQ-081");
+  assert.deepEqual(
+    out.map((s) => [s.term, s.suggestion, s.path]),
+    [
+      ["req-081", "REQ-008", "docs/req/REQ-008.md"],
+      ["req-081", "REQ-018", "docs/req/REQ-018-inspection.md"],
+    ],
+  );
+});
+
+test("did-you-mean: the exact id itself is not a suggestion — its neighbor is", () => {
+  // "REQ-018" exists, so it is not offered; but "REQ-008" is one edit away and
+  // a real document — that transposition is exactly what the tier is for.
+  const out = didYouMean(TYPO_RECORDS, "REQ-018");
+  assert.deepEqual(
+    out.map((s) => s.suggestion),
+    ["REQ-008"],
+  );
+});
+
+test("did-you-mean: a slug answers for a document without an id", () => {
+  const out = didYouMean(TYPO_RECORDS, "BR-001-skz");
+  assert.equal(out[0].suggestion, "BR-001-sku");
+  assert.equal(out[0].path, "docs/br/BR-001-sku.md");
+});
+
+test("did-you-mean: an ambiguous suggestion carries no path", () => {
+  const records = [
+    { path: "x/a.md", id: "REQ-018" },
+    { path: "y/b.md", id: "REQ-018" },
+  ];
+  const out = didYouMean(records, "REQ-081");
+  assert.equal(out[0].suggestion, "REQ-018");
+  assert.equal(out[0].path, null);
+});
+
+test("did-you-mean: short terms and distant words stay silent", () => {
+  assert.deepEqual(didYouMean(TYPO_RECORDS, "br"), []); // too short to mean anything
+  assert.deepEqual(didYouMean(TYPO_RECORDS, "warehouse"), []); // nothing within reach
+});
+
+test("did-you-mean: at most three suggestions, alphabetical at equal distance", () => {
+  const records = [
+    { path: "a.md", id: "AAA-103" },
+    { path: "b.md", id: "AAA-101" },
+    { path: "c.md", id: "AAA-102" },
+    { path: "d.md", id: "AAA-105" },
+  ];
+  const out = didYouMean(records, "AAA-104"); // every id is one edit away
+  assert.deepEqual(
+    out.map((s) => s.suggestion),
+    ["AAA-101", "AAA-102", "AAA-103"], // AAA-105 loses to the cap of three
+  );
+});
+
+const SNIPPET_DOC = [
+  "---", "id: REQ-010", "---", "",
+  "# REQ-010", "",
+  "Logistics of the chain.", "",
+  "## Warehouse", "",
+  "The pallets arrive before noon.", "They are counted at the gate.",
+].join("\n");
+
+test("snippet: the first line of the section that answers the query", () => {
+  const out = snippetOf(SNIPPET_DOC, 9, "pallets"); // §Warehouse is on line 9
+  assert.deepEqual(out, { line: 11, text: "The pallets arrive before noon." });
+});
+
+test("snippet: the search stops at the next heading", () => {
+  const doc = "## One\nnothing here\n\n## Two\nthe pallets line\n";
+  assert.equal(snippetOf(doc, 1, "pallets"), null);
+});
+
+test("snippet: morphology — a word minus its last character matches", () => {
+  const doc = "## Warehouse\nThe pallet arrives at noon.\n";
+  assert.equal(snippetOf(doc, 1, "pallets").text, "The pallet arrives at noon.");
+});
+
+test("snippet: a long line is cut to a window around the term", () => {
+  const filler = "x".repeat(300);
+  const doc = `## S\n${filler} pallets ${filler}\n`;
+  const out = snippetOf(doc, 1, "pallets", 60);
+  assert.ok(out.text.length <= 62); // 60 of text plus the two ellipses
+  assert.match(out.text, /pallets/);
+  assert.match(out.text, /^…/);
+  assert.match(out.text, /…$/);
+});
+
+test("snippet: an empty query has nothing to find", () => {
+  assert.equal(snippetOf("## S\ntext\n", 1, ""), null);
 });

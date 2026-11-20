@@ -440,10 +440,17 @@ not the whole file.
   anchor, and path, with an inflection fallback (`boxes` finds `boxed`); then by body —
   BM25 over sections, for words absent from the face (an identifier inside someone else's
   text, a term from the middle of a section). The output includes the anchor line
-  `§<heading>:<line>` (for a body hit — the best section); read from there;
+  `§<heading>:<line>` (for a body hit — the best section); a body hit also shows its
+  **answering line** — the snippet of the best section around the query word, so many
+  questions are answered without opening the file at all. The first five hits carry the
+  full face, the tail is paths only; a typo in an identifier (`REQ-081` for `REQ-018`)
+  gets a `did you mean:` line with the identifiers within small edit distance.
+  `--status` / `--type` / `--service` narrow the corpus before the search;
+  `--json` turns search, map and related into machine output for other hooks;
   `kb.mjs map <directory>` — the composition of a directory.
 - **Graph:** `kb.mjs related <path|id>` — a document's neighbors (incoming/outgoing links
-  and resolved `parent`/`depends_on`/… relations), `kb.mjs path <A> <B>` — the shortest
+  and resolved `parent`/`depends_on`/… relations) with the gist of each neighbor — the
+  follow-up decision comes without opening them; `kb.mjs path <A> <B>` — the shortest
   chain of documents. Arguments resolve without guessing: an ambiguous `id` returns
   candidates.
 - **Config:** `.kbindex.json` at the project root — `roots`, `include`, `exclude`,

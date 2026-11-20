@@ -5,8 +5,9 @@
  * Usage:
  *   node kb.mjs build   [--project <dir>]
  *   node kb.mjs search  <query> [--project <dir>] [--limit <n>]
- *   node kb.mjs map     <dir> [--project <dir>]
- *   node kb.mjs related <path|id> [--project <dir>]
+ *                       [--status <s>] [--type <t>] [--service <s>] [--json]
+ *   node kb.mjs map     <dir> [--project <dir>] [--json]
+ *   node kb.mjs related <path|id> [--project <dir>] [--json]
  *   node kb.mjs path    <path|id> <path|id> [--project <dir>]
  *   node kb.mjs audit   [--project <dir>]
  *   node kb.mjs clean   [--project <dir>]
@@ -33,6 +34,7 @@ import {
   brokenLinks,
   computeHash,
   cut,
+  didYouMean,
   isExcluded,
   relatedOf,
   RELATION_FIELDS,
@@ -41,6 +43,7 @@ import {
   searchWithBody,
   selectPaths,
   shortestPath,
+  snippetOf,
 } from "./lib/kb-core.mjs";
 import {
   indexDir,
@@ -65,7 +68,7 @@ const BOILERPLATE = ["status:", "date:", "owner:", "source:", "slug:", "role:", 
 const SHORT_GIST = 40;
 
 export function parseArgs(argv) {
-  const args = { _: [], project: process.cwd(), limit: 20, help: false, error: null };
+  const args = { _: [], project: process.cwd(), limit: 20, help: false, json: false, face: {}, error: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") {
@@ -76,6 +79,12 @@ export function parseArgs(argv) {
       const value = Number(argv[++i]);
       if (!Number.isFinite(value) || value <= 0) args.error = "--limit needs a positive number";
       else args.limit = Math.floor(value);
+    } else if (arg === "--json") {
+      args.json = true;
+    } else if (arg === "--status" || arg === "--type" || arg === "--service") {
+      const value = argv[++i];
+      if (!value) args.error = `${arg} needs a value`;
+      else args.face[arg.slice(2)] = value.toLowerCase();
     } else if (arg === "-h" || arg === "--help") args.help = true;
     else args._.push(arg);
   }
@@ -264,31 +273,106 @@ function cmdBuild(projectDir) {
   out(`${buildReport(built)}\n`);
 }
 
-function cmdSearch(projectDir, query, limit) {
-  const records = recordsOf(projectDir);
+/** How many hits of a search keep their full face — the gist or the answering
+ *  line. The rest of the list is paths only: the agent reads the top of the
+ *  list attentively, the tail is a reminder that the list goes on. */
+const FULL_HITS = 5;
 
+/** Keeps only the records whose face matches the --status/--type/--service
+ *  filters. The filter runs before the search, so both tiers — face and body —
+ *  see the same narrowed corpus. */
+function filterByFace(records, face) {
+  const keys = Object.keys(face);
+  if (!keys.length) return records;
+  return records.filter((record) => keys.every((key) => String(record[key] ?? "").toLowerCase() === face[key]));
+}
+
+/** The answering line of a body hit: read from the file at the anchor of its
+ *  best section, cut to a window around the query word. The agent sees why the
+ *  document matched without opening it. */
+function bodySnippet(projectDir, hit, query) {
+  if (!hit.anchor) return null;
+  return snippetOf(readDoc(projectDir, hit.path), hit.anchor.line, query);
+}
+
+function cmdSearch(projectDir, query, limit, options = {}) {
+  const records = filterByFace(recordsOf(projectDir), options.face || {});
   const { face, body } = searchWithBody(records, readSections(projectDir), query);
-  const hits = [...face, ...body];
-  if (!hits.length) {
-    out("kb-index: no matches\n");
+
+  if (options.json) {
+    out(
+      `${JSON.stringify({
+        query,
+        filters: options.face || {},
+        face,
+        body: body.map((hit) => ({ ...hit, snippet: bodySnippet(projectDir, hit, query) })),
+        ...(face.length + body.length === 0 ? { didYouMean: didYouMean(records, query) } : {}),
+      })}\n`,
+    );
     return;
   }
+
+  const hits = [...face, ...body];
+  if (!hits.length) {
+    const lines = ["kb-index: no matches"];
+    // A typo in an identifier must not read as "the document does not exist":
+    // the closest id or slug within a small edit distance is offered instead.
+    for (const suggestion of didYouMean(records, query)) {
+      const where = suggestion.path ? ` (${suggestion.path})` : "";
+      lines.push(`did you mean: ${suggestion.suggestion}${where}?`);
+    }
+    out(`${lines.join("\n")}\n`);
+    return;
+  }
+
+  const shown = hits.slice(0, limit);
   const lines = [];
-  for (const hit of hits.slice(0, limit)) {
+  shown.forEach((hit, index) => {
     const anchor =
       hit.anchor && hit.anchor.heading ? `§${hit.anchor.heading}:${hit.anchor.line}` : "";
     // The pipeline state rides on the face: "draft" before a read saves the agent
     // a wasted read; docType says which kind of document answered.
     const tags = [hit.status, hit.docType].filter(Boolean).join("/");
-    lines.push(`${hit.id}  ${hit.path}${tags ? `  [${tags}]` : ""}${anchor ? `  ${anchor}` : ""}`);
-    if (hit.gist) lines.push(`       ${cut(hit.gist, 200)}`);
-  }
+    const head = `${hit.id}  ${hit.path}${tags ? `  [${tags}]` : ""}${anchor ? `  ${anchor}` : ""}`;
+    lines.push(head);
+    if (index >= FULL_HITS) return; // the tail carries the path — nothing more
+    if (index >= face.length) {
+      const snippet = bodySnippet(projectDir, hit, query);
+      if (snippet) lines.push(`       ${snippet.text}`);
+    } else if (hit.gist) {
+      lines.push(`       ${cut(hit.gist, 200)}`);
+    }
+  });
+  if (hits.length > shown.length) lines.push(`… and ${hits.length - shown.length} more (--limit ${limit})`);
   out(`${lines.join("\n")}\n`);
 }
 
-function cmdMap(projectDir, dir) {
+function cmdMap(projectDir, dir, options = {}) {
   const target = dir.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
-  recordsOf(projectDir);
+  const records = recordsOf(projectDir);
+
+  // The JSON map is the exact directory — no lift to the parent map, so the
+  // machine consumer never mistakes borrowed rows for the directory's own.
+  if (options.json) {
+    const documents = records
+      .filter((record) => dirOf(record.path) === target)
+      .map((record) => ({
+        id: record.id,
+        title: record.title,
+        status: record.status,
+        docType: record.docType,
+        service: record.service,
+        gist: record.gist,
+        anchor: record.anchor,
+        path: record.path,
+      }));
+    if (!documents.length) {
+      note(`kb-index: no documents in ${target || "."}\n`);
+      process.exit(1);
+    }
+    out(`${JSON.stringify({ dir: target, documents })}\n`);
+    return;
+  }
 
   const found = nearestMap(projectDir, target);
   if (!found) {
@@ -334,12 +418,33 @@ function neighborLabel(record) {
   return name ? ` — ${name}` : "";
 }
 
-function cmdRelated(projectDir, arg) {
+function cmdRelated(projectDir, arg, options = {}) {
   const records = recordsOf(projectDir);
   const path = targetOf(records, arg);
   const record = records.find((entry) => entry.path === path);
   const graph = buildGraph(records);
   const neighbors = relatedOf(path, graph);
+
+  if (options.json) {
+    out(
+      `${JSON.stringify({
+        path,
+        id: record ? record.id : "",
+        title: record ? record.title : "",
+        neighbors: neighbors.map((neighbor) => {
+          const other = graph.byPath.get(neighbor.path);
+          return {
+            path: neighbor.path,
+            relations: neighbor.relations,
+            mutual: neighbor.mutual,
+            title: other ? other.title : "",
+            gist: other ? other.gist : "",
+          };
+        }),
+      })}\n`,
+    );
+    return;
+  }
 
   const head = record && (record.title || record.id) ? `${record.title || record.id}  (${path})` : path;
   const lines = [head];
@@ -349,6 +454,9 @@ function cmdRelated(projectDir, arg) {
       const arrow = relation.dir === "out" ? "→" : "←";
       lines.push(`  ${arrow} ${relation.key}: ${neighbor.path}${neighborLabel(other)}`);
     }
+    // The gist decides the follow-up without opening the neighbor: most
+    // neighbors are visited only to be ruled out.
+    if (other && other.gist) lines.push(`       ${cut(other.gist, 100)}`);
   }
   if (lines.length === 1) lines.push("  (no related documents)");
   out(`${lines.join("\n")}\n`);
@@ -473,8 +581,10 @@ function main(argv) {
     note(
       [
         "usage: kb.mjs build|search|map|related|path|audit|clean [--project <dir>] [--limit <n>]",
+        "        search [--status <s>] [--type <t>] [--service <s>]   map|related [--json]",
         "  build              — rebuild the index, the sections and the maps, print the report",
-        "  search <query>     — find documents by their face, then by their body sections",
+        "  search <query>     — find documents by their face, then by their body sections;",
+        "                       the filters narrow the corpus before the search",
         "  map <dir>          — print the map of a directory",
         "  related <path|id>  — the documents linked to and from one document",
         "  path <a> <b>       — the shortest chain of documents between two documents",
@@ -495,7 +605,7 @@ function main(argv) {
         note("kb-index: search needs a query\n");
         process.exit(2);
       }
-      cmdSearch(args.project, query, args.limit);
+      cmdSearch(args.project, query, args.limit, { json: args.json, face: args.face });
       break;
     }
     case "map": {
@@ -504,7 +614,7 @@ function main(argv) {
         note("kb-index: map needs a directory\n");
         process.exit(2);
       }
-      cmdMap(args.project, dir);
+      cmdMap(args.project, dir, { json: args.json });
       break;
     }
     case "related": {
@@ -513,7 +623,7 @@ function main(argv) {
         note("kb-index: related needs a document path or an id\n");
         process.exit(2);
       }
-      cmdRelated(args.project, target);
+      cmdRelated(args.project, target, { json: args.json });
       break;
     }
     case "path": {

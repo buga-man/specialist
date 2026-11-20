@@ -273,3 +273,90 @@ test("search: the face carries the pipeline status tag", () => {
   const out = kb(dir, "search", "complaints");
   assert.match(out, /\[draft\]/);
 });
+
+test("search: a body hit shows the answering line of its best section", () => {
+  const dir = project({ "docs/req/REQ-010.md": BODY_DOC });
+  const out = kb(dir, "search", "pallets");
+  assert.match(out, /The pallets arrive before noon\./); // the line, not just the anchor
+});
+
+test("search: a typo in an id gets a did-you-mean line", () => {
+  const doc = ["---", "id: REQ-018", "title: Point", "---", "", "## Section", "text"].join("\n");
+  const dir = project({ "docs/req/REQ-018.md": doc });
+  kb(dir, "build");
+  const out = kb(dir, "search", "REQ-081");
+  assert.match(out, /no matches/);
+  assert.match(out, /did you mean: REQ-018 \(docs\/req\/REQ-018\.md\)\?/);
+});
+
+test("search: no matches and nothing within reach — no suggestion", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  const out = kb(dir, "search", "zanzibar");
+  assert.equal(out.trim(), "kb-index: no matches");
+});
+
+test("search: --status narrows the corpus before the search", () => {
+  const draft = ["---", "id: A-1", "status: draft", "---", "", "## S", "warehouse text"].join("\n");
+  const done = ["---", "id: A-2", "status: approved", "---", "", "## S", "warehouse text"].join("\n");
+  const dir = project({ "docs/a.md": draft, "docs/b.md": done });
+  kb(dir, "build");
+  assert.match(kb(dir, "search", "warehouse", "--status", "approved"), /A-2/);
+  assert.equal(kb(dir, "search", "warehouse", "--status", "review").trim(), "kb-index: no matches");
+});
+
+test("search: --json is machine output", () => {
+  const dir = project({ "docs/req/REQ-010.md": BODY_DOC });
+  const raw = kb(dir, "search", "pallets", "--json");
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.query, "pallets");
+  assert.equal(parsed.face.length, 0);
+  assert.equal(parsed.body.length, 1);
+  assert.equal(parsed.body[0].path, "docs/req/REQ-010.md");
+  assert.equal(parsed.body[0].snippet.text, "The pallets arrive before noon.");
+});
+
+test("search: the tail beyond five hits is paths only", () => {
+  const doc = (id) => ["---", `id: ${id}`, "title: T", "---", "", "## S", "warehouse gist text"].join("\n");
+  const files = {};
+  for (let i = 1; i <= 7; i++) files[`docs/d${i}.md`] = doc(`W-${i}`);
+  const dir = project(files);
+  kb(dir, "build");
+  const out = kb(dir, "search", "warehouse");
+  assert.equal(out.match(/^ {7}\S/gm).length, 5); // five full faces — the rest is paths
+  assert.match(out, /W-6/);
+  assert.match(out, /W-7/);
+});
+
+test("search: the cut is announced with the --limit hint", () => {
+  const doc = (id) => ["---", `id: ${id}`, "title: T", "---", "", "## S", "warehouse gist text"].join("\n");
+  const files = {};
+  for (let i = 1; i <= 7; i++) files[`docs/d${i}.md`] = doc(`W-${i}`);
+  const dir = project(files);
+  kb(dir, "build");
+  const out = kb(dir, "search", "warehouse", "--limit", "3");
+  assert.match(out, /… and 4 more \(--limit 3\)/);
+});
+
+test("related: the neighbor carries its gist", () => {
+  const dir = project({ "docs/rel-a.md": LINK_A, "docs/rel-b.md": LINK_B });
+  const out = kb(dir, "related", "docs/rel-a.md");
+  assert.match(out, /→ link: docs\/rel-b\.md — Target/);
+  assert.match(out, /^ {7}Text\./m); // the gist of the neighbor, indented under it
+});
+
+test("related: --json is machine output", () => {
+  const dir = project({ "docs/rel-a.md": LINK_A, "docs/rel-b.md": LINK_B });
+  const parsed = JSON.parse(kb(dir, "related", "REL-A", "--json"));
+  assert.equal(parsed.path, "docs/rel-a.md");
+  assert.equal(parsed.neighbors.length, 1);
+  assert.equal(parsed.neighbors[0].path, "docs/rel-b.md");
+  assert.equal(parsed.neighbors[0].gist, "Text.");
+});
+
+test("map: --json is the exact directory", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  const parsed = JSON.parse(kb(dir, "map", "docs/req", "--json"));
+  assert.equal(parsed.dir, "docs/req");
+  assert.equal(parsed.documents[0].id, "REQ-001");
+  assert.equal(parsed.documents[0].gist, "Complaints from five channels of the store.");
+});
