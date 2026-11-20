@@ -47,8 +47,9 @@ silently skipped: "no alternate flows" is a claim the artifact owns.
   max / negative / unicode, timezone and DST where time is involved) — enumerated by
   axis, not recalled.
 - Dual modes, permissions (actor × action), concurrency (double submit, simultaneous
-  edit), state transitions — the same axes test-analysis walks, now as executable
-  rows.
+  edit), state transitions — the five axes of `test-analysis` §5 (the canonical list:
+  boundaries, state transitions, dual modes, permissions, concurrency), now as
+  executable rows; its §5 is the source of truth for the axis set.
 - **Formalization**: where the prose is conditional, the artifact carries the decision
   table (conditions × actions); where stateful, the transition table. Each row of
   either IS a case — the table is the spec of the case, prose bows to it.
@@ -115,8 +116,11 @@ node "<skill-dir>/scripts/cases.mjs" check docs/tests/<cases>.md docs/specs/<spe
 loads; resolve the path from there. The script catches what needs no judgment:
 malformed or duplicate IDs, unknown criterion references, missing grader/type/
 expected cells, and the coverage both ways — a must criterion no case exercises
-(error), a should criterion without one (note). Exit 1 means the artifact does not
-yet hold; fix what it names before handing the file downstream.
+(error), a should criterion without one (note). Criterion numbers share one space
+across the specs on the command line — a number two given specs both carry is
+reported as a collision (pass only the specs whose numbering is global, or renumber).
+Exit 1 means the artifact does not yet hold; fix what it names before handing the
+file downstream.
 
 ## Consumers (what makes the artifact worth writing)
 

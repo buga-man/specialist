@@ -105,3 +105,32 @@ test("parseCriteria: must wins when the number repeats across specs", () => {
   assert.equal(criteria.get(1).must, true);
   assert.equal(criteria.get(3).must, false);
 });
+
+test("parseCriteria: the heading is bilingual — a Russian spec's criteria are read, not skipped", () => {
+  const ru = [
+    "# Спека", "",
+    "## Критерии приёмки", "",
+    "1. При отправке система сохраняет запись. (must) — Verify: command — save.sh → exit 0",
+    "2. При пустом списке система показывает подсказку. (should)",
+  ].join("\n");
+  const criteria = parseCriteria([ru]);
+  assert.equal(criteria.size, 2);
+  assert.equal(criteria.get(1).must, true);
+  assert.equal(criteria.get(2).must, false);
+});
+
+test("a number carried by more than one spec is a collision note; must still governs coverage", () => {
+  const other = [
+    "# Repo spec", "",
+    "## Приёмочные критерии", "",
+    "1. Другой критерий с тем же номером. (should)",
+  ].join("\n");
+  const cases = casesTable([
+    "| TEST-FEA-001 | 1 | main | command | valid submit | saved, exit 0 |",
+    "| TEST-FEA-002 | 2 | boundary | command | empty list | the hint shows |",
+  ]);
+  const r = checkCases(cases, [SPEC, other]);
+  assert.equal(r.notes.filter((n) => /criterion 1 is numbered in 2 of the given specs/.test(n)).length, 1);
+  // the business spec's must (not the repo spec's should) still decides the coverage side
+  assert.equal(r.errors.filter((e) => /criterion 1 \(must\) is exercised by no case/.test(e)).length, 0);
+});

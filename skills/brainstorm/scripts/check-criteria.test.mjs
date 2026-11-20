@@ -107,3 +107,21 @@ test("checkCriteria: the section scan stops at the next heading", () => {
   assert.equal(r.mustCount, 1);
   assert.equal(r.errors.length, 1); // only the real criterion is checked
 });
+
+test("checkCriteria: the criteria heading is bilingual — a Russian spec is checked, not skipped", () => {
+  const ru = (heading) => [
+    "# Спека", "",
+    `## ${heading}`, "",
+    "1. При отправке система сохраняет запись. (must) — Verify: manual — QA наблюдает",
+    "2. Система должна быть удобной. (must)",
+    "3. При ошибке ввода система отклоняет форму. (must) — Verify: manual — QA наблюдает",
+  ].join("\n");
+  for (const heading of ["Критерии приёмки", "Приёмочные критерии", "7. Критерии приёмки"]) {
+    const r = checkCriteria(ru(heading));
+    assert.equal(r.found, true, heading);
+    assert.equal(r.mustCount, 3, heading);
+    assert.equal(r.errors.filter((e) => /criterion 2 \(must\) has no Verify/.test(e)).length, 1, heading);
+  }
+  // a heading in neither language still means nothing to check
+  assert.equal(checkCriteria("# Спека\n\n## Требования\n\n1. Система работает. (must)\n").found, false);
+});

@@ -1,6 +1,6 @@
 ---
 name: trace-audit
-description: Mechanical audit of the spec pipeline's own artifacts — walk docs/specs/ and docs/plans/ and report what the pipeline left behind. Checks — must criteria without a runnable Verify, parent/children desync, implementation without a review, findings that never closed across reports, plans stuck on blocked tasks. Use when the user asks for a traceability audit or pipeline health, "what's uncovered", "which specs never got reviewed", or before a release to see the gaps the busy flow skipped. Reports only — the fixes route to their owning roles.
+description: Mechanical audit of the spec pipeline's own artifacts — walk docs/specs/ and docs/plans/ and report what the pipeline left behind. The walk script (walk.mjs) catches what needs no judgment — must criteria without a Verify, parent/children desync, dead links, id/slug mismatch, TEST-ID reuse across the registry, stale blocking, draft status outgrown; the judgment checks add implementation without a review, findings that never closed across reports, the untriaged queue. Use when the user asks for a traceability audit or pipeline health, "what's uncovered", "which specs never got reviewed", or before a release to see the gaps the busy flow skipped. Reports only — the fixes route to their owning roles.
 ---
 
 # Trace audit
@@ -17,7 +17,8 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
 ## Flow
 
 ```
-1 gather the artifact tree → 2 run the checks → 3 route the findings → 4 report
+1 gather the artifact tree → 2 the mechanical walk (script) → 3 the judgment checks
+→ 4 route the findings → 5 report
 ```
 
 ## 1. Gather the artifact tree
@@ -33,22 +34,39 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
   `- Done:` / `- Blocked by:` lines, report findings tables and `Re-verified:` /
   `Recurring:` lines.
 
-## 2. The checks
+## 2. The mechanical walk — the script
 
-- **Orphan criteria.** Every must criterion of every spec carries a `Verify:` that names
-  a runnable command; a "manual — who observes what" check is legitimate but is listed
-  separately (it waits on a person, not on nothing). A must with no `Verify:` at all is
-  the finding — it can never produce an evidence-backed verdict in spec-review.
-- **Traceability desync.** Every artifact's `parent` resolves to an existing file whose
-  `children` lists it back; every `children` entry resolves to an existing file; the id
-  in the frontmatter matches the file's slug. One-way links, dead links, and id/slug
-  mismatches are findings (documentation defects — same class spec-review flags, here
-  found repo-wide instead of per feature).
+```bash
+node "<skill-dir>/scripts/walk.mjs" [docs-root]        # default docs
+```
+
+`<skill-dir>` is the directory of this SKILL.md — the host reports it when the skill
+loads; resolve the path from there. The script catches the promises that need no
+judgment:
+
+- **Traceability desync** — a `parent` that resolves to no artifact or to one whose
+  `children` does not list it back; a `children` entry that resolves to nothing; a
+  frontmatter `id` absent from the file's slug.
+- **Orphan criteria** — a must criterion without a `Verify:`, in every spec at once
+  (the criteria heading is read bilingually — the working language may be either).
+- **TEST-ID registry** — an ID reused across cases artifacts or twice in one: IDs are
+  stable, retired, never reused, and the registry is global across `docs/tests/`.
+- **Stale blocking** — a `- Blocked by: open question #N in <spec>` line whose spec's
+  Open-questions table no longer carries #N (work waiting on nothing), or that names a
+  spec the tree does not carry (a dead link).
+- **Status honesty, the mechanical half** — `status: draft` with children, or with a
+  plan of the same topic carrying closed tasks.
+
+Exit 1 means findings — quote them in the report as stated (each is a re-derivable
+fact, not a judgment). Silence per directory is reported as "nothing to check", never
+as passed. What the script cannot see is §3's work.
+
+## 3. The judgment checks — what the walk cannot see
+
 - **Criterion ↔ case coverage** (where `docs/tests/` holds cases artifacts): a must
   criterion no case exercises, and a case row exercising a criterion no spec carries,
   are both findings — `test-design`'s script (`cases.mjs check`) decides them
-  mechanically; this audit quotes its output. A duplicate or retired-then-reused
-  TEST-ID across the artifacts is the same class of breakage as a parent/child desync.
+  mechanically; this audit quotes its output.
 - **Implementation without a review.** A spec chain whose repo specs have an
   implementation plan with closed tasks but no `*-review` report for the chain: work
   shipped without acceptance. A chain mid-implementation is not a finding — it is
@@ -60,19 +78,18 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
   more consecutive reports are the process-level finding: the same class surviving
   every pass means the fix belongs in CODESTYLE.md (tech-writer's territory — propose,
   don't write).
-- **Stuck work.** Plan tasks marked `- Blocked by:` whose blocking open question the
-  owning spec still lists as open — the block is honest. A blocked task whose question
-  the spec no longer lists (resolved or removed) is stale blocking: work waiting on
-  nothing.
+- **Honest blocking, the other half.** A blocked task whose question the spec still
+  lists as open is honest — listed as in-flight, not a finding; the script already
+  caught the stale ones.
 - **The untriaged queue.** Open items in the newest `*-triage` report that no later
   report re-verified and no plan task carries: findings that fell out of the loop
   between triage and routing. A `needs-info` item aging across two triages is the
   same debt, named.
-- **Status honesty.** A spec `status: draft` with downstream children or closed
-  implementation tasks — the artifact outgrew its status; a `status: approved` spec
-  with no approval trail in Amendments is the reverse finding.
+- **Approval honesty.** A `status: approved` spec with no approval trail in Amendments
+  is the reverse of the script's draft check — it needs the reading the script will
+  not do.
 
-## 3. Route the findings
+## 4. Route the findings
 
 Every finding names its owner in the report — the audit ends actionable, not
 picturesque:
@@ -83,7 +100,7 @@ picturesque:
 - open and stale findings → the owning plan (dev role) or root-cause for single bugs;
 - recurring classes → a CODESTYLE.md anti-pattern proposal for tech-writer.
 
-## 4. Report
+## 5. Report
 
 - Persist as `docs/specs/YYYY-MM-DD-pipeline-trace.md` — a repo-level report, not a
   feature's (the `-trace` suffix keeps it out of the `-quality`/`-audit`/`-review`
