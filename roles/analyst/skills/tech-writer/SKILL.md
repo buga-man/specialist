@@ -68,7 +68,17 @@ is not a verdict — same bar as spec-review.
   `CODESTYLE.md`'s Anti-patterns section (evidence: the findings' `file:line`s),
   applied only after the user's approval. That loop — review findings become
   conventions, conventions teach the executors — is how a finding class dies out
-  instead of recurring forever.
+  instead of recurring forever. A recurring class that argues for a binding rule,
+  not advice, proposes a Principle instead (below).
+- **CODESTYLE Principles are versioned governance**: where the project keeps a
+  `## Principles` section in CODESTYLE.md (MUST/SHOULD rules the reviewers enforce —
+  code-review blocks on a violated MUST, spec-review makes it changes required),
+  the writer is its scribe. A principle change is proposed with a version bump —
+  MAJOR: a principle removed or redefined; MINOR: a new principle; PATCH: a
+  clarification — and a sync-impact line naming what reads it (spec-review,
+  code-review, spec-implementation, the executors). Both land only after the
+  user's approval, like every amendment; the version and the sync-impact line ride
+  the section's header, so a reader sees what changed and whom it binds.
 - **Review report card:** per review report in the range — findings by class and
   severity, plus the re-verification counts (`closed / not closed / regressions`)
   where a successor report exists. The confirmation rate (closed ÷ re-verified) is the

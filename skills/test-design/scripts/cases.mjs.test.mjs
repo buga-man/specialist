@@ -176,3 +176,30 @@ test("a number carried by more than one spec is a collision note; must still gov
   // the business spec's must (not the repo spec's should) still decides the coverage side
   assert.equal(r.errors.filter((e) => /criterion 1 \(must\) is exercised by no case/.test(e)).length, 0);
 });
+
+test("an ID inserted between existing rows is an out-of-order note — the table is append-only", () => {
+  const r = checkCases(casesTable([
+    "| TEST-FEA-001 | 1 | main | command | valid submit | saved, exit 0 |",
+    "| TEST-FEA-003 | 2 | boundary | command | empty list | the hint shows |",
+    "| TEST-FEA-002 | 1 | exception | command | API 503 | retry dialog |", // inserted, not appended
+  ]), [SPEC]);
+  assert.equal(r.errors.filter((e) => /duplicate TEST-ID/.test(e)).length, 0); // not a duplicate — an insertion
+  assert.equal(r.notes.filter((n) => /out of order/.test(n) && /TEST-FEA-002/.test(n) && /after TEST-FEA-003/.test(n)).length, 1);
+});
+
+test("append-only is per topic: a second topic's numbering restarts without a note", () => {
+  const r = checkCases(casesTable([
+    "| TEST-FEA-001 | 1 | main | command | valid submit | saved, exit 0 |",
+    "| TEST-FEA-002 | 2 | boundary | command | empty list | the hint shows |",
+    "| TEST-OTHER-001 | 1 | main | command | x | y |", // a fresh topic, its own space
+  ]), [SPEC]);
+  assert.equal(r.notes.filter((n) => /out of order/.test(n)).length, 0);
+});
+
+test("a retired number leaves a hole but order still holds — no note", () => {
+  const r = checkCases(casesTable([
+    "| TEST-FEA-001 | 1 | main | command | valid submit | saved, exit 0 |",
+    "| TEST-FEA-004 | 2 | boundary | command | empty list | the hint shows |", // 002–003 retired
+  ]), [SPEC]);
+  assert.equal(r.notes.filter((n) => /out of order/.test(n)).length, 0);
+});

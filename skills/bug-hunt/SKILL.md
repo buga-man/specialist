@@ -103,6 +103,9 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   - Bugs: a reproduction sketch — concrete inputs, observed vs expected outcome.
   - Security: an exploitation sketch — who can send what, and what it yields.
   - Severity: **critical** / **high** / **medium** / **low** — impact × plausibility.
+  - A findings table caps at **50 rows**; the rest collapse into one overflow line —
+    `+N more (critical/high/medium/low)` — a table nobody finishes protects nothing.
+    Overflow findings still route into the plan; they just do not scroll.
   - **Fix criteria**: what observation proves the bug fixed — the dev role's acceptance
     check, written so the fixer needs no further conversation to know they are done
     ("the retry dialog appears at most once per failure", not "fix the dialog").
@@ -130,6 +133,10 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
   follow-up hunt should aim first — the next hunter inherits the aim, not just the
   findings.
 - Outcome: **no findings** / **findings listed** / **exploitable — fix before merge**.
+- **The hunt loop converges or says so**: a re-hunt that yields no findings is
+  terminal — `Converged: hunt N` closes the loop within the agreed budget, no
+  filler findings to look busy and no silent extra pass. Until then every report
+  names what is left and the budget line rules.
 - Fixes go back into the plan (or root-cause — the dev role, if installed — for a single
   confirmed bug); this skill does not fix.
 

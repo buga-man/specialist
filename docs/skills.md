@@ -84,8 +84,9 @@ out-of-role skills are then blocked until the user consents to a switch.
 
 **Why:** tasks arrive as three lines hiding half the requirements. The skill surfaces them:
 it studies the docs and the system, asks the user at most 10 questions per round (two
-rounds at most, only those whose answers change the spec), and turns it all into a
-business spec.
+rounds at most, only those whose answers change the spec, ordered by what they move —
+scope > security/privacy > UX > technical detail; below that line an assumption is
+proposed instead of a question), and turns it all into a business spec.
 
 - **Input → output:** raw task → `docs/specs/YYYY-MM-DD-<topic>.md`
 - **In the spec:** business meaning without code (no paths, APIs, schemas), scope/non-scope
@@ -94,9 +95,12 @@ business spec.
   power, measurable vocabulary, defined terms; a worked sharpening example included) and — for
   must — a `Verify:` command or an explicit manual check; the mechanical part of the bar is a
   runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify presence,
-  vague wording, the 5–20 must band). Business cases "actor → action → outcome" (each covered
-  by at least one criterion), a glossary slot for the terms the criteria rely on, success
-  metrics, open questions with working assumptions and a blocking flag. **Value-first,
+  vague wording, the 5–20 must band, more than three blocking open questions). Business
+  cases "actor → action → outcome" (each covered by at least one criterion) carry a
+  priority tier P1/P2/P3 — the P1 tier alone is a shippable slice and the plan's
+  slicing order — plus a glossary slot for the terms the criteria rely on, success
+  metrics, open questions with working assumptions and a blocking flag (more than
+  three blocking rows means the picture is not one yet — the script says so). **Value-first,
   above the formal bar** — problem, not solution (strip every mention of implementation;
   the need must still stand on its own) and no gold-plating (every criterion traces to
   the stated value; a criterion beyond the need is a finding, not a bonus). Amendments
@@ -266,16 +270,19 @@ exercises and a case exercising nothing the spec asked for are both visible find
   the gaps report → `docs/tests/YYYY-MM-DD-<topic>-<repo>-cases.md` — a cases table
   (`ID | Criterion | Type | Grader | State / input | Expected`), decision and state
   tables for formalization, a regression section sourced from prior defects.
-- **IDs are stable:** never renumbered, retired rows are never reused — every
-  downstream reference (reviews, plans, the suite) hangs off them.
+- **IDs are stable and append-only:** never renumbered, retired rows are never reused,
+  new rows join the end of the table — every downstream reference (reviews, plans, the
+  suite) hangs off them; an ID inserted between existing rows means the table was
+  rewritten, and the script flags it.
 - **Type:** main / alternate / exception / boundary / dual-mode / permission /
   concurrency / state / regression. **Grader:** command (the default — the same model
   writing and reviewing shares one blind spot, so what can be a command never ships as
   a model judgment) / stand / manual / model.
 - **The contract script:** `node "<skill-dir>/scripts/cases.mjs" check <cases.md>
-  <spec.md>` — malformed/duplicate IDs, unknown graders and types, missing cells,
-  unknown criterion references, and the coverage both ways (a must criterion without a
-  case is an error; a should without one is a note).
+  <spec.md>` — malformed/duplicate IDs, out-of-order IDs (the table is append-only),
+  unknown graders and types, missing cells, unknown criterion references, and the
+  coverage both ways (a must criterion without a case is an error; a should without
+  one is a note).
 - **One artifact, three consumers:** spec-review walks it TEST-ID by TEST-ID;
   spec-implementation mines command-graded rows as red tests; stand-acceptance runs
   the stand-graded rows. root-cause's regression tests join the same registry.
@@ -302,16 +309,26 @@ broken until proven otherwise".
   amendment sharpens the test). **Non-functional criteria must be measurable**:
   criterion + measurement method + threshold + environment; missing any → unverifiable,
   and the amendment proposes the four fields.
+- **Gap classes:** every failed criterion and deviation carries one — `missing` (absent
+  from the code) / `partial` (short of the criterion's words) / `contradicts` (the
+  opposite, or against a recorded decision) / `unrequested` (no spec asked for it) —
+  the axis the fix routes by: missing and partial return to the plan, contradicts is
+  the user's ruling, unrequested is justified or removed.
 - **Plus:** a scan for unsanctioned behavior (what the code does beyond the specs), an audit
   of the executor's report, spec-drift (a divergence without an amendment = failed; a stale
-  spec — propose an amendment), and the criteria attack: name a plausible wrong implementation
+  spec — propose an amendment), terminology drift (the glossary is the canon — one
+  concept, one name; a downstream artifact renaming a defined term is a documentation
+  finding), CODESTYLE Principles enforcement (a violated MUST principle is changes
+  required on that alone), and the criteria attack: name a plausible wrong implementation
   that would pass every criterion — if one exists, the criteria set gets a proposed sharper
   criterion (amendment), so the trap does not survive into the next feature. Proposed
   amendments carry an explicit status — proposed → accepted/rejected with the date; a
   `proposed` surviving into the next review is carried forward with its age; an
   amendment changing an existing contract carries its blast-radius class — breaking
   (a migration note is part of the amendment) / additive. Outcome: accepted /
-  accepted with notes / changes required.
+  accepted with notes / changes required; **the review loop converges or says so** —
+  a re-review pass with zero failed criteria and zero actionable deviations is
+  terminal (`Converged: pass N`), with nothing written to look busy.
 - **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
   derived from the slug dates; no state stored (tech-writer's audit aggregates these
   into a cycle-times table).
@@ -342,11 +359,15 @@ effort.
   Must/Should/Optional. A large diff is read in churn order (git log --follow
   frequency, shared modules before leaves) — depth goes where change goes.
 - **Findings:** `file:line` + what and why + a proposed direction (not a patch);
-  severity blocker / worth fixing / note; outcome clean / worth a pass / rework
-  required. Blockers and worth-fixing go back into the plan as tasks.
+  severity blocker / worth fixing / note; a findings table caps at 50 rows, the rest
+  collapse into one overflow line; outcome clean / worth a pass / rework required.
+  Blockers and worth-fixing go back into the plan as tasks. A violated MUST
+  principle of CODESTYLE.md's Principles section is a blocker on that alone.
 - **Re-verification and memory:** a previous `*-quality` report opens the pass —
   carried findings get closed / not closed / fixed-with-regression statuses
-  (`Re-verified: N closed, M not closed, K regressions`); findings live in a countable
+  (`Re-verified: N closed, M not closed, K regressions`); **the loop converges or
+  says so** — a re-review with zero blockers and zero worth-fixing findings is
+  terminal (`Converged: pass N`), no filler to look busy; findings live in a countable
   table and the report ends with a `Recurring:` line — the review memory tech-writer
   aggregates into CODESTYLE anti-patterns.
 - **Scouts:** a large diff's churn-ordered deep reads and the re-verification of
@@ -385,11 +406,14 @@ must never accept.
 - **Findings:** `file:line` + the trigger scenario (bugs — a reproduction sketch;
   security — an exploitation sketch) + fix criteria (the observation that proves the
   bug fixed — the dev role's acceptance check) + severity critical/high/medium/low;
+  the table caps at 50 rows, the rest collapse into one overflow line;
   **no scenario — no finding**; **dedup on filing** — the same trigger scenario
   already open in a prior audit links and carries its status, never a duplicate row.
   Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /
-  findings listed / exploitable — fix before merge. A two-line debrief closes the
+  findings listed / exploitable — fix before merge; **the hunt loop converges or
+  says so** — a re-hunt with no findings is terminal (`Converged: hunt N`) within
+  the agreed budget. A two-line debrief closes the
   report — what the charter got right or wrong, where the next hunt should aim first.
 - **Parallel hunters (by explicit permission):** a large target may run independent
   hunters with distinct checklist foci, dispatched through the `scouts` skill — its
@@ -473,6 +497,11 @@ via browser automation, and building `md → standalone HTML + PDF` with the ski
   `*-audit` reports — a class recurring across reports becomes a ready-to-paste
   CODESTYLE.md anti-pattern proposal (after approval); a review report card (findings
   by class, re-verification counts, the confirmation rate) rides the same report.
+  **CODESTYLE Principles are versioned governance:** where the project keeps a
+  `## Principles` section in CODESTYLE.md (MUST/SHOULD rules the reviewers enforce),
+  the writer is its scribe — a principle change is proposed with a SemVer bump
+  (MAJOR — removed/redefined, MINOR — new, PATCH — clarification) and a sync-impact
+  line naming its readers, applied after approval like every amendment.
 - **Key rules:** the manual's audience is the user, not a developer (no paths or internal
   names); the manual describes only verified behavior (by spec or live); everything else is
   marked `[draft: unconfirmed]`; screenshots come only from the dev stand + synthetic data.

@@ -50,6 +50,14 @@ review there is.
   - **unverifiable** — cannot be checked from here; name exactly what is needed
     (a live environment, a manual step, a missing test).
 - A criterion with no test and no observable behavior is unverifiable, never passed.
+- Every failed criterion and every deviation carries a **gap class** — `missing` /
+  `partial` / `contradicts` / `unrequested`: *missing* — the required behavior is
+  absent from the code; *partial* — present, but short of what the criterion's words
+  demand; *contradicts* — the code does the opposite, or conflicts a recorded
+  decision; *unrequested* — behavior no spec asked for (§3). The class is the axis
+  the fix routes by: missing and partial go back into the plan as tasks, contradicts
+  is a deviation the user must rule on, unrequested is justified or removed — and
+  a verdict without its gap class is an impression, not a verdict.
 - **A green run is not evidence by itself — a pass ≠ a verified criterion.** The
   evidence is the *match* between the test's assertions and the criterion: cite the
   assertion against the criterion's words. A suite green because the covering test
@@ -91,7 +99,14 @@ the same walk runs sequentially — the verdicts' contract does not change.
   boundary values, null and empty cases.
 - Where the repo carries `CODESTYLE.md`, scan the diff against it: code visibly departing
   from the documented conventions (naming, idioms, structure) is a finding — a note,
-  never a failed criterion on its own.
+  never a failed criterion on its own. A `## Principles` section there, where the
+  project keeps one, outranks style: a diff violating a MUST principle is
+  **changes required** on that alone — the deviation names the principle and carries
+  the gap class `contradicts`; a violated SHOULD principle is a normal finding.
+- **Terminology drift**: the business spec's glossary is the canon — one concept,
+  one name. A downstream artifact (plan, cases artifact, tests) renaming a defined
+  term, or the spec itself carrying two names for one concept, is a documentation
+  finding: propose the amendment that restores the one name, never adopt the drift.
 - Grep the diff's new symbols against the repo: code duplicating existing functionality is
   a finding even when the spec ordered it — the spec's `searched:` failed; propose the
   amendment (extend the existing piece instead), never pass it silently.
@@ -134,6 +149,11 @@ the same walk runs sequentially — the verdicts' contract does not change.
   bug rather than a spec deviation goes to root-cause (a known failing case — the dev
   role, if installed) or bug-hunt (a wider adversarial sweep of the area). This skill
   does not fix code.
+- **The review loop converges or says so.** A re-review after fixes re-verifies the
+  failed rows and walks fresh ground; a pass with zero failed criteria and zero
+  actionable deviations is terminal — report it as `Converged: pass N`, and write
+  nothing new to look busy (a re-review that invents filler findings has stopped
+  reviewing). Until then every report names what is still open.
 
 ## Rules
 

@@ -174,3 +174,69 @@ test("checkCriteria: the criteria heading is bilingual — a Russian spec is che
   // a heading in neither language still means nothing to check
   assert.equal(checkCriteria("# Спека\n\n## Требования\n\n1. Система работает. (must)\n").found, false);
 });
+
+const SPEC_WITH_QUESTIONS = (rows) => [
+  "# Feature — business specification",
+  "",
+  "## 3. Acceptance criteria",
+  ...Array.from({ length: 6 }, (_, i) => `${i + 1}. When X${i}, the system shall Y${i}. (must) — Verify: cmd${i} → 0`),
+  "",
+  "## 7. Open questions",
+  "| # | Question | Working assumption | Risk if wrong | Blocking |",
+  "|---|---|---|---|---|",
+  ...rows,
+].join("\n");
+
+test("checkCriteria: more than three blocking open questions is a warning — three is the budget", () => {
+  const farm = checkCriteria(SPEC_WITH_QUESTIONS([
+    "| 1 | Which auth? | OAuth2 | rework | yes |",
+    "| 2 | Retention? | 90 days | compliance | yes |",
+    "| 3 | Who pays? | the org | pricing wrong | yes |",
+    "| 4 | Mobile? | out of scope | a second feature | yes |",
+  ]));
+  assert.equal(farm.errors.length, 0);
+  assert.equal(farm.blockingOpen, 4);
+  assert.ok(farm.warnings.some((w) => /4 blocking open questions/.test(w) && /picture is not one yet/.test(w)));
+
+  const within = checkCriteria(SPEC_WITH_QUESTIONS([
+    "| 1 | Which auth? | OAuth2 | rework | yes |",
+    "| 2 | Retention? | 90 days | compliance | yes |",
+    "| 3 | Mobile? | out of scope | a second feature | no |", // not blocking — inside the budget
+  ]));
+  assert.equal(within.blockingOpen, 2);
+  assert.ok(!within.warnings.some((w) => /blocking open questions/.test(w)));
+});
+
+test("checkCriteria: the open-questions section is bilingual and non-blocking rows never count", () => {
+  const ru = [
+    "# Спека", "",
+    "## Критерии приёмки", "",
+    ...Array.from({ length: 6 }, (_, i) => `${i + 1}. При X${i} система делает Y${i}. (обязательно) — Проверка: cmd${i} → 0`),
+    "",
+    "## 7. Открытые вопросы",
+    "| # | Вопрос | Допущение | Риск | Блокирующий |",
+    "|---|---|---|---|---|",
+    "| 1 | Какая авторизация? | OAuth2 | переделка | да |",
+    "| 2 | Хранение данных? | 90 дней | комплаенс | да, до согласования |",
+    "| 3 | Мобильная версия? | вне масштаба | второй продукт | нет |",
+  ].join("\n");
+  const r = checkCriteria(ru);
+  assert.equal(r.blockingOpen, 2); // да and «да, до…» block; нет does not
+  assert.ok(!r.warnings.some((w) => /blocking open questions/.test(w)));
+});
+
+test("checkCriteria: no open-questions section or table — blocking check is silently off (fail-safe)", () => {
+  const without = checkCriteria(SPEC(["1. When X, the system shall Y. (must) — Verify: cmd → 0"]));
+  assert.equal(without.blockingOpen, 0);
+  assert.ok(!without.warnings.some((w) => /blocking/.test(w)));
+
+  const proseOnly = checkCriteria([
+    "# Спека", "",
+    "## 3. Acceptance criteria",
+    ...Array.from({ length: 6 }, (_, i) => `${i + 1}. When X${i}, the system shall Y${i}. (must) — Verify: cmd${i} → 0`),
+    "",
+    "## 7. Open questions",
+    "No table here — just a prose line mentioning blocking.",
+  ].join("\n"));
+  assert.equal(proseOnly.blockingOpen, 0);
+});

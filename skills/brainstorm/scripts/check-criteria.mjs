@@ -10,6 +10,9 @@
  *              — every subjective word carries a number, an example, or an oracle;
  *   - warning: the must-criteria count outside the 5–20 band — too few is a scope
  *              question, too many is several features pretending to be one;
+ *   - warning: more than three blocking open questions — the picture is not one
+ *              yet; resolve or split with the user instead of saving a question
+ *              farm (fail-safe: no Open questions section or table → not checked);
  *   - info:    a criterion that does not start with a known EARS stem — intentional
  *              when the team's working language differs from the stems.
  *
@@ -55,6 +58,17 @@ const SHOULD_RE = /\(\s*(?:should|желательн[а-яё]*|опционал�
  *  \b is ASCII-only, and «перепроверка:» must not count as a Verify. */
 const VERIFY_RE = /(?:^|[^\p{L}])(?:verify|провер[а-яё]*)\s*:/iu;
 
+/** The open-questions section heading, bilingual — a prefix stem for the Cyrillic
+ *  side, as everywhere here (\b never fires around Cyrillic letters). */
+const OPEN_QUESTIONS_HEADING_RE =
+  /^#{1,6}\s*(?:\d+[.\s]*)?\s*(?:open questions\b|открыт[а-яё]*\s+вопрос)/i;
+
+/** Blocking answers, bilingual: the cell must start with the word — "yes, until
+ *  the API lands" blocks, "yes-but" written as "no" does not. The boundary is a
+ *  negative letter-lookahead, not \b: JS \b is ASCII-only and never fires around
+ *  Cyrillic («да,» would lose its edge and stop matching). */
+const BLOCKING_YES_RE = /^(?:yes|да)(?![\p{L}])/iu;
+
 const criteriaSection = (lines) => {
   let start = -1;
   for (let i = 0; i < lines.length; i++) {
@@ -89,6 +103,36 @@ const splitCriteria = (lines) => {
   }
   return items;
 };
+
+/** The number of blocking rows in the spec's Open questions table. The table's
+ *  Blocking column decides (bilingual heading); rows without the column —
+ *  or without the section — are nothing to count (fail-safe, never an error). */
+export function countBlockingOpenQuestions(lines) {
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (OPEN_QUESTIONS_HEADING_RE.test(lines[i])) {
+      start = i + 1;
+      break;
+    }
+  }
+  if (start === -1) return 0;
+  let blocking = 0;
+  let column = -1;
+  for (let i = start; i < lines.length; i++) {
+    if (/^#{1,6}\s+/.test(lines[i])) break; // the next section ends it
+    if (!lines[i].startsWith("|")) continue;
+    const cells = lines[i].split("|").slice(1, -1).map((c) => c.trim());
+    if (cells.length < 2) continue;
+    if (column === -1) {
+      const idx = cells.findIndex((c) => /blocking|блок/i.test(c));
+      if (idx !== -1) column = idx;
+      continue; // the header row itself never counts
+    }
+    if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue; // the separator row
+    if (BLOCKING_YES_RE.test(cells[column] ?? "")) blocking++;
+  }
+  return blocking;
+}
 
 export function checkCriteria(text) {
   const lines = String(text ?? "").split(/\r?\n/);
@@ -125,7 +169,11 @@ export function checkCriteria(text) {
   if (mustCount > MUST_BAND_HIGH) {
     warnings.push(`${mustCount} must criteria — more than ~${MUST_BAND_HIGH} means the scope is really several features; split it with the user`);
   }
-  return { found: true, errors, warnings, infos, mustCount, shouldCount };
+  const blocking = countBlockingOpenQuestions(lines);
+  if (blocking > 3) {
+    warnings.push(`${blocking} blocking open questions — more than three means the picture is not one yet; resolve or split with the user instead of saving a question farm`);
+  }
+  return { found: true, errors, warnings, infos, mustCount, shouldCount, blockingOpen: blocking };
 }
 
 function main(argv) {
@@ -148,7 +196,7 @@ function main(argv) {
     process.exit(0);
   }
 
-  console.log(`check-criteria: ${file} — ${report.mustCount} must criteria${report.shouldCount ? `, ${report.shouldCount} should` : ""}`);
+  console.log(`check-criteria: ${file} — ${report.mustCount} must criteria${report.shouldCount ? `, ${report.shouldCount} should` : ""}${report.blockingOpen ? `, ${report.blockingOpen} blocking open question(s)` : ""}`);
   for (const line of report.errors) console.log(`  error: ${line}`);
   for (const line of report.warnings) console.log(`  warning: ${line}`);
   for (const line of report.infos) console.log(`  info: ${line}`);
