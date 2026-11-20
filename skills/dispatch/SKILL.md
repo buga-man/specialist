@@ -1,6 +1,6 @@
 ---
 name: dispatch
-description: The specialist framework's entry point — classify the task by role (analyst / developer / QA) before any work starts, route to the role's entry skill, and switch roles only with the user's explicit consent. Use when a task starts and the role is unclear, when the task seems to belong to another role, or when the user asks to switch roles.
+description: The specialist framework's entry point — classify the task by role (analyst / developer / QA) before any work starts, route to the role's entry skill, and switch roles only with the user's explicit consent (switch here, a new session, a role subagent, or stay and record). Use when a task starts and the role is unclear, when the task seems to belong to another role, or when the user asks to switch roles.
 ---
 
 # Dispatch — which role takes this task
@@ -48,7 +48,9 @@ another role's work. Stop and ask the user, with these options:
 2. **New session with the needed role** — cleanest for heavy stage work (specs,
    acceptance); the current session keeps its context for its own role.
 3. **A subagent with the role** — where the host supports subagents, hand the task to a
-   fresh agent with a role-entry prompt (this session keeps its role):
+   fresh agent with a role-entry prompt (this session keeps its role). The handoff
+   follows the `scouts` skill's rules — the subagent receives sanitized artifacts,
+   never the conversation:
 
    > Enter the \<role\> role of the specialist framework: load the `role-\<role\>` skill
    > and follow it. The task: \<one paragraph\>. The handoff artifact: \<path\>. Stay

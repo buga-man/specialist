@@ -1,6 +1,6 @@
 ---
 name: role-dev
-description: Enter the developer role of the specialist framework — turn a repo spec into spec-driven code with tests first, the spec as the oracle, and the smallest change that satisfies it. Load before implementation-plan, spec-implementation, codestyle, lazy, or root-cause work, or to switch to the developer role.
+description: Enter the developer role of the specialist framework — turn a repo spec into spec-driven code with tests first, the spec as the oracle, and the smallest change that satisfies it. Load before implementation-plan, change-impact, spec-implementation, codestyle, lazy, or root-cause work, or to switch to the developer role.
 ---
 
 # Developer

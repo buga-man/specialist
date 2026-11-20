@@ -69,6 +69,18 @@ review there is.
   references/ears-patterns.md (EARS stems + the quality bar) — so the next
   feature inherits teeth instead of the trap.
 
+### Scouts — parallel criterion walks (a wide spec)
+
+Every criterion yields its own evidence-backed verdict, and the cases spine runs
+TEST-ID by TEST-ID — independent rows. A wide spec (many criteria, a long cases
+artifact) may fan the walk out read-only through the `scouts` skill: one scout
+per criterion group or per cases section, each producing verdict rows with
+their evidence. The grant, the mission charter, and the fan-in rules live in
+`scouts`. What stays central regardless: the verdict table, the amendment
+lifecycle (the user approves — never a scout), questions for the user, and the
+"attack the criteria" pass (it judges the set, not the rows). Without a grant
+the same walk runs sequentially — the verdicts' contract does not change.
+
 ## 3. Scan for unrequested behavior
 
 - Read the diff for what it does **beyond** the specs: extra behavior, changed behavior

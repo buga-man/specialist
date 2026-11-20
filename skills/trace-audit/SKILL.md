@@ -89,6 +89,17 @@ as passed. What the script cannot see is §3's work.
   is the reverse of the script's draft check — it needs the reading the script will
   not do.
 
+### Scouts — parallel chain walks (§3, a wide tree)
+
+The judgment checks walk feature chains that are independent of each other. A
+wide tree may fan §3 out read-only through the `scouts` skill: one scout per
+feature chain, each reading its reports in date order for findings that never
+closed and recurring classes; the untriaged-queue and approval-honesty checks
+stay with the lead (they read the whole tree, not one chain). The mechanical
+half never fans out — walk.mjs is already tree-wide and fast. The grant, the
+mission charter, and the fan-in rules live in `scouts`. Without a grant the
+same checks run sequentially — the findings table's contract does not change.
+
 ## 4. Route the findings
 
 Every finding names its owner in the report — the audit ends actionable, not

@@ -17,6 +17,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 - `role-qa`
 - `dispatch`
 - `bootstrap`
+- `scouts`
 
 ## Install
 

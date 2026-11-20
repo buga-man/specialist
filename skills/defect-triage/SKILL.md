@@ -1,6 +1,6 @@
 ---
 name: defect-triage
-description: Triage incoming defects and findings the way issue-review triages a report — verify against the code at a named revision (an "already fixed" claim needs the fixing commit proven an ancestor), check the report's completeness against a checklist, dedupe by trigger scenario across prior reports, and assign severity × plausibility, the root-cause class, and a SHA-scoped confidence (confirmed / likely / unverified / refuted). Produces a triage report with routing (plan task / root-cause / spec amendment / wontfix — the user decides wontfix), aging and recurring classes, plus an opt-in draft reply for external reporters. Use when the user asks to triage bugs, process a findings backlog, assess an incoming bug report, or decide what a defect queue is worth.
+description: Triage incoming defects and findings — verify against the code at a named revision (an "already fixed" claim needs the fixing commit proven an ancestor), check the report's completeness against a checklist, dedupe by trigger scenario across prior reports, and assign severity × plausibility, the root-cause class, and a SHA-scoped confidence (confirmed / likely / unverified / refuted). Produces a triage report with routing (plan task / root-cause / spec amendment / wontfix — the user decides wontfix), aging and recurring classes, plus an opt-in draft reply for external reporters. Use when the user asks to triage bugs, process a findings backlog, assess an incoming bug report, or decide what a defect queue is worth.
 ---
 
 # Defect triage
@@ -71,6 +71,18 @@ Every conclusion is scoped to a revision — name the SHA it was reached at.
   - `refuted` — the inspected revision does not behave as described.
   `unverified` and `needs-info` are honest verdicts; guessing a class to close a row
   is the triage's own defect.
+
+### Scouts — parallel verification (step 3, a large queue)
+
+Queue items are independent by construction — every verdict is per-item and
+per-revision — so a large queue may verify through the `scouts` skill: one scout
+per item (or per prior-report family), each reading its code path at its named
+SHA, hunting its fixing commit, proving ancestry. The grant, the mission
+charter, and the fan-in rules live in `scouts`. What stays central regardless:
+step 2's dedupe by scenario (pairwise — it precedes any dispatch), aging and
+recurring over the whole queue, blocker surfacing, and every draft reply.
+Without a grant the same verification runs sequentially — the queue table's
+contract does not change.
 
 ## 4. Completeness check (external reports)
 

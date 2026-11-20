@@ -54,6 +54,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
+| `scouts` *(cross-cutting)* | the subagent protocol behind every fan-out — parallel read-only recon and verification under an explicit grant: one question asks permission and count (`.spec-gate`'s `scouts: <N>` answers it standing), the granted count is the hard budget, no answer or no host support → the same missions sequentially; mission charters (one mission per scout, artifact paths not pastes, never pre-judged), fan-in (reports are hypotheses until re-verified, dedup by scenario, a silent scout is chased), read-only, no recursion |
 | `bootstrap` *(cross-cutting)* | repository → framework-ready: surveys what exists, proposes and creates the confirmed pieces (`.spec-gate`, `docs/specs/` + `docs/plans/`, `CODESTYLE.md` via codestyle, optional `.suite-gate` / `.kbindex/`); legacy documentation migrates under the port-never-rewrite rule (pilot first, the user reviews); idempotent, confirm-before-create, no commits |
 
 **Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
@@ -152,7 +153,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twenty-four skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty-five skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all thirteen hooks: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -239,8 +240,9 @@ one role and the session carries only that role's skills:
 Every role plugin also carries `dispatch` — the entry point that classifies a task by
 role before any work starts and governs switching: roles are switched only with the
 user's explicit consent (switch here / a new session with the role / a role subagent /
-stay and record the task for the other role) — and `bootstrap`, the cross-cutting
-repository primer. The role rows above name each role's own skills; the two shared
+stay and record the task for the other role) — `scouts` (the subagent protocol behind
+every fan-out), and `bootstrap`, the cross-cutting
+repository primer. The role rows above name each role's own skills; the three shared
 ones ride in every plugin.
 
 - **Claude Code / ZCode** — the same marketplace, another plugin:

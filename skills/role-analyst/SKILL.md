@@ -1,6 +1,6 @@
 ---
 name: role-analyst
-description: Enter the analyst role of the specialist framework — take a raw task to verifiable specs (business → system → per-repository) and keep documentation true to the code. Load before brainstorm, system-thinking, decompositor, kb-index, or tech-writer work, when the user asks what should be built, or to switch to the analyst role.
+description: Enter the analyst role of the specialist framework — take a raw task to verifiable specs (business → system → per-repository) and keep documentation true to the code. Load before brainstorm, system-thinking, decompositor, kb-index, tech-writer, or trace-audit work, when the user asks what should be built, or to switch to the analyst role.
 ---
 
 # Analyst

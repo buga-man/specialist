@@ -73,24 +73,21 @@ convenience.
 
 Repo recon splits naturally by repository: one read-only scout per repo, identical mission
 shape. When the change touches several repos — or one repo with a wide blast radius —
-offer to dispatch scout subagents and keep the analysis (stage 4) in the main context:
+dispatch the `scouts` skill and keep the analysis (stage 4) in the main context. The grant
+(one question — permission and count), the mission charter, and the fan-in rules live
+there; the specifics of this skill:
 
-- **Ask first — always.** One explicit question: may subagent scouts be used, and how
-  many? Name the repos (or the split of one wide repo) and the recommended count; the
-  granted number is the hard budget for the run — need more, ask again.
-- **Denied, or the host has no subagent mechanism** → recon the repos yourself,
-  sequentially; the missions and the report contract stay the same.
-- **One mission per scout**: for its repo — what exists today in the affected area, where
-  the change lands, the blast radius (upstream callers, downstream dependencies), and the
-  work the spec never mentioned (frontend, migrations, compatibility). An existing
-  service, endpoint, or job that could replace a "new build" is called out explicitly.
+- Missions here, per repo: what exists today in the affected area, where the change
+  lands, the blast radius (upstream callers, downstream dependencies), and the work the
+  spec never mentioned (frontend, migrations, compatibility). An existing service,
+  endpoint, or job that could replace a "new build" is called out explicitly.
 - **Report contract**: findings tagged `[found]` with `file:line`; reuse candidates and
-  unmentioned work as their own lists; uncertainties separately. The tags survive into the
-  spec — traceability does not break on delegation. What leaves for a scout is
-  cleaned of secrets and personal data — delegation must not widen what the git
-  boundary already guards.
-- Stage 4 stays yours: scouts supply material, not conclusions. Verify a scout's
-  load-bearing claim in the main context before it drives a decision. Scouts read — never edit.
+  unmentioned work as their own lists; uncertainties separately. The tags survive into
+  the spec — traceability does not break on delegation. The contract applies unchanged
+  whether the missions ran in parallel or — denied, unanswered, or unsupported on the
+  host — sequentially.
+- Stage 4 stays yours — scouts supply material, not conclusions (the fan-in rules
+  of `scouts` apply unchanged).
 
 ## 4. Critical analysis
 

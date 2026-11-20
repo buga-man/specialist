@@ -1,6 +1,6 @@
 ---
 name: role-qa
-description: Enter the QA/reviewer role of the specialist framework — accept implementations against their specs with evidence-backed verdicts, and hunt bugs and security holes adversarially. Load before spec-review, stand-acceptance, code-review, or bug-hunt work, or to switch to the QA role.
+description: Enter the QA/reviewer role of the specialist framework — accept implementations against their specs with evidence-backed verdicts, probe specs for holes, and hunt bugs and security holes adversarially. Load before spec-review, stand-acceptance, code-review, bug-hunt, test-analysis, test-design, or defect-triage work, or to switch to the QA role.
 ---
 
 # QA
