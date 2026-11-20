@@ -8,8 +8,9 @@
  *                       [--status <s>] [--type <t>] [--service <s>] [--json]
  *   node kb.mjs map     <dir> [--project <dir>] [--json]
  *   node kb.mjs related <path|id> [--project <dir>] [--json]
- *   node kb.mjs path    <path|id> <path|id> [--project <dir>]
- *   node kb.mjs audit   [--project <dir>]
+ *   node kb.mjs path    <path|id> <path|id> [--project <dir>] [--json]
+ *   node kb.mjs status  [--project <dir>]
+ *   node kb.mjs audit   [--project <dir>] [--json]
  *   node kb.mjs clean   [--project <dir>]
  *
  * The index lives in <project>/.kbindex/ and is not versioned:
@@ -32,9 +33,12 @@ import {
   buildRecord,
   buildSections,
   brokenLinks,
+  compareIndex,
   computeHash,
   cut,
+  dependencyCycles,
   didYouMean,
+  hubDocuments,
   isExcluded,
   relatedOf,
   RELATION_FIELDS,
@@ -68,7 +72,7 @@ const BOILERPLATE = ["status:", "date:", "owner:", "source:", "slug:", "role:", 
 const SHORT_GIST = 40;
 
 export function parseArgs(argv) {
-  const args = { _: [], project: process.cwd(), limit: 20, help: false, json: false, face: {}, error: null };
+  const args = { _: [], project: process.cwd(), limit: 10, help: false, json: false, face: {}, error: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--project") {
@@ -331,9 +335,11 @@ function cmdSearch(projectDir, query, limit, options = {}) {
     const anchor =
       hit.anchor && hit.anchor.heading ? `§${hit.anchor.heading}:${hit.anchor.line}` : "";
     // The pipeline state rides on the face: "draft" before a read saves the agent
-    // a wasted read; docType says which kind of document answered.
+    // a wasted read; docType says which kind of document answered. A body hit
+    // is marked `~` — the match is weaker there, and the agent should know.
     const tags = [hit.status, hit.docType].filter(Boolean).join("/");
-    const head = `${hit.id}  ${hit.path}${tags ? `  [${tags}]` : ""}${anchor ? `  ${anchor}` : ""}`;
+    const tier = index >= face.length ? "~ " : "";
+    const head = `${tier}${hit.id}  ${hit.path}${tags ? `  [${tags}]` : ""}${anchor ? `  ${anchor}` : ""}`;
     lines.push(head);
     if (index >= FULL_HITS) return; // the tail carries the path — nothing more
     if (index >= face.length) {
@@ -462,7 +468,7 @@ function cmdRelated(projectDir, arg, options = {}) {
   out(`${lines.join("\n")}\n`);
 }
 
-function cmdPath(projectDir, argA, argB) {
+function cmdPath(projectDir, argA, argB, options = {}) {
   const records = recordsOf(projectDir);
   const from = targetOf(records, argA);
   const to = targetOf(records, argB);
@@ -477,6 +483,23 @@ function cmdPath(projectDir, argA, argB) {
     process.exit(1);
   }
 
+  if (options.json) {
+    out(
+      `${JSON.stringify({
+        from,
+        to,
+        steps: steps.map((step) => ({
+          from: step.from,
+          to: step.to,
+          relation: step.edge.key,
+          direction: step.edge.from === step.from ? "out" : "in",
+        })),
+        hops: steps.length,
+      })}\n`,
+    );
+    return;
+  }
+
   const lines = [from];
   for (const step of steps) {
     const arrow = step.edge.from === step.from ? "→" : "←";
@@ -486,30 +509,26 @@ function cmdPath(projectDir, argA, argB) {
   out(`${lines.join("\n")}\n`);
 }
 
-function cmdAudit(projectDir) {
+/** Everything the audit knows, as data — the text and the JSON renderings come
+ *  from this one object, so the two never diverge. */
+function auditReport(projectDir) {
   const { records, refs } = buildIndex(projectDir);
+
   const ids = new Map();
   for (const record of records) {
     if (!record.id) continue;
     if (!ids.has(record.id)) ids.set(record.id, []);
     ids.get(record.id).push(record.path);
   }
-
-  const lines = ["kb-index audit"];
-  const duplicates = [...ids.entries()].filter(([, paths]) => paths.length > 1);
-  lines.push(`duplicate ids: ${duplicates.length}`);
-  for (const [id, paths] of duplicates) {
-    lines.push(`  ${id}`);
-    for (const path of paths) lines.push(`    ${path}`);
-  }
+  const duplicates = [...ids.entries()]
+    .filter(([, paths]) => paths.length > 1)
+    .map(([id, paths]) => ({ id, paths: [...paths].sort() }));
 
   const ambiguous = Object.entries(refs.refs).flatMap(([path, list]) =>
-    list.filter((ref) => ref.resolved === null).map((ref) => ({ path, ref })),
+    list
+      .filter((ref) => ref.resolved === null)
+      .map((ref) => ({ path, key: ref.key, value: ref.value, candidates: ref.candidates })),
   );
-  lines.push(`ambiguous refs: ${ambiguous.length}`);
-  for (const { path, ref } of ambiguous) {
-    lines.push(`  ${path} — ${ref.key}: ${ref.value} → ${ref.candidates.join(", ")}`);
-  }
 
   // Dead cross-references: link targets that resolve to no known document AND do not
   // exist on disk (a link to an image or a directory is not a dead document reference;
@@ -523,8 +542,6 @@ function cmdAudit(projectDir) {
       broken.push({ path: record.path, target });
     }
   }
-  lines.push(`broken links: ${broken.length}`);
-  for (const { path, target } of broken.slice(0, 20)) lines.push(`  ${path} → ${target}`);
 
   // Orphans: nothing links to them and no ref resolves to them — isolated documents
   // an agent searching the corpus will never reach through the graph.
@@ -533,34 +550,115 @@ function cmdAudit(projectDir) {
     for (const link of record.links || []) referenced.add(link);
     for (const ref of record.refs || []) if (ref.resolved) referenced.add(ref.resolved);
   }
-  const orphans = records.filter((record) => !referenced.has(record.path));
-  lines.push(`orphan documents (nothing points at them): ${orphans.length}`);
-  for (const record of orphans.slice(0, 20)) lines.push(`  ${record.path}`);
+  const orphans = records.filter((record) => !referenced.has(record.path)).map((record) => record.path);
 
   // Pipeline-state health: a draft aging out, and content that changed after the
   // frontmatter's last-updated — the spec pipeline keys on both.
   const DRAFT_STALE_DAYS = 30;
   const day = (ms) => new Date(ms).toISOString().slice(0, 10);
-  const staleDrafts = records.filter(
-    (record) => record.status === "draft" && record.mtime > 0 && Date.now() - record.mtime > DRAFT_STALE_DAYS * 864e5,
-  );
-  lines.push(`drafts older than ${DRAFT_STALE_DAYS} days: ${staleDrafts.length}`);
-  for (const record of staleDrafts.slice(0, 20)) lines.push(`  ${record.path}`);
-  const drifted = records.filter((record) => {
-    if (!record.lastUpdated || !record.mtime) return false;
-    const updated = new Date(record.lastUpdated);
-    return !Number.isNaN(updated.getTime()) && day(record.mtime) > record.lastUpdated;
-  });
-  lines.push(`content changed after last-updated: ${drifted.length}`);
-  for (const record of drifted.slice(0, 20)) lines.push(`  ${record.path}`);
+  const staleDrafts = records
+    .filter(
+      (record) => record.status === "draft" && record.mtime > 0 && Date.now() - record.mtime > DRAFT_STALE_DAYS * 864e5,
+    )
+    .map((record) => record.path);
+  const drifted = records
+    .filter((record) => {
+      if (!record.lastUpdated || !record.mtime) return false;
+      const updated = new Date(record.lastUpdated);
+      return !Number.isNaN(updated.getTime()) && day(record.mtime) > record.lastUpdated;
+    })
+    .map((record) => record.path);
 
-  const noGist = records.filter((record) => !record.gist);
-  const noAnchor = records.filter((record) => !record.anchor);
-  lines.push(`documents without gist: ${noGist.length}`);
-  for (const record of noGist.slice(0, 20)) lines.push(`  ${record.path}`);
-  lines.push(`documents without anchor: ${noAnchor.length}`);
-  for (const record of noAnchor.slice(0, 20)) lines.push(`  ${record.path}`);
+  const kinds = { usable: 0, empty: 0, boilerplate: 0, short: 0 };
+  for (const record of records) kinds[gistKind(record.gist)]++;
 
+  return {
+    documents: records.length,
+    gist: kinds,
+    withoutGist: records.filter((record) => !record.gist).map((record) => record.path),
+    withoutAnchor: records.filter((record) => !record.anchor).map((record) => record.path),
+    duplicateIds: duplicates,
+    ambiguousRefs: ambiguous,
+    brokenLinks: broken,
+    orphans,
+    staleDraftDays: DRAFT_STALE_DAYS,
+    staleDrafts,
+    drifted,
+    cycles: dependencyCycles(records),
+    hubs: hubDocuments(records),
+  };
+}
+
+/** The text rendering of the audit report — the shape agents already read. */
+function renderAudit(report) {
+  const lines = ["kb-index audit"];
+  lines.push(`duplicate ids: ${report.duplicateIds.length}`);
+  for (const { id, paths } of report.duplicateIds) {
+    lines.push(`  ${id}`);
+    for (const path of paths) lines.push(`    ${path}`);
+  }
+
+  lines.push(`ambiguous refs: ${report.ambiguousRefs.length}`);
+  for (const { path, key, value, candidates } of report.ambiguousRefs) {
+    lines.push(`  ${path} — ${key}: ${value} → ${candidates.join(", ")}`);
+  }
+
+  lines.push(`broken links: ${report.brokenLinks.length}`);
+  for (const { path, target } of report.brokenLinks.slice(0, 20)) lines.push(`  ${path} → ${target}`);
+
+  lines.push(`orphan documents (nothing points at them): ${report.orphans.length}`);
+  for (const path of report.orphans.slice(0, 20)) lines.push(`  ${path}`);
+
+  lines.push(`dependency cycles: ${report.cycles.length}`);
+  for (const cycle of report.cycles.slice(0, 20)) lines.push(`  ${[...cycle, cycle[0]].join(" → ")}`);
+
+  lines.push(`hub documents (most pointed at): ${report.hubs.length}`);
+  for (const { path, links } of report.hubs) lines.push(`  ${path} — ${links} links in`);
+
+  lines.push(`drafts older than ${report.staleDraftDays} days: ${report.staleDrafts.length}`);
+  for (const path of report.staleDrafts.slice(0, 20)) lines.push(`  ${path}`);
+  lines.push(`content changed after last-updated: ${report.drifted.length}`);
+  for (const path of report.drifted.slice(0, 20)) lines.push(`  ${path}`);
+
+  lines.push(`documents without gist: ${report.withoutGist.length}`);
+  for (const path of report.withoutGist.slice(0, 20)) lines.push(`  ${path}`);
+  lines.push(`documents without anchor: ${report.withoutAnchor.length}`);
+  for (const path of report.withoutAnchor.slice(0, 20)) lines.push(`  ${path}`);
+
+  return lines.join("\n");
+}
+
+function cmdAudit(projectDir, options = {}) {
+  const report = auditReport(projectDir);
+  if (options.json) {
+    out(`${JSON.stringify(report)}\n`);
+    return;
+  }
+  out(`${renderAudit(report)}\n`);
+}
+
+/** The index-vs-disk divergence on demand — what a Stop block would say, printed
+ *  without blocking. Answers "why does the gate complain" in one command. */
+function cmdStatus(projectDir) {
+  const index = readIndex(projectDir);
+  if (!index) {
+    out("kb-index: no index — run build\n");
+    return;
+  }
+  const config = readConfig(projectDir);
+  const files = selectPaths(listMarkdownFiles(projectDir), config);
+  const disk = files.map((path) => ({ path, hash: computeHash(readDoc(projectDir, path)) }));
+  const { changed, added, missing } = compareIndex(index, disk);
+
+  const lines = [`kb-index: ${index.length} documents indexed, ${files.length} on disk`];
+  const section = (name, list) => {
+    lines.push(`${name}: ${list.length}`);
+    for (const path of list.slice(0, 20)) lines.push(`  ${path}`);
+  };
+  section("changed", changed);
+  section("added", added);
+  section("missing", missing);
+  lines.push(changed.length + added.length + missing.length === 0 ? "index is fresh" : "index is stale — run build");
   out(`${lines.join("\n")}\n`);
 }
 
@@ -580,14 +678,15 @@ function main(argv) {
   if (args.help || !command) {
     note(
       [
-        "usage: kb.mjs build|search|map|related|path|audit|clean [--project <dir>] [--limit <n>]",
-        "        search [--status <s>] [--type <t>] [--service <s>]   map|related [--json]",
+        "usage: kb.mjs build|search|map|related|path|status|audit|clean [--project <dir>] [--limit <n>]",
+        "        search [--status <s>] [--type <t>] [--service <s>]   map|related|path|audit [--json]",
         "  build              — rebuild the index, the sections and the maps, print the report",
         "  search <query>     — find documents by their face, then by their body sections;",
         "                       the filters narrow the corpus before the search",
         "  map <dir>          — print the map of a directory",
         "  related <path|id>  — the documents linked to and from one document",
         "  path <a> <b>       — the shortest chain of documents between two documents",
+        "  status             — the index-vs-disk divergence, without the gate",
         "  audit              — report on the quality of the data",
         "  clean              — remove .kbindex",
       ].join("\n") + "\n",
@@ -598,6 +697,9 @@ function main(argv) {
   switch (command) {
     case "build":
       cmdBuild(args.project);
+      break;
+    case "status":
+      cmdStatus(args.project);
       break;
     case "search": {
       const query = args._.slice(1).join(" ").trim();
@@ -632,11 +734,11 @@ function main(argv) {
         note("kb-index: path needs two documents (paths or ids)\n");
         process.exit(2);
       }
-      cmdPath(args.project, a, b);
+      cmdPath(args.project, a, b, { json: args.json });
       break;
     }
     case "audit":
-      cmdAudit(args.project);
+      cmdAudit(args.project, { json: args.json });
       break;
     case "clean":
       cmdClean(args.project);
