@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md and the specs' recorded decisions where present, and the tests; also maps the diff's stale impact on the existing suite (tests to re-run, tests that may now lie, coverage silently removed); produces findings with file:line evidence and severity, persisted as a report. Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
+description: Review a diff for code quality and logic — how well the change is written and whether it does its work efficiently. Use when the user asks to review code quality, readability, structure, naming, or to look for suboptimal logic (needless work, N+1, accidental complexity) on a branch or diff. Reads the diff with the code around each hunk, the repo's CODESTYLE.md and the specs' recorded decisions where present, and the tests; also maps the diff's stale impact on the existing suite (tests to re-run, tests that may now lie, coverage silently removed); produces findings with file:line evidence and severity, persisted as a report that opens with a change map — heart / consequences / glue — and closes it with a Not-reviewed line (no changed file skipped in silence). Spec compliance belongs to spec-review; bugs and security holes belong to bug-hunt. Runs best in a fresh session — the reviewer does not fix.
 ---
 
 # Code review
@@ -113,6 +113,15 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
 
 - Persist the report as `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`, next to the
   specs of the feature — findings must stay navigable, not live in chat.
+- The report opens with a **change map** — the review order of §1 made visible to the
+  reader: the **heart** (the files carrying the change's intent), the
+  **consequences** (what the heart moves: callers, tests, config), the **glue**
+  (generated files, renames, mechanical churn) — one sentence on why the heart is
+  the heart, not a file-by-file retelling; the diff itself is the inventory. A
+  small diff's map is a single line. The map ends with the coverage line
+  `Not reviewed: N — <files>`, written as `Not reviewed: none` when N is 0: every
+  changed file is in the map, in the findings, or named as not reviewed — a
+  reviewer quietly skipping files is the report's blind spot.
 - Findings live in a table — one row per finding: `location | class | severity |
   direction` — classes from the passes (naming, structure, duplication, dead
   weight, error idioms, tests; needless work, data fit, hot path, accidental

@@ -349,6 +349,12 @@ effort.
 - **Input → output:** diff (branch against base) + the code around each hunk +
   `CODESTYLE.md` where present + the spec chain's recorded decisions ("Decisions and
   rationale") where the feature has them → `docs/specs/YYYY-MM-DD-<topic>-<repo>-quality.md`
+- **Change map:** the report opens with the diff as three groups — **heart** /
+  **consequences** / **glue**, one sentence on why the heart is the heart, not a
+  file-by-file retelling — and closes it with the coverage line
+  `Not reviewed: N — <files>` (`Not reviewed: none` when empty): every changed file
+  is in the map, in the findings, or named as not reviewed; a reviewer quietly
+  skipping files is the report's blind spot.
 - **Three passes:** quality — intent vs naming, structure, duplication (new symbols
   grepped against the repo; a duplicate is a finding even when the plan ordered it),
   dead weight, error-handling idioms, tautological tests; logic — needless work, N+1,

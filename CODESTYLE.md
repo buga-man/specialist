@@ -72,6 +72,12 @@ appears, its aspect moves out of the document into that table.
 - Temp directories: `mkdtempSync` + cleanup in `process.on("exit")`
   (`hooks/lib/kb-gate.test.mjs:17`).
 - A regression of new behavior is captured by a test in the same commit.
+- A new or heavily rewritten skill is proven in a clean room before release: a fresh
+  agent session that sees only its SKILL.md, a scratch folder outside this
+  repository, a real task from the skill's domain. Judge what the agent does, not
+  what the text says — a skill is instructions an agent executes, and only the
+  execution is the test (live precedent: the 0.38.0 scouts fan-out found 12 wording
+  fixes before the release).
 
 ## 7. Comments and language
 
@@ -107,6 +113,11 @@ appears, its aspect moves out of the document into that table.
   kb-index — `skills/kb-index/scripts/lib/kb-core.mjs` (1197),
   `skills/kb-index/scripts/lib/kb-core.test.mjs` (627), `skills/kb-index/scripts/kb.mjs`
   (546): read them in chunks, do not split unprompted.
+- SKILL.md files stay within one capped read — every one under 220 lines and 13 KB
+  (`scripts/skill-size.mjs` in npm test, 2026-11-20): a skill loads whole into the
+  session on every use, and one that grows with every release dilutes the attention
+  its own instructions get. A skill that outgrows its cap moves detail into
+  `references/` (precedent: `skills/brainstorm/references/`).
 - Why-comments carry provenance and survive refactors: a dated decision record
   (`hooks/lib/vuln-core.mjs:9` — "Design decisions (agreed 2026-11-08)"), the reason a
   workaround exists (`skills/codestyle/scripts/lib/codestyle-core.mjs:103` — the local-date
