@@ -7,8 +7,9 @@
  *   - An active plan lives in docs/plans/*.md; a task is a "### Task ..." section.
  *   - A task is closed by an explicit "- Done: ..." line. Checkbox lines ("- [x] ...")
  *     are progress notes and never close a task.
- *   - A task's editable files are the backticked paths on its "- Files:" line;
- *     glob patterns (e.g. "*.css" under a tree) are honored.
+ *   - A task's editable files are the backticked paths on its "- Files:" line and the
+ *     line's continuation (a wrapped Files list is one scope line); glob patterns
+ *     (e.g. "*.css" under a tree) are honored.
  *   - Edits to files outside the open tasks' file lists are a scope violation.
  *   - The markers are English-only; the prose around them is the team's language.
  *
@@ -225,6 +226,12 @@ export function activePlanInfo(projectDir) {
     let taskFiles = [];
     let taskTitle = "";
     let inFence = false; // a fenced example inside a plan is prose, never contract
+    let filesTail = false; // the task's last bullet was a "- Files:" line — its wrap continues the list
+    const collectFilesPaths = (s) => {
+      for (const m of s.matchAll(/`([^`]+)`/g)) {
+        taskFiles.push(m[1].trim().replace(/\\/g, "/").replace(/^\.\//, ""));
+      }
+    };
     const flush = () => {
       if (inTask && taskOpen) {
         result.hasOpenTasks = true;
@@ -239,11 +246,13 @@ export function activePlanInfo(projectDir) {
       taskHasFilesLine = false;
       taskFiles = [];
       taskTitle = "";
+      filesTail = false;
     };
     for (const raw of text.split(/\r?\n/)) {
       const line = raw.trimEnd();
       if (/^\s*(?:```|~~~)/.test(line)) {
         inFence = !inFence;
+        filesTail = false;
         continue;
       }
       if (inFence) continue;
@@ -259,7 +268,16 @@ export function activePlanInfo(projectDir) {
         flush(); // another section header — the task ended
         continue;
       }
-      if (!/^[-*+]\s/.test(line.trim())) continue;
+      if (!/^[-*+]\s/.test(line.trim())) {
+        // A "- Files:" list wraps like any long markdown line (lazy continuation):
+        // the backticked paths on the wrap belong to the same scope line. The tail
+        // ends at a blank line, a new bullet, a heading, or a fence — later prose
+        // must not leak into the scope.
+        if (line.trim() === "") filesTail = false;
+        else if (filesTail) collectFilesPaths(line);
+        continue;
+      }
+      filesTail = false;
       const bullet = line.trim().toLowerCase().replace(/^[-*+]+\s*/, "");
       // Closure is the explicit marker ("- Done: <commit>"); "- [x]" checkboxes are
       // progress notes and never close a task.
@@ -269,9 +287,8 @@ export function activePlanInfo(projectDir) {
       }
       if (/^files\s*:/i.test(bullet)) {
         taskHasFilesLine = true;
-        for (const m of line.matchAll(/`([^`]+)`/g)) {
-          taskFiles.push(m[1].trim().replace(/\\/g, "/").replace(/^\.\//, ""));
-        }
+        filesTail = true;
+        collectFilesPaths(line);
       }
     }
     flush();
@@ -353,7 +370,8 @@ export function decide({ projectDir, filePath, mode }) {
             "spec-gate: an open task in docs/plans/ has a `- Files:` line with no backticked " +
             'paths, so its scope cannot be determined. The gate is off until this is fixed. ' +
             'Format the line as `- Files: `path/one.ts`, `path/two.ts`` — backticks and a "- " bullet ' +
-            'are required, and the line must come before any "- Done:" marker.',
+            'are required, and the line must come before any "- Done:" marker. A wrapped list is ' +
+            'fine — keep every path in backticks and no blank line inside the list.',
         };
       }
       // No "- Files:" line at all — fail safe (nothing to enforce).

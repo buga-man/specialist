@@ -136,7 +136,7 @@ Undos in reverse execution order, then one post-rollback verify:
   (copy their field set); creating it is **two edits** — set its `parent` (the repo spec)
   and append the plan's `id` to that spec's `children`; a parent with downstream docs and
   an empty `children` is a traceability defect.
-- **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language).
+- **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language). A long `- Files:` list may wrap — the gate reads the continuation lines as the same scope line; keep every path in backticks and no blank line inside the list.
 - **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later (the qa role; if it is not installed, a fresh review pass before merge); do not inflate it into a full spec chain.
 - Write the plan in the team's working language, which may differ from the language of this skill.
 

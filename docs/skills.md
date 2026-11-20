@@ -154,7 +154,8 @@ needs. Written plans survive session boundaries and compaction — plans in a he
 
 - **Input → output:** repo spec → `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`
 - **Task format (machine-readable, parsed by spec-gate):** `### Task N`, `- Files:`
-  (paths in backticks, on one line, globs allowed), action steps, `Verify` with the exact
+  (paths in backticks, globs allowed; a long list may wrap — the continuation lines
+  are the same scope line), action steps, `Verify` with the exact
   command and expected result, `Commit`; optional `Risk:`/`Revert:`/`Criteria:`/`Verify (red):`
   per task; plan-level `## Revert` (reverse-order undos + post-rollback verify), a final
   full-suite task, an optional `## Decision log`. One task = one commit. The hook reads only
