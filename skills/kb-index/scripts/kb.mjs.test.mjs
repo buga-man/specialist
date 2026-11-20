@@ -306,6 +306,64 @@ test("search: --status narrows the corpus before the search", () => {
   assert.equal(kb(dir, "search", "warehouse", "--status", "review").trim(), "kb-index: no matches");
 });
 
+test("search: --type and --service narrow by the frontmatter fields (the record's docType/service)", () => {
+  // --type reads the record's docType field (frontmatter doc-type / type) — the
+  // flag and the field have different names; the filter must meet the field.
+  const br = ["---", "id: B-1", "doc-type: br", "service: warehouse", "---", "", "## S", "logistics text"].join("\n");
+  const us = ["---", "id: B-2", "type: us", "---", "", "## S", "logistics text"].join("\n");
+  const dir = project({ "docs/br.md": br, "docs/us.md": us });
+  kb(dir, "build");
+  assert.match(kb(dir, "search", "logistics", "--type", "br"), /B-1/);
+  assert.match(kb(dir, "search", "logistics", "--type", "us"), /B-2/); // the bare `type` frontmatter key counts too
+  assert.equal(kb(dir, "search", "logistics", "--type", "br", "--service", "nope").trim(), "kb-index: no matches");
+  const serviced = kb(dir, "search", "logistics", "--service", "warehouse");
+  assert.match(serviced, /B-1/);
+  assert.doesNotMatch(serviced, /B-2/); // no service field — filtered out
+});
+
+test("search: --json honors --limit, caps the snippets and reports the truncation", () => {
+  const doc = (i) =>
+    ["---", `id: M-${i}`, "title: Procedure", "---", "", "Procedure document.", "", "## Steps", `Meridian calibration step ${i} runs.`].join("\n");
+  const files = {};
+  for (let i = 1; i <= 7; i++) files[`docs/m${i}.md`] = doc(i);
+  const dir = project(files);
+  kb(dir, "build");
+
+  const limited = JSON.parse(kb(dir, "search", "meridian", "--json", "--limit", "3"));
+  assert.equal(limited.body.length, 3);
+  assert.equal(limited.truncated, 4); // 7 hits — 3 shown
+
+  const full = JSON.parse(kb(dir, "search", "meridian", "--json"));
+  assert.equal(full.body.length, 7);
+  assert.equal(full.truncated, undefined); // within the default limit
+  assert.equal(full.body.filter((hit) => hit.snippet !== null).length, 5); // the head answers, the tail is ids
+  assert.equal(full.body.filter((hit) => hit.snippet === null).length, 2);
+});
+
+test("build: a UTF-8 BOM before the frontmatter does not eat the metadata", () => {
+  const bom = ["\uFEFF---", "id: BOM-1", "title: Bombed", "---", "", "## S", "calibration text"].join("\n");
+  const dir = project({ "docs/bom.md": bom });
+  kb(dir, "build");
+  const out = kb(dir, "search", "BOM-1"); // the id is a face hit only if the frontmatter parsed
+  assert.match(out, /BOM-1/);
+});
+
+test("map: --json of the root (\".\") lists the root documents", () => {
+  const dir = project({ "README.md": DOC.replace("REQ-001", "ROOT-1"), "docs/req/REQ-001.md": DOC });
+  const parsed = JSON.parse(kb(dir, "map", ".", "--json"));
+  assert.equal(parsed.dir, "");
+  assert.equal(parsed.documents.length, 1);
+  assert.equal(parsed.documents[0].path, "README.md");
+});
+
+test("map: a \"..\" segment is rejected, not walked out of the index", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  kb(dir, "build");
+  const r = spawnSync(process.execPath, [KB, "map", "../../somewhere", "--project", dir], { encoding: "utf8" });
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /not "\.\."/);
+});
+
 test("search: --json is machine output", () => {
   const dir = project({ "docs/req/REQ-010.md": BODY_DOC });
   const raw = kb(dir, "search", "pallets", "--json");

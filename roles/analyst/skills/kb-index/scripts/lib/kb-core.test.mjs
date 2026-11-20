@@ -713,6 +713,15 @@ test("snippet: the search stops at the next heading", () => {
   assert.equal(snippetOf(doc, 1, "pallets"), null);
 });
 
+test("snippet: a # line inside a code fence is section text, not a boundary", () => {
+  // The section indexer is fence-aware; the snippet pass must agree — a "# comment"
+  // inside ```bash ends nothing, and a fenced line can itself be the answer.
+  const doc = ["## Warehouse", "```bash", "# install the thing", "```", "", "The pallets arrive before noon."].join("\n");
+  assert.deepEqual(snippetOf(doc, 1, "pallets"), { line: 6, text: "The pallets arrive before noon." });
+  const fencedAnswer = ["## Warehouse", "```bash", "kb build --project pallets", "```"].join("\n");
+  assert.deepEqual(snippetOf(fencedAnswer, 1, "pallets"), { line: 3, text: "kb build --project pallets" });
+});
+
 test("snippet: morphology — a word minus its last character matches", () => {
   const doc = "## Warehouse\nThe pallet arrives at noon.\n";
   assert.equal(snippetOf(doc, 1, "pallets").text, "The pallet arrives at noon.");

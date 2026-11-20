@@ -104,10 +104,14 @@ function walkMarkdown(root, current, seen = new Set()) {
   return files.sort();
 }
 
-/** The text of a document; a missing file reads as an empty text. */
+/** The text of a document; a missing file reads as an empty text. A leading
+ *  UTF-8 BOM is stripped: Notepad and PowerShell write one by default on
+ *  Windows, and "\uFEFF---" would fail the frontmatter check so silently that
+ *  the whole document loses its metadata (the hash covers the stripped text —
+ *  a BOM flip re-indexes the file, as a content change should). */
 export function readDoc(projectDir, relPath) {
   try {
-    return readFileSync(join(projectDir, ...String(relPath).split("/")), "utf8");
+    return readFileSync(join(projectDir, ...String(relPath).split("/")), "utf8").replace(/^\uFEFF/, "");
   } catch {
     return "";
   }

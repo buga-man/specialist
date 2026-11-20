@@ -115,6 +115,23 @@ test("checkGitCommand: git add of a sensitive file — block", async () => {
   assert.ok(r.reason.includes(".secrets-allow"));
 });
 
+test("checkGitCommand: a C-quoted status path is unquoted before the allowlist matches", async () => {
+  // core.quotePath C-quotes non-ASCII names: ключ.pem arrives as
+  // "\320\272\320\273\321\216\321\207.pem" — an allowlist line written for the
+  // real name must still reach it.
+  const status = '?? "\\320\\272\\320\\273\\321\\216\\321\\207.pem"\n';
+  const statusRun = async (cmd, args) =>
+    args[0] === "status" ? { code: 0, stdout: status, stderr: "" } : { code: 0, stdout: "", stderr: "" };
+  const allowed = await checkGitCommand({
+    projectDir: project({ ".secrets-allow": "^ключ\\.pem$" }),
+    command: "git add .",
+    run: statusRun,
+  });
+  assert.equal(allowed, null); // the real name is allowlisted — the quoted form must not dodge it
+  const blocked = await checkGitCommand({ projectDir: project({}), command: "git add .", run: statusRun });
+  assert.ok(blocked && blocked.reason.includes("ключ.pem"));
+});
+
 test("checkGitCommand: a secret in the commit's staged diff — block without echoing the value", async () => {
   const dir = project({});
   const diff = `diff --git a/src/c.py b/src/c.py\n@@ -1,0 +2,1 @@\n+KEY = "${AWS}"`;

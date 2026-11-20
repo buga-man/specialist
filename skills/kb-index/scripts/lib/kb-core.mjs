@@ -1386,10 +1386,14 @@ export function snippetOf(content, anchorLine, query, limit = 160) {
   const terms = parseQuery(query)
     .include.map((term) => ({ term, stem: term.length >= 4 ? term.slice(0, -1) : "" }));
   if (!terms.length) return null;
+  // The same fence map extractSections uses: a "# comment" inside a fenced block
+  // is section text (and can be the answering line), never a section boundary —
+  // the two passes must agree about what a section contains.
+  const inside = fencedLines(lines);
 
   for (let i = start - 1; i < lines.length; i++) {
     const line = stripCr(lines[i]);
-    if (i > start - 1 && /^#{1,6}\s/.test(line.trim())) break; // the next section begins
+    if (i > start - 1 && !inside[i] && /^#{1,6}\s/.test(line.trim())) break; // the next section begins
     const trimmed = line.trim();
     if (!trimmed) continue;
 

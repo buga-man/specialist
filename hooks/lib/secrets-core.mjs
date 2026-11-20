@@ -322,10 +322,12 @@ export async function checkGitCommand({ projectDir, command, run }) {
       if (!explicit.length || dirSpecs.length) {
         const r = await run("git", ["status", "--porcelain", "--untracked-files=all"], { cwd: dir, timeout: 15000 });
         if (r.code === 0 && r.stdout) {
+          // core.quotePath C-quotes non-ASCII names ("d\303\266nem.md"); unquoted, an
+          // allowlist regex written for the real name could never match them.
           const fromIndex = r.stdout
             .split(/\r?\n/)
             .filter((l) => l.trim())
-            .map((l) => l.slice(3).replace(/^.* -> /, "").trim());
+            .map((l) => unquoteGitPath(l.slice(3).replace(/^.* -> /, "").trim()));
           const underSpecs = (p) => !dirSpecs.length || dirSpecs.some((d) => matchesPathspec(p, d));
           candidates = candidates.concat(fromIndex.filter(underSpecs));
         }

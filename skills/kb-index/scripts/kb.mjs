@@ -290,13 +290,20 @@ function cmdBuild(projectDir) {
  *  list attentively, the tail is a reminder that the list goes on. */
 const FULL_HITS = 5;
 
+/** The CLI flag → the record field it filters. `--type` reads the record's
+ *  `docType` (the frontmatter's `doc-type`/`type`); the flag keeps its short
+ *  name, the record keeps its field — this map is the only place they meet. */
+const FACE_FIELD = { status: "status", type: "docType", service: "service" };
+
 /** Keeps only the records whose face matches the --status/--type/--service
  *  filters. The filter runs before the search, so both tiers — face and body —
  *  see the same narrowed corpus. */
 function filterByFace(records, face) {
   const keys = Object.keys(face);
   if (!keys.length) return records;
-  return records.filter((record) => keys.every((key) => String(record[key] ?? "").toLowerCase() === face[key]));
+  return records.filter((record) =>
+    keys.every((key) => String(record[FACE_FIELD[key] ?? key] ?? "").toLowerCase() === face[key]),
+  );
 }
 
 /** The answering line of a body hit: read from the file at the anchor of its
@@ -326,13 +333,23 @@ function cmdSearch(projectDir, query, limit, options = {}) {
   const { face, body } = searchWithBody(records, readSections(projectDir), query);
 
   if (options.json) {
+    // The same economy as the text mode: --limit bounds both tiers, and the
+    // answering line (a file read per hit) is computed for the head only —
+    // a machine consumer gets the same shape, not an unbounded dump.
+    const cutFace = face.slice(0, limit);
+    const cutBody = body.slice(0, limit);
+    const total = face.length + body.length;
     out(
       `${JSON.stringify({
         query,
         filters: { ...(options.face || {}), ...(options.updatedSince ? { updatedSince: options.updatedSince } : {}) },
-        face,
-        body: body.map((hit) => ({ ...hit, snippet: bodySnippet(projectDir, hit, query) })),
-        ...(face.length + body.length === 0 ? { didYouMean: didYouMean(records, query) } : {}),
+        face: cutFace,
+        body: cutBody.map((hit, index) => ({
+          ...hit,
+          snippet: index < FULL_HITS ? bodySnippet(projectDir, hit, query) : null,
+        })),
+        ...(total === 0 ? { didYouMean: didYouMean(records, query) } : {}),
+        ...(total > cutFace.length + cutBody.length ? { truncated: total - (cutFace.length + cutBody.length) } : {}),
       })}\n`,
     );
     return;
@@ -376,7 +393,14 @@ function cmdSearch(projectDir, query, limit, options = {}) {
 }
 
 function cmdMap(projectDir, dir, options = {}) {
-  const target = dir.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
+  let target = dir.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
+  if (target === "." || target === "./") target = ""; // the root's name on the CLI and in the index
+  if (target.split("/").includes("..")) {
+    // nearestMap walks the maps tree upwards; a ".." segment would walk it out of
+    // .kbindex — reading INDEX.md files the corpus never held.
+    note("kb-index: map takes a directory inside the project, not \"..\"\n");
+    process.exit(2);
+  }
   const records = recordsOf(projectDir);
 
   // The JSON map is the exact directory — no lift to the parent map, so the
