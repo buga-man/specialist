@@ -20,6 +20,10 @@ When this repository is installed as a pi package (`pi install ...`), all
 - **vuln-guard.ts** — blocks `bash` running `git commit` when semgrep finds
   vulnerabilities in the staged files. No semgrep on PATH — a no-op. The opt-in per-edit
   scan (`.vuln-guard=always`) lives in edit-guard.ts. Logic: `../hooks/lib/vuln-core.mjs`.
+- **suite-gate.ts** — blocks `bash` running `git commit` when the project's test
+  command from `.suite-gate` (first line) exits non-zero. Opt-in: no file, empty, or
+  `off` — pass-through; a spawn error or timeout is uncertainty, not a red suite.
+  Logic: `../hooks/lib/suite-core.mjs`.
 - **edit-guard.ts** — after a successful `edit`/`write`, in one handler and one
   deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:`
   scope line or of the guard allowlists is called out), the project's formatter

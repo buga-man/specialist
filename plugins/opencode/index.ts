@@ -11,8 +11,9 @@
  *       edit / write  → spec-gate: the plan scope (docs/plans/) is enforced on the
  *                       payload's target files.
  *   - `tool.execute.after` / `execute.after`
- *       failed calls  → skipped: a failed edit or a failed git command changed nothing,
- *                       so post-edit guards and staleness signals would only mislead.
+ *       failed calls  → skipped (V2, which sees the call's status): a failed edit or a
+ *                       failed git command changed nothing, so post-edit guards and
+ *                       staleness signals would only mislead.
  *       bash          → git-watch: after a tree-changing git operation, a staleness
  *                       signal for the derived artifacts is appended to the tool output.
  *       edit / write  → edit-guard: boundary-visibility notes, then format-guard +
@@ -253,9 +254,19 @@ const definition = Plugin.define({
   },
 });
 
-/** The V1 hooks object (supported by OpenCode 1.18.29+; harmless in V2). */
+/** The V1 hooks object (supported by OpenCode 1.18.29+; harmless in V2).
+ *
+ *  V1's `execute.after` payload carries no tool arguments (its input is
+ *  { tool, sessionID, callID } and its output is { title, output, metadata } —
+ *  `args` exists only on `execute.before`'s output). The after-hooks therefore
+ *  read the arguments captured in `before` under the same callID; a call that
+ *  somehow skipped `before` sees no arguments and stays silent. V1 has no
+ *  status field either, so the failed-call skip is V2's alone. */
 async function server(ctx: any) {
   const projectDir = projectDirOf(ctx);
+  const callArgs = new Map<string, any>();
+  const argsOf = (input: any, output: any): EditInput | undefined =>
+    callArgs.get(String(input?.callID ?? "")) ?? input?.args ?? output?.args;
   return {
     "chat.message": async (input: any, output: any) => {
       orientationOnce(input?.sessionID, (text) => {
@@ -263,16 +274,21 @@ async function server(ctx: any) {
       }, projectDir);
     },
     "tool.execute.before": async (input: any, output: any) => {
+      if (callArgs.size > 500) callArgs.clear(); // before-without-after must not leak forever
+      callArgs.set(String(input?.callID ?? ""), output?.args);
       await guardBefore(projectDir, String(input?.tool ?? ""), output?.args);
     },
     "tool.execute.after": async (input: any, output: any) => {
+      const key = String(input?.callID ?? "");
+      const args = argsOf(input, output);
+      callArgs.delete(key);
       const tool = String(input?.tool ?? "");
       if (tool === "bash") {
-        await watchAfterBash(projectDir, output?.args, output);
+        await watchAfterBash(projectDir, args, output);
         return;
       }
       if (tool === "edit" || tool === "write" || tool === "patch") {
-        await afterEdit(projectDir, output?.args, output);
+        await afterEdit(projectDir, args, output);
       }
     },
   };

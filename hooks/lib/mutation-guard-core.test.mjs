@@ -36,6 +36,9 @@ test("the outward and history shapes are blocked", () => {
   blocked("git push");
   blocked("git push origin main");
   blocked("git push --force-with-lease origin main");
+  blocked("git -c user.name=x push origin main"); // global -c settings must not hide the push
+  blocked("git -c user.name=x -c receive.denyCurrentBranch=x push"); // and they repeat
+  blocked("git -C ../other -c user.name=x push"); // interleaved with -C, in any order
   blocked("git reset --hard HEAD~2");
   blocked("git reset -q --hard origin/main");
   blocked("git rebase main");
@@ -52,6 +55,8 @@ test("the outward and history shapes are blocked", () => {
   blocked("git stash drop stash@{2}");
   blocked("git stash clear");
   blocked("git restore .");
+  blocked("git restore --staged --worktree src/index.ts"); // --worktree discards even next to --staged
+  blocked("git restore --worktree src/index.ts");
   blocked("git restore src/index.ts");
 });
 
@@ -109,6 +114,7 @@ test("hook bypasses: a displaced core.hooksPath is blocked on any command", () =
   blockedBypass('git -c "core.hooksPath=/tmp/my hooks" commit'); // quoted value
   blockedBypass("git -C .. -c core.hooksPath=/x push"); // global options interleave
   blockedBypass("git -c user.name=y -c core.hooksPath=/x commit"); // and repeat
+  blockedBypass("git -c user.name=y commit --no-verify"); // a plain -c must not hide the bypass either
   blockedBypass("git -c core.hooksPath=/x rebase main"); // the command itself is irrelevant
 });
 

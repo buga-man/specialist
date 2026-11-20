@@ -46,7 +46,7 @@ does not run someone else's formatter where the project did not choose it.
 |---|---|---|
 | `tech-writer` (manual build) | Node + **Chrome or Edge** (headless PDF printing); for screenshots — the host's browser automation and a live dev stand | HTML is built without a browser; the browser is needed only for the PDF. Chrome/Edge is present on any Windows machine; on Linux/macOS it installs the standard way |
 | `stand-acceptance` | the docker compose stand of the specific project; the host's browser automation for the UI checks | A team-and-project skill (a deliberate exception to portability) |
-| the other 12 skills | only the agent itself and the repository | — |
+| the other 19 skills | only the agent itself and the repository | — |
 
 ## Installing into Claude Code
 
@@ -55,11 +55,12 @@ does not run someone else's formatter where the project did not choose it.
 /plugin install specialist@specialist
 ```
 
-After installation the following register automatically: 18 skills (autoloaded by
-description; the pipeline's fourteen plus `dispatch` and the three `role-*` entry
-skills), the hooks from `hooks/hooks.json` (spec-gate, skill-gate, secrets-guard,
-vuln-guard, suite-gate on PreToolUse; git-watch, edit-guard on PostToolUse;
-plan-context, codestyle-reminder on SessionStart; kb-gate on Stop).
+After installation the following register automatically: 21 skills (autoloaded by
+description; the pipeline's seventeen plus `dispatch` and the three `role-*` entry
+skills), the hooks from `hooks/hooks.json` (spec-gate, config-guard, skill-gate,
+bash-policy, mutation-guard, secrets-guard, vuln-guard, suite-gate on PreToolUse;
+git-watch, edit-guard on PostToolUse; plan-context, codestyle-reminder on
+SessionStart; kb-gate on Stop).
 
 Verification without pushing the marketplace — by a local path:
 

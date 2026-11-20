@@ -299,7 +299,8 @@ only the target path, never the edit's content.
 
 ## git-watch — git changed the tree under the agent
 
-`PostToolUse` on `Bash` (Claude Code only). After a tree-changing git operation
+`PostToolUse` on `Bash` — on every host (see the table above; pi and OpenCode run
+the same check after their bash equivalents). After a tree-changing git operation
 (`commit`, `checkout`/`switch`, `merge`, `rebase`, `pull`, `reset`, `cherry-pick`,
 `stash pop/apply`), the hook dumbly cross-checks the derived artifacts against disk — the
 source of the change (a branch, a rebase, a pull) does not matter:

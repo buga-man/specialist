@@ -379,6 +379,18 @@ function main() {
     }
   }
 
+  // The enumerations nobody checked before: README names every registered hook, and
+  // extensions/README.md lists every extension file. A registration or an extension
+  // missing from its index page is invisible to the reader deciding to install.
+  const readmeText = read("README.md");
+  for (const hook of hookNames(registeredAdapters())) {
+    if (!readmeText.includes(`\`${hook}\``)) findings.push(`README.md: hook "${hook}" is not mentioned`);
+  }
+  const extReadme = read("extensions/README.md");
+  for (const ext of piExtensions()) {
+    if (!extReadme.includes(ext)) findings.push(`extensions/README.md: extension "${ext}" is not mentioned`);
+  }
+
   const catalogRel = join("docs", "skill-index.md");
   const catalog = buildCatalog(infos);
   // Compare newline-insensitively: git's autocrlf rewrites the checked-out file to CRLF

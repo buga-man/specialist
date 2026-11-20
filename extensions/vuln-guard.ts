@@ -8,6 +8,7 @@
  */
 import { isToolCallEventType, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { checkGitCommit } from "../hooks/lib/vuln-core.mjs";
+import { gitRoot } from "../skills/kb-index/scripts/lib/kb-fs.mjs";
 
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
@@ -15,8 +16,12 @@ export default function (pi: ExtensionAPI) {
       if (!isToolCallEventType("bash", event)) return;
       const command = String((event.input as { command?: string } | undefined)?.command || "");
       if (!command) return;
+      // The same project-dir resolution as the other extensions and the Claude
+      // Code adapters (no host-declared project variable on pi): a session
+      // opened in a subdirectory still reads the root's .vuln-guard mode.
+      const projectDir = gitRoot(ctx.cwd) || ctx.cwd;
       const result = await checkGitCommit({
-        projectDir: ctx.cwd,
+        projectDir,
         command,
         run: (cmd, args, opts) => pi.exec(cmd, args, opts),
       });

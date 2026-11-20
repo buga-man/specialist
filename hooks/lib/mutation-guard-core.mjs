@@ -46,6 +46,20 @@ const MUTATION_PATTERNS = [
  *  prose does not count as a flag. */
 const shellTokens = (s) => String(s ?? "").match(/"[^"]*"|'[^']*'|\S+/g) ?? [];
 
+/** Strips the leading global options (`-C <dir>` and `-c <cfg>`, repeatable and
+ *  interleaved) from a git invocation and returns "git <subcommand …>" — the
+ *  shape the mutation patterns and the bypass detectors match. Without this,
+ *  `git -c user.name=x push` is not the push it plainly is. A non-git segment
+ *  comes back unchanged; the displaced-hooksPath check keeps reading the raw
+ *  tokens (the -c values it inspects live exactly there). */
+function canonicalGit(segment) {
+  const args = shellTokens(segment);
+  if (args[0] !== "git") return segment;
+  let i = 1;
+  while (i < args.length && (args[i] === "-C" || args[i] === "-c")) i += 2;
+  return ["git", ...args.slice(i)].join(" ");
+}
+
 /** `git commit` skipping the commit hooks: the long `--no-verify` or its short `-n`
  *  (alone or inside a short-flag cluster, e.g. `-nm "x"`). The cluster is scanned left
  *  to right and stops at `m` — the message option swallows the rest of the cluster, so
@@ -130,10 +144,13 @@ function branchForceDeletes(segment) {
   return null;
 }
 
-/** `git restore` discards uncommitted work unless it only unstages (--staged). */
+/** `git restore` discards uncommitted work unless it only unstages (--staged).
+ *  --worktree restores the working tree even next to --staged, so it counts as
+ *  a discard in every combination. */
 function restoreDiscards(segment) {
   const m = segment.match(/^git(?:\s+-C\s+\S+)?\s+restore\b(.*)$/);
   if (!m) return null;
+  if (m[1].includes("--worktree")) return "discards working-tree changes (restore --worktree)";
   return m[1].includes("--staged") ? null : "discards working-tree changes (restore)";
 }
 
@@ -150,16 +167,18 @@ export function decideMutation(command) {
     for (const { re, what } of MUTATION_PATTERNS) if (re.test(seg)) return what;
     return branchForceDeletes(seg) ?? restoreDiscards(seg);
   };
-  for (const segment of segments) {
+  for (const raw of segments) {
+    // The global options are stripped for matching (`git -c user.name=x push` is a
+    // push); the block message still quotes the command as the agent typed it.
+    const segment = canonicalGit(raw);
     // The bypass class first: `git push --no-verify` is both a push and a bypass, and
     // the bypass reading names the sharper reason to hand the agent.
-    const bypass =
-      commitSkipsHooks(segment) ?? pushSkipsHooks(segment) ?? hooksPathDisplaced(segment);
+    const bypass = hooksPathDisplaced(raw) ?? commitSkipsHooks(segment) ?? pushSkipsHooks(segment);
     if (bypass) {
       return {
         action: "block",
         reason:
-          `mutation-guard: "${segment}" ${bypass}. The git-boundary gates (secrets-guard, ` +
+          `mutation-guard: "${raw}" ${bypass}. The git-boundary gates (secrets-guard, ` +
           "vuln-guard, suite-gate) are git hooks — this shape skips them. Issue the plain " +
           "command instead and let the hooks speak; when one blocks, fix what it points " +
           "at. Skipping hooks is the user's decision — ask them to run it themselves, or " +
@@ -171,7 +190,7 @@ export function decideMutation(command) {
       return {
         action: "block",
         reason:
-          `mutation-guard: "${segment}" ${found}. Outward and history-mutating operations ` +
+          `mutation-guard: "${raw}" ${found}. Outward and history-mutating operations ` +
           "run on the user's explicit command, not the agent's initiative — confirm with " +
           "the user in chat; if they already approved, ask them to run it themselves, or " +
           "have them set `mutation-guard: off` in .spec-gate. Commits are not affected " +
