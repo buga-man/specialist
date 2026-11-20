@@ -70,6 +70,22 @@ const criteriaSection = (lines) => {
   return lines.slice(start, end);
 };
 
+/** The numbered criteria as whole multi-line items: a numbered line starts an item,
+ *  the following non-empty lines continue it — long criteria wrap, and the (must)
+ *  marker and the Verify tail may land on the wrap, not on the numbered line. */
+const splitCriteria = (lines) => {
+  const items = [];
+  for (const raw of lines) {
+    const m = /^\s*\d+\.\s+(.*)$/.exec(raw);
+    if (m) {
+      items.push(m[1]);
+    } else if (items.length > 0 && raw.trim() !== "") {
+      items[items.length - 1] += ` ${raw.trim()}`;
+    }
+  }
+  return items;
+};
+
 /** The comparable form of a criterion body — case-folded, punctuation and the
  *  must/should/Verify tail stripped, whitespace collapsed. */
 const normalizeCriterion = (body) =>
@@ -102,11 +118,8 @@ export function probeSpec(text) {
   let dualModeInSpec = DUAL_MODE_RE.test(section.join("\n")) || DUAL_MODE_RE.test(lines.join("\n"));
   let hasBothModes = false;
 
-  for (const raw of section) {
-    const m = /^\s*\d+\.\s+(.*)$/.exec(raw);
-    if (!m) continue;
+  for (const body of splitCriteria(section)) {
     criterionNo++;
-    const body = m[1];
     const isMust = /\(must\)/i.test(body);
     if (isMust) mustCount++;
     if (isMust && !/\bverify\s*:/i.test(body)) {

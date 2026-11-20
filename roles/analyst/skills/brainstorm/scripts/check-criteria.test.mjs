@@ -94,6 +94,37 @@ test("checkCriteria: no Acceptance-criteria section — nothing to check; should
   assert.equal(r.mustCount, 0);
 });
 
+test("checkCriteria: a wrapped criterion keeps its (must) marker and Verify tail across lines", () => {
+  const r = checkCriteria(
+    SPEC([
+      "1. When a client uploads a file larger than 100 MB, the system shall reject it",
+      "   with HTTP 413. (must) — Verify: pytest tests/upload_limit.py → exit 0",
+      "2. When the list is empty, the system shall show the empty state",
+      "(must) — Verify: manual — QA observes the empty page",
+    ]),
+  );
+  assert.equal(r.mustCount, 2);
+  assert.equal(r.errors.length, 0);
+
+  const unverified = checkCriteria(
+    SPEC([
+      "1. When a client uploads a file larger than 100 MB, the system shall reject it",
+      "   with HTTP 413. (must)",
+    ]),
+  );
+  assert.equal(unverified.errors.length, 1);
+  assert.match(unverified.errors[0], /criterion 1 \(must\) has no Verify/);
+
+  const vagueWrap = checkCriteria(
+    SPEC([
+      "1. When a client uploads, the system shall be",
+      "",
+      "   fast about it. (must) — Verify: manual — time it",
+    ]),
+  );
+  assert.ok(vagueWrap.warnings.some((w) => /"fast"/.test(w)));
+});
+
 test("checkCriteria: the section scan stops at the next heading", () => {
   const r = checkCriteria(
     [
