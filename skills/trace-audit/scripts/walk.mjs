@@ -91,6 +91,13 @@ export function openQuestionNumbers(text) {
   return numbers;
 }
 
+/** The must marker and the Verify label, bilingual: paren-anchored Cyrillic stems
+ *  (no \b — ASCII-only; the anchoring keeps (необязательно) from reading as must),
+ *  and the Verify stem matches through a leading non-letter — «перепроверка:»
+ *  does not count. */
+const MUST_RE = /\(\s*(?:must|обязательн[а-яё]*)\s*\)/i;
+const VERIFY_RE = /(?:^|[^\p{L}])(?:verify|провер[а-яё]*)\s*:/iu;
+
 /** Every must criterion of `text` without a `Verify:` — { file, no } rows. */
 export function mustsWithoutVerify(text) {
   const section = sectionLines(String(text ?? "").split(/\r?\n/), CRITERIA_HEADING_RE);
@@ -101,7 +108,7 @@ export function mustsWithoutVerify(text) {
   // A numbered line starts a criterion, the following non-empty lines continue it —
   // a wrapped criterion keeps its (must) marker and Verify tail on the wrap.
   const flush = () => {
-    if (no !== null && /\(must\)/i.test(body) && !/\bverify\s*:/i.test(body)) out.push(no);
+    if (no !== null && MUST_RE.test(body) && !VERIFY_RE.test(body)) out.push(no);
   };
   section.forEach((raw, idx) => {
     const m = /^\s*(\d+)\.\s+(.*)$/.exec(raw);

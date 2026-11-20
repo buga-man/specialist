@@ -86,13 +86,23 @@ const splitCriteria = (lines) => {
   return items;
 };
 
+/** The must/should markers, bilingual: Cyrillic branches are paren-anchored stems
+ *  (no \b — ASCII-only; the anchoring keeps (необязательно) from reading as must —
+ *  it is a should-class spelling). The Verify label matches through a leading
+ *  non-letter, so «перепроверка:» does not count. */
+const MUST_RE = /\(\s*(?:must|обязательн[а-яё]*)\s*\)/i;
+const SHOULD_RE = /\(\s*(?:should|желательн[а-яё]*|опциональн[а-яё]*|необязательн[а-яё]*)\s*\)/i;
+const MARKERS_RE = /\(\s*(?:must|should|обязательн[а-яё]*|желательн[а-яё]*|опциональн[а-яё]*|необязательн[а-яё]*)\s*\)/gi;
+const VERIFY_RE = /(?:^|[^\p{L}])(?:verify|провер[а-яё]*)\s*:/iu;
+
 /** The comparable form of a criterion body — case-folded, punctuation and the
  *  must/should/Verify tail stripped, whitespace collapsed. */
 const normalizeCriterion = (body) =>
   body
     .toLowerCase()
-    .replace(/\(must\)|\(should\)/gi, "")
+    .replace(MARKERS_RE, "")
     .replace(/[-—]?\s*verify\s*:.*$/i, "")
+    .replace(/[-—]?\s*провер[а-яё]*\s*:.*$/i, "")
     .replace(/[.,;:!?«»"'`()]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -105,13 +115,14 @@ const normalizeCriterion = (body) =>
 export function probeSpec(text) {
   const lines = String(text ?? "").split(/\r?\n/);
   const section = criteriaSection(lines);
-  if (!section) return { found: false, errors: [], warnings: [], signals: [], mustCount: 0 };
+  if (!section) return { found: false, errors: [], warnings: [], signals: [], mustCount: 0, shouldCount: 0 };
 
   const errors = [];
   const warnings = [];
   const signals = [];
   const seen = new Map();
   let mustCount = 0;
+  let shouldCount = 0;
   let criterionNo = 0;
   let hasErrorPath = false;
   let hasBoundary = false;
@@ -120,9 +131,10 @@ export function probeSpec(text) {
 
   for (const body of splitCriteria(section)) {
     criterionNo++;
-    const isMust = /\(must\)/i.test(body);
+    const isMust = MUST_RE.test(body);
     if (isMust) mustCount++;
-    if (isMust && !/\bverify\s*:/i.test(body)) {
+    if (!isMust && SHOULD_RE.test(body)) shouldCount++;
+    if (isMust && !VERIFY_RE.test(body)) {
       errors.push(`criterion ${criterionNo} (must) has no Verify — every must criterion names the command or the manual check that decides it`);
     }
     const key = normalizeCriterion(body);
@@ -160,7 +172,7 @@ export function probeSpec(text) {
     signals.push("the spec names modes/flags but no criterion checks both — the dual-mode axis is an open hole");
   }
 
-  return { found: true, errors, warnings, signals, mustCount };
+  return { found: true, errors, warnings, signals, mustCount, shouldCount };
 }
 
 function main(argv) {
@@ -183,7 +195,7 @@ function main(argv) {
     process.exit(0);
   }
 
-  console.log(`probe: ${file} — ${report.mustCount} must criteria`);
+  console.log(`probe: ${file} — ${report.mustCount} must criteria${report.shouldCount ? `, ${report.shouldCount} should` : ""}`);
   for (const line of report.errors) console.log(`  error: ${line}`);
   for (const line of report.warnings) console.log(`  warning: ${line}`);
   for (const line of report.signals) console.log(`  signal: ${line}`);

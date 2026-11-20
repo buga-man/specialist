@@ -125,6 +125,24 @@ test("checkCriteria: a wrapped criterion keeps its (must) marker and Verify tail
   assert.ok(vagueWrap.warnings.some((w) => /"fast"/.test(w)));
 });
 
+test("checkCriteria: the must/should/Verify markers are bilingual — Cyrillic specs are graded, not silenced", () => {
+  const r = checkCriteria(
+    [
+      "# Спека", "",
+      "## Критерии приёмки", "",
+      "1. При отправке система сохраняет запись. (обязательно) — Проверка: manual — QA наблюдает",
+      "2. При ошибке ввода система отклоняет форму. (обязательно)",
+      "3. При пустом списке система показывает подсказку. (желательно)",
+      "4. Отчёт можно выгрузить. (необязательно)",
+    ].join("\n"),
+  );
+  assert.equal(r.mustCount, 2);
+  assert.equal(r.shouldCount, 2); // (желательно) and (необязательно) — the should class, never musts
+  assert.equal(r.errors.filter((e) => /criterion 1 /.test(e)).length, 0); // Проверка: counts as Verify
+  assert.equal(r.errors.filter((e) => /criterion 2 \(must\) has no Verify/.test(e)).length, 1);
+  assert.equal(r.errors.filter((e) => /criterion 3|criterion 4/.test(e)).length, 0); // should / optional — no Verify owed
+});
+
 test("checkCriteria: the section scan stops at the next heading", () => {
   const r = checkCriteria(
     [
