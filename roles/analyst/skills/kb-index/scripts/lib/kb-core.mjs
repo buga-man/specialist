@@ -1311,6 +1311,79 @@ export function snippetOf(content, anchorLine, query, limit = 160) {
 }
 
 /**
+ * The cycles of the directed relation graph: A → B → C → A over the resolved
+ * relations (`parent`, `depends_on`, …). Markdown links are not followed — a
+ * link is a reference, not a dependency. Each cycle is reported once, rotated
+ * to its lexicographically smallest node; a human almost never finds these by
+ * hand, and a spec pipeline built on `depends_on` deadlocks on them.
+ *
+ * @param {Record<string, unknown>[]} records — every record of the corpus.
+ * @returns {string[][]} the cycles as arrays of paths, shortest first.
+ */
+export function dependencyCycles(records) {
+  const graph = buildGraph(records);
+  const adjacency = new Map();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "ref") continue;
+    if (!adjacency.has(edge.from)) adjacency.set(edge.from, new Set());
+    adjacency.get(edge.from).add(edge.to);
+  }
+  for (const [from, list] of adjacency) adjacency.set(from, [...list].sort());
+
+  const color = new Map(); // undefined — white, 1 — gray (on the stack), 2 — black
+  const stack = [];
+  const seen = new Set();
+  const cycles = [];
+
+  const visit = (node) => {
+    color.set(node, 1);
+    stack.push(node);
+    for (const next of adjacency.get(node) || []) {
+      const state = color.get(next);
+      if (state === undefined) {
+        visit(next);
+      } else if (state === 1) {
+        const at = stack.lastIndexOf(next);
+        const cycle = stack.slice(at);
+        const smallest = cycle.indexOf([...cycle].sort()[0]);
+        const canonical = [...cycle.slice(smallest), ...cycle.slice(0, smallest)];
+        const key = canonical.join("\u0000");
+        if (!seen.has(key)) {
+          seen.add(key);
+          cycles.push(canonical);
+        }
+      }
+    }
+    stack.pop();
+    color.set(node, 2);
+  };
+
+  for (const node of adjacency.keys()) if (color.get(node) === undefined) visit(node);
+
+  cycles.sort((a, b) => a.length - b.length || (a.join("\u0000") < b.join("\u0000") ? -1 : 1));
+  return cycles;
+}
+
+/**
+ * The documents most pointed at — the entry points of the corpus. A new agent
+ * (or a human) starts from the hubs, not from the orphans.
+ *
+ * @param {Record<string, unknown>[]} records — every record of the corpus.
+ * @param {number} limit — how many hubs to return.
+ * @returns {Array<{ path: string, links: number }>} by in-degree, ties alphabetical.
+ */
+export function hubDocuments(records, limit = 10) {
+  const graph = buildGraph(records);
+  const inDegree = new Map();
+  for (const edge of graph.edges) inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1);
+  return [...inDegree.entries()]
+    .filter(([, links]) => links > 0)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .slice(0, limit)
+    .map(([path, links]) => ({ path, links }));
+}
+
+/**
  * Compares the index with the disk: what changed, what was added, what is
  * missing from the disk.
  *

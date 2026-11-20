@@ -30,11 +30,13 @@ The scripts live in the skill itself: the CLI is `<skill-dir>/scripts/kb.mjs`.
    Output per hit: `id`, path, anchor (`§<heading>:<line>`), and a content line
    — the gist for a face hit, the **answering line** of the best section for a
    body hit (read straight from the file, cut around the query word). A snippet
-   often answers the question without opening the document at all. The first
-   five hits carry the full face; the rest of the list is paths only — widen it
-   with `--limit <n>` (20 by default). A query that returns nothing prints
-   `did you mean:` with the ids and slugs a small edit away — a transposed
-   digit pair (`REQ-081` for `REQ-018`) is a typo, not a missing document.
+   often answers the question without opening the document at all. A body hit
+   is marked with a leading `~` — the match lives in the body, not on the face.
+   The first five hits carry the full face; the rest of the list is paths only
+   — widen it with `--limit <n>` (10 by default). A query that returns nothing
+   prints `did you mean:` with the ids and slugs a small edit away — a
+   transposed digit pair (`REQ-081` for `REQ-018`) is a typo, not a missing
+   document.
 
    The corpus can be narrowed before the search: `--status draft`,
    `--type br`, `--service qc` (the frontmatter fields of the face). For a
@@ -92,6 +94,13 @@ section texts. A miss usually means the wording differs:
 node "<skill-dir>/scripts/kb.mjs" build
 ```
 
+The divergence on demand — what the gate would block on, printed without
+blocking:
+
+```bash
+node "<skill-dir>/scripts/kb.mjs" status
+```
+
 The index is not versioned and lives in `.kbindex/` of the project. The plugin's
 gates keep it in sync: in Claude Code and Codex the Stop hook blocks the end of the
 turn until the index is rebuilt; in pi a settle-time follow-up demands the same. In
@@ -104,7 +113,8 @@ thin in the output. **Write the lead paragraph into the document itself**, not i
 the index: the index is derived, the files are the source of truth. It also makes the
 document better for a human reader.
 
-Quality report (documents without a gist, duplicate `id`s, ambiguous relations):
+Quality report (documents without a gist, duplicate `id`s, ambiguous relations,
+broken links, orphans, dependency cycles, hub documents, stale drafts):
 
 ```bash
 node "<skill-dir>/scripts/kb.mjs" audit

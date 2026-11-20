@@ -360,3 +360,78 @@ test("map: --json is the exact directory", () => {
   assert.equal(parsed.documents[0].id, "REQ-001");
   assert.equal(parsed.documents[0].gist, "Complaints from five channels of the store.");
 });
+
+test("search: a body hit is marked with ~, a face hit is not", () => {
+  const dir = project({ "docs/req/REQ-010.md": BODY_DOC });
+  const out = kb(dir, "search", "pallets");
+  assert.match(out, /^~ REQ-010  docs\/req\/REQ-010\.md/m); // body tier
+  const face = kb(dir, "search", "logistics");
+  assert.match(face, /^REQ-010  docs\/req\/REQ-010\.md/m); // face tier, no mark
+});
+
+test("search: the default limit is ten", () => {
+  const doc = (id) => ["---", `id: ${id}`, "title: T", "---", "", "## S", "warehouse gist text"].join("\n");
+  const files = {};
+  for (let i = 1; i <= 12; i++) files[`docs/d${i}.md`] = doc(`W-${i}`);
+  const dir = project(files);
+  kb(dir, "build");
+  const out = kb(dir, "search", "warehouse");
+  assert.match(out, /… and 2 more \(--limit 10\)/);
+});
+
+test("status: a fresh index says fresh, an edit is caught", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  kb(dir, "build");
+  assert.match(kb(dir, "status"), /index is fresh/);
+  writeFileSync(join(dir, "docs", "req", "REQ-001.md"), `${DOC}\nchanged`);
+  const out = kb(dir, "status");
+  assert.match(out, /changed: 1/);
+  assert.match(out, /index is stale — run build/);
+});
+
+test("status: no index — an invitation to build", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  assert.match(kb(dir, "status"), /no index — run build/);
+});
+
+test("audit: a dependency cycle is reported", () => {
+  const doc = (id, parent) =>
+    ["---", `id: ${id}`, `parent: ${parent}`, "---", "", "## S", "text"].join("\n");
+  const dir = project({
+    "docs/a.md": doc("CYC-A", "CYC-B"),
+    "docs/b.md": doc("CYC-B", "CYC-C"),
+    "docs/c.md": doc("CYC-C", "CYC-A"),
+  });
+  const out = kb(dir, "audit");
+  assert.match(out, /dependency cycles: 1/);
+  assert.match(out, /docs\/a\.md → docs\/b\.md → docs\/c\.md → docs\/a\.md/);
+});
+
+test("audit: hub documents are listed with their in-degree", () => {
+  const hub = ["---", "id: HUB-1", "---", "", "## S", "hub gist"].join("\n");
+  const pointed = (id) => ["---", `id: ${id}`, "parent: HUB-1", "---", "", "## S", "text"].join("\n");
+  const dir = project({ "docs/hub.md": hub, "docs/p1.md": pointed("P-1"), "docs/p2.md": pointed("P-2") });
+  const out = kb(dir, "audit");
+  assert.match(out, /hub documents \(most pointed at\)/);
+  assert.match(out, /docs\/hub\.md — 2 links in/);
+});
+
+test("audit: --json carries every section of the report", () => {
+  const dir = project({ "docs/req/REQ-001.md": DOC });
+  const parsed = JSON.parse(kb(dir, "audit", "--json"));
+  assert.equal(parsed.documents, 1);
+  assert.equal(parsed.gist.usable, 1);
+  assert.deepEqual(parsed.cycles, []);
+  assert.ok(Array.isArray(parsed.hubs));
+  assert.ok(Array.isArray(parsed.duplicateIds));
+  assert.ok(Array.isArray(parsed.orphans));
+});
+
+test("path: --json carries the steps with their relations", () => {
+  const dir = project({ "docs/rel-a.md": LINK_A, "docs/rel-b.md": LINK_B });
+  const parsed = JSON.parse(kb(dir, "path", "REL-A", "REL-B", "--json"));
+  assert.equal(parsed.from, "docs/rel-a.md");
+  assert.equal(parsed.hops, 1);
+  assert.equal(parsed.steps[0].relation, "link");
+  assert.equal(parsed.steps[0].direction, "out");
+});

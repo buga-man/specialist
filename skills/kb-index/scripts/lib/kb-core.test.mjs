@@ -10,10 +10,12 @@ import {
   buildRecord,
   buildSections,
   compareIndex,
+  dependencyCycles,
   didYouMean,
   extractAnchor,
   extractGist,
   brokenLinks,
+  hubDocuments,
   extractLinks,
   extractSections,
   isExcluded,
@@ -727,4 +729,50 @@ test("snippet: a long line is cut to a window around the term", () => {
 
 test("snippet: an empty query has nothing to find", () => {
   assert.equal(snippetOf("## S\ntext\n", 1, ""), null);
+});
+
+const ref = (key, to) => ({ key, value: to, resolved: to, candidates: [] });
+
+test("cycles: a closed parent chain is reported once, rotated to the smallest node", () => {
+  const records = [
+    { path: "docs/c.md", id: "C", refs: [ref("parent", "docs/a.md")], links: [] },
+    { path: "docs/a.md", id: "A", refs: [ref("parent", "docs/b.md")], links: [] },
+    { path: "docs/b.md", id: "B", refs: [ref("parent", "docs/c.md")], links: [] },
+  ];
+  const cycles = dependencyCycles(records);
+  assert.equal(cycles.length, 1);
+  assert.deepEqual(cycles[0], ["docs/a.md", "docs/b.md", "docs/c.md"]);
+});
+
+test("cycles: links never close a cycle — only resolved relations do", () => {
+  const records = [
+    { path: "docs/a.md", id: "A", refs: [], links: ["docs/b.md"] },
+    { path: "docs/b.md", id: "B", refs: [], links: ["docs/a.md"] },
+  ];
+  assert.deepEqual(dependencyCycles(records), []);
+});
+
+test("cycles: an acyclic chain reports nothing", () => {
+  const records = [
+    { path: "docs/a.md", id: "A", refs: [ref("depends_on", "docs/b.md")], links: [] },
+    { path: "docs/b.md", id: "B", refs: [], links: [] },
+  ];
+  assert.deepEqual(dependencyCycles(records), []);
+});
+
+test("hubs: in-degree over links and refs, ties alphabetical", () => {
+  const records = [
+    { path: "docs/hub.md", id: "H", refs: [], links: [] },
+    { path: "docs/other.md", id: "O", refs: [], links: [] },
+    { path: "docs/x.md", id: "X", refs: [ref("parent", "docs/hub.md")], links: ["docs/hub.md"] },
+    { path: "docs/y.md", id: "Y", refs: [ref("parent", "docs/hub.md")], links: ["docs/other.md"] },
+  ];
+  const hubs = hubDocuments(records);
+  assert.deepEqual(
+    hubs.map((hub) => [hub.path, hub.links]),
+    [
+      ["docs/hub.md", 3], // two refs and a link
+      ["docs/other.md", 1],
+    ],
+  );
 });

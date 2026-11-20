@@ -453,6 +453,10 @@ not the whole file.
   follow-up decision comes without opening them; `kb.mjs path <A> <B>` — the shortest
   chain of documents. Arguments resolve without guessing: an ambiguous `id` returns
   candidates.
+- **Health:** `kb.mjs status` — the index-vs-disk divergence on demand (what the Stop
+  gate would block on, without blocking); `kb.mjs audit` — the quality report: duplicate
+  `id`s, ambiguous relations, broken links, orphan documents, dependency cycles,
+  hub documents, stale drafts, content drift; `--json` for machine consumers.
 - **Config:** `.kbindex.json` at the project root — `roots`, `include`, `exclude`,
   `gistMaxChars`, `bodySearch`. `exclude` sets privacy: paths enter the index without a body
   (no gist, no anchor, no links, no sections) — for example, client briefs.

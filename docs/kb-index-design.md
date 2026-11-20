@@ -318,7 +318,8 @@ CLI:
 | `kb.mjs map <directory>` | the directory map; builds the index first when absent |
 | `kb.mjs related <path\|id>` | a document's neighbors: incoming and outgoing `links` and resolved `refs`; mutual ones first |
 | `kb.mjs path <A> <B>` | the shortest chain of documents between A and B over the undirected graph |
-| `kb.mjs audit` | a report: duplicate `id`s, ambiguous and unresolved relations, documents without a gist |
+| `kb.mjs status` | the index-vs-disk divergence on demand — what a Stop block would say, without blocking |
+| `kb.mjs audit` | a report: duplicate `id`s, ambiguous relations, broken links, orphans, dependency cycles, hub documents, stale drafts, documents without a gist or anchor |
 | `kb.mjs clean` | remove `.kbindex/` |
 
 `related`/`path` arguments resolve without guessing: exact path → path without
@@ -405,3 +406,17 @@ no artifact changes, `index.json` and `sections.json` untouched:
    (the §13 API, now also over the CLI).
 5. `related` shows the gist of every neighbour — the follow-up decision without
    opening the neighbour.
+
+**Evolution 2026-11-20 (0.34.1).** The trust audit — everything here reads data the
+index already holds:
+
+1. `dependencyCycles` in `kb-core.mjs` and the audit: A → B → C → A over resolved
+   relations; markdown links never close a cycle. Each cycle reported once, rotated
+   to its smallest node.
+2. `hubDocuments`: the most pointed-at documents — the entry points of the corpus,
+   the opposite end from the orphans.
+3. `kb.mjs status`: the index-vs-disk divergence (`compareIndex`) on demand — the
+   gate's verdict without the gate.
+4. A body hit is marked `~` in the search output; the default `--limit` is 10.
+5. `audit` is now a report object with two renderings — text and `--json`; `path`
+   learned `--json` too (steps with relations and directions).
