@@ -365,7 +365,10 @@ effort.
   Must/Should/Optional. A large diff is read in churn order (git log --follow
   frequency, shared modules before leaves) — depth goes where change goes.
 - **Findings:** `file:line` + what and why + a proposed direction (not a patch);
-  severity blocker / worth fixing / note; a findings table caps at 50 rows, the rest
+  severity blocker / worth fixing / note; only live code carries production weight —
+  a finding names its source kind (live / fixture / example / dead), and
+  production-grade demands on an example or doc snippet are a known false positive;
+  a findings table caps at 50 rows, the rest
   collapse into one overflow line; outcome clean / worth a pass / rework required.
   Blockers and worth-fixing go back into the plan as tasks. A violated MUST
   principle of CODESTYLE.md's Principles section is a blocker on that alone.
@@ -413,7 +416,10 @@ must never accept.
   security — an exploitation sketch) + fix criteria (the observation that proves the
   bug fixed — the dev role's acceptance check) + severity critical/high/medium/low;
   the table caps at 50 rows, the rest collapse into one overflow line;
-  **no scenario — no finding**; **dedup on filing** — the same trigger scenario
+  **no scenario — no finding**; **a finding names its source kind** (live code /
+  fixture / example in docs / demo / dead code — a structural finding in a non-live
+  source is a note at most; substance outranks the source — a real-format secret in
+  an example is still a finding, downgraded one step); **dedup on filing** — the same trigger scenario
   already open in a prior audit links and carries its status, never a duplicate row.
   Critical security findings are reported to the user
   immediately; the report never carries live secret values. Outcome: no findings /

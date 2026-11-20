@@ -111,6 +111,12 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
     ("the retry dialog appears at most once per failure", not "fix the dialog").
 - **No scenario, no finding**: a suspicious pattern without a way to trigger it is a
   note, never a finding.
+- **A finding names its source kind** — live code, or a fixture / an example in docs
+  or README / a demo / dead code. A structural finding in a non-live source is a
+  note at most, never a table row — the table is the product's real exposure, and
+  an example is not it. Substance outranks the source: a real-format secret in an
+  example is still a finding, downgraded one step; a fake on its face
+  (`example`/`sk-ant-…` placeholder) is not a finding at all.
 - **Dedup on filing** — search, compare, create. Before a finding enters the table,
   sweep the prior `*-audit` reports (this topic's, and the neighboring areas when they
   overlap): the same trigger scenario already open there → link that finding and carry
