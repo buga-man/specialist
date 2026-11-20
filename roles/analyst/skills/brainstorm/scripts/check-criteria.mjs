@@ -59,6 +59,22 @@ const criteriaSection = (lines) => {
   return lines.slice(start, end);
 };
 
+/** The numbered criteria as whole multi-line items: a numbered line starts an item,
+ *  the following non-empty lines continue it — long criteria wrap, and the (must)
+ *  marker and the Verify tail may land on the wrap, not on the numbered line. */
+const splitCriteria = (lines) => {
+  const items = [];
+  for (const raw of lines) {
+    const m = /^\s*\d+\.\s+(.*)$/.exec(raw);
+    if (m) {
+      items.push(m[1]);
+    } else if (items.length > 0 && raw.trim() !== "") {
+      items[items.length - 1] += ` ${raw.trim()}`;
+    }
+  }
+  return items;
+};
+
 export function checkCriteria(text) {
   const lines = String(text ?? "").split(/\r?\n/);
   const section = criteriaSection(lines);
@@ -70,11 +86,8 @@ export function checkCriteria(text) {
   let mustCount = 0;
   let criterionNo = 0;
 
-  for (const raw of section) {
-    const m = /^\s*\d+\.\s+(.*)$/.exec(raw);
-    if (!m) continue;
+  for (const body of splitCriteria(section)) {
     criterionNo++;
-    const body = m[1];
     const isMust = /\(must\)/i.test(body);
     if (isMust) mustCount++;
     if (isMust && !/\bverify\s*:/i.test(body)) {

@@ -97,6 +97,22 @@ test("hole signals — error path, boundary, dual mode", () => {
   assert.equal(bothModes.signals.filter((s) => /dual-mode/.test(s)).length, 0);
 });
 
+test("a wrapped criterion keeps its marker, Verify, and dedupe text across lines", () => {
+  const text = criteria(
+    "1. When a user submits, the system shall save the record.",
+    "   (must) — Verify: command — save.sh → exit 0",
+    "2. When a user submits, the system shall save the record.",
+    "   (must) — Verify: command — save.sh → exit 0",
+    "3. If the input is invalid,",
+    "   the system shall reject it. (must)",
+  );
+  const r = probeSpec(text);
+  assert.equal(r.mustCount, 3);
+  assert.equal(r.errors.length, 2);
+  assert.match(r.errors[0], /^criterion 2 repeats criterion 1/);
+  assert.match(r.errors[1], /criterion 3 \(must\) has no Verify/);
+});
+
 test("a spec without an acceptance-criteria section is nothing to probe", () => {
   const r = probeSpec("# Notes\n\nJust prose.\n");
   assert.equal(r.found, false);

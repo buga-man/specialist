@@ -96,11 +96,24 @@ export function mustsWithoutVerify(text) {
   const section = sectionLines(String(text ?? "").split(/\r?\n/), CRITERIA_HEADING_RE);
   if (section === null) return [];
   const out = [];
+  let no = null;
+  let body = "";
+  // A numbered line starts a criterion, the following non-empty lines continue it —
+  // a wrapped criterion keeps its (must) marker and Verify tail on the wrap.
+  const flush = () => {
+    if (no !== null && /\(must\)/i.test(body) && !/\bverify\s*:/i.test(body)) out.push(no);
+  };
   section.forEach((raw, idx) => {
     const m = /^\s*(\d+)\.\s+(.*)$/.exec(raw);
-    if (!m) return;
-    if (/\(must\)/i.test(m[2]) && !/\bverify\s*:/i.test(m[2])) out.push(Number(m[1]) || idx + 1);
+    if (m) {
+      flush();
+      no = Number(m[1]) || idx + 1;
+      body = m[2];
+    } else if (no !== null && raw.trim() !== "") {
+      body += ` ${raw.trim()}`;
+    }
   });
+  flush();
   return out;
 }
 

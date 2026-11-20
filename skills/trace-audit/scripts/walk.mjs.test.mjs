@@ -108,6 +108,23 @@ test("status honesty: draft with children, and draft with closed plan tasks", ()
   assert.equal(r.findings.filter((f) => /status draft while .* carries closed tasks/.test(f.finding)).length, 1);
 });
 
+test("orphan criteria: a wrapped criterion keeps its (must) marker and Verify tail", () => {
+  const docs = happy();
+  docs.specs[0] = {
+    name: "2026-11-01-payments.md",
+    text: BUSINESS.replace(
+      "1. When a user pays, the system shall record the payment. (must) — Verify: command — pay.sh → exit 0",
+      ["1. When a user pays, the system shall record the payment.", "   (must) — Verify: command — pay.sh → exit 0"].join("\n"),
+    ).replace(
+      "2. When the card is declined, the system shall show the retry dialog. (must) — Verify: stand — the dialog shows",
+      ["2. When the card is declined, the system shall show", "   the retry dialog. (must)"].join("\n"),
+    ),
+  };
+  const r = auditArtifacts(docs);
+  assert.equal(r.findings.filter((f) => f.check === "orphan criteria" && /criterion 1/.test(f.finding)).length, 0);
+  assert.equal(r.findings.filter((f) => f.check === "orphan criteria" && /criterion 2/.test(f.finding)).length, 1);
+});
+
 test("orphan criteria: a must without Verify is a finding — in an English or a Russian spec", () => {
   const docs = happy();
   docs.specs[0] = {

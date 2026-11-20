@@ -91,16 +91,13 @@ export function parseCriteria(specTexts) {
   for (const text of specTexts) {
     const lines = String(text ?? "").split(/\r?\n/);
     let inSection = false;
-    for (const line of lines) {
-      if (/^#{1,6}\s+/.test(line)) {
-        inSection = CRITERIA_HEADING_RE.test(line);
-        continue;
-      }
-      if (!inSection) continue;
-      const m = /^\s*(\d+)\.\s+(.*)$/.exec(line);
-      if (!m) continue;
-      const no = Number(m[1]);
-      const must = /\(must\)/i.test(m[2]);
+    let no = null;
+    let body = "";
+    // A numbered line starts a criterion, the following non-empty lines continue it —
+    // long criteria wrap, and the (must) marker may land on the wrap.
+    const flush = () => {
+      if (no === null) return;
+      const must = /\(must\)/i.test(body);
       const existing = out.get(no);
       if (existing) {
         existing.must = existing.must || must;
@@ -108,7 +105,25 @@ export function parseCriteria(specTexts) {
       } else {
         out.set(no, { must, sources: 1 });
       }
+    };
+    for (const line of lines) {
+      if (/^#{1,6}\s+/.test(line)) {
+        flush();
+        no = null;
+        inSection = CRITERIA_HEADING_RE.test(line);
+        continue;
+      }
+      if (!inSection) continue;
+      const m = /^\s*(\d+)\.\s+(.*)$/.exec(line);
+      if (m) {
+        flush();
+        no = Number(m[1]);
+        body = m[2];
+      } else if (no !== null && line.trim() !== "") {
+        body += ` ${line.trim()}`;
+      }
     }
+    flush();
   }
   return out;
 }

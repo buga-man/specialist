@@ -119,6 +119,28 @@ test("parseCriteria: the heading is bilingual — a Russian spec's criteria are 
   assert.equal(criteria.get(2).must, false);
 });
 
+test("parseCriteria: a wrapped criterion keeps its (must) marker across lines", () => {
+  const wrapped = [
+    "# Wrapped", "",
+    "## Acceptance criteria", "",
+    "1. When a user submits,",
+    "   the system shall save. (must) — Verify: command — x",
+    "2. When the list is empty, the system shall hint.",
+    "   (should)",
+  ].join("\n");
+  const criteria = parseCriteria([wrapped]);
+  assert.equal(criteria.size, 2);
+  assert.equal(criteria.get(1).must, true);
+  assert.equal(criteria.get(2).must, false);
+
+  // coverage still bites: the wrapped must that no case exercises is an error
+  const cases = casesTable([
+    "| TEST-FEA-001 | 2 | main | command | empty list | the hint shows |",
+  ]);
+  const r = checkCases(cases, [wrapped]);
+  assert.equal(r.errors.filter((e) => /criterion 1 \(must\) is exercised by no case/.test(e)).length, 1);
+});
+
 test("a number carried by more than one spec is a collision note; must still governs coverage", () => {
   const other = [
     "# Repo spec", "",
