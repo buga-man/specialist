@@ -4,7 +4,8 @@
  * Blocks edit/write of files that are outside the scope of the open plan's tasks
  * (docs/plans/*.md): a task is a "### Task ..." section, closed by an explicit
  * "- Done:" line ("- [x]" checkboxes are progress, never closure); editable files
- * are the backticked paths on its "- Files:" line, globs honored.
+ * are the backticked paths on its "- Files:" line and its continuation (a wrapped
+ * Files list is one scope line), globs honored.
  *
  * Mode: the ".spec-gate" file in the project root — "hard" also blocks code edits
  * when no plan exists, "off" disables the gate, absent = soft (gate only with a plan).

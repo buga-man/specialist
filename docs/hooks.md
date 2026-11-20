@@ -81,9 +81,11 @@ discuss with the user).
 **The plan contract** (`docs/plans/*.md`, markers are English-only):
 
 - a task = a `### Task ...` section;
-- task files = paths in backticks on the `- Files:` line (globs are supported:
-  `src/**/*.css`); if the line is present but no paths could be parsed from it, the gate
-  blocks with an explanation of the format instead of opening silently;
+- task files = paths in backticks on the `- Files:` line — a wrapped list's
+  continuation lines count as the same line until a blank line, a new bullet, a
+  heading, or a fence (globs are supported: `src/**/*.css`); if the line is present
+  but no paths could be parsed from it, the gate blocks with an explanation of the
+  format instead of opening silently;
 - closure = an explicit `- Done: ...` line; `- [x]` checkboxes
   are step progress and do **not** close a task. That is why the plan template contains no
   `- Done:` line — the executor adds it when closing a task.

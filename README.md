@@ -128,7 +128,8 @@ API — [extensions/README.md](extensions/README.md).
 
 All are fail-safe: a hook failure never blocks work. `docs/**` and `*.md` are always
 editable under spec-gate. The plan contract — `docs/hooks.md`: sections
-`### Task`, task files from `- Files:` (globs are supported; a
+`### Task`, task files from `- Files:` (globs are supported, a wrapped list's
+continuation lines count; a
 line whose paths cannot be parsed — a block with an explanation, not a silent opening;
 a plan ending inside an unbalanced code fence — a warning, its swallowed tasks are
 named), task closure — an explicit `- Done:` line (checkboxes `- [x]` are progress, not

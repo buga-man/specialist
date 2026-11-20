@@ -205,6 +205,36 @@ test("regression: a Files line with no backticked paths blocks instead of silent
   }
 });
 
+test("regression: a wrapped Files line keeps its paths in scope (was: false block)", () => {
+  const dir = project({
+    "docs/plans/p.md": [
+      "### Task 1: importer",
+      "- Files: `src/import.js`,",
+      "  `src/utils/files.js`,",
+      "  `src/import.test.js`",
+      "- Verify: npm test → exit 0",
+      "",
+      "### Task 2: styles",
+      "- Files:",
+      "  `src/theme.css`",
+      "",
+      "Prose after a blank line mentions `src/not-a-scope.ts` — not a Files continuation.",
+    ].join("\n"),
+  });
+  const info = activePlanInfo(dir);
+  assert.equal(info.unparsedFiles, false);
+  assert.deepEqual(
+    [...info.openFiles].sort(),
+    ["src/import.js", "src/import.test.js", "src/theme.css", "src/utils/files.js"].sort(),
+  );
+  const edit = (p) => decide({ projectDir: dir, filePath: p, mode: "soft" });
+  assert.equal(edit("src/import.js").action, "allow"); // was the only one allowed before the fix
+  assert.equal(edit("src/utils/files.js").action, "allow"); // was a false "scope creep" block
+  assert.equal(edit("src/import.test.js").action, "allow"); // was a false "scope creep" block
+  assert.equal(edit("src/theme.css").action, "allow"); // was the unparsed-files hard block
+  assert.equal(edit("src/not-a-scope.ts").action, "block"); // prose after a blank line is not scope
+});
+
 test("regression: the plan template's Done placeholder closes nothing it should not", () => {
   // The old template shipped the literal line "- Done: <commit hash> (added by the executor…)",
   // which the gate reads as a real closure — a plan copied from it was fully closed.
