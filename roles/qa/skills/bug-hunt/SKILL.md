@@ -135,17 +135,16 @@ Run in a fresh session when possible; the hunter does not fix what it hunts.
 
 ## Parallel hunters (scouts — by explicit permission)
 
-- A large or risky target may be hunted in parallel: 2–3 independent hunters, each with
-  one checklist focus (e.g. one — concurrency and resources, one — authz and data
-  flows, one — error paths and boundaries), plus the coordinator's own pass. The same
-  permission rule as the recon skills: ask the user first — a plain hunt in this
-  session or scouts; if scouts — how many, and how many hunt→fix→hunt iterations the
-  budget covers (default ≤3); the granted counts are the hard budget. Every iteration
-  runs fresh scouts with no context from the previous one — inherited arguments anchor
-  the new eyes (docs/review-discipline.md). Without subagents (denied or unsupported)
-  the same foci run sequentially in one session. The fix inside the loop belongs to
-  the dev role when roles are pinned (the hunter does not fix); without a pin the same
-  session fixes between hunts.
+- A large or risky target may be hunted in parallel: independent hunters, each with one
+  checklist focus (e.g. one — concurrency and resources, one — authz and data flows,
+  one — error paths and boundaries), plus the coordinator's own pass. Dispatch through
+  the `scouts` skill — the grant, the mission charter, and the fan-in rules live there;
+  this skill extends its one question with the loop count (how many hunt→fix→hunt
+  iterations, recommended ≤3 — a default is named in the question, never assumed).
+  Without subagents (denied, unanswered, or unsupported) the same foci run
+  sequentially in one session. The fix inside the loop belongs to the dev role when
+  roles are pinned (the hunter does not fix); without a pin the same session fixes
+  between hunts.
 - The coordinator deduplicates by scenario, not by location: two hunters naming the
   same trigger scenario is one finding. Disagreement (one calls it a bug, the other
   does not) is resolved by building the scenario out, never by vote.

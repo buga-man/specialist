@@ -1,7 +1,7 @@
 {
   "name": "specialist-dev",
   "description": "The developer role of the specialist framework — a repo spec to spec-driven code: implementation plans, tests-first minimal implementation, conventions, bug root-causing. Skills-only plugin; the guards ship with the full specialist bundle.",
-  "version": "0.37.3",
+  "version": "0.38.0",
   "author": {
     "name": "Specialist"
   },

@@ -102,6 +102,19 @@ the axis list, not by remembering:
 This axis list is the canonical one — `test-design` §3 executes the same five as case
 rows; a change here lands there in the same edit, or the two skills drift.
 
+### Scouts — parallel axes and sources (stages 4–5, a wide spec)
+
+The six mining sources (§4) and the five axes (§5) are independent readers —
+each walks its own surface of the same spec. A wide spec may fan them out
+read-only through the `scouts` skill: one scout per source or per axis, each
+returning its raw candidates — holes as questions, mined criteria with their
+evidence line. The grant, the mission charter, and the fan-in rules live in
+`scouts`. What stays central regardless: the mined-criteria diff and its dedupe
+(strike what the spec already has — one number space), the axis coverage note,
+the formalization pass (§6), and the report. The probe script never fans out.
+Without a grant the same passes run sequentially — the gaps report's contract
+does not change.
+
 ## 6. Formalize the vague
 
 A vague criterion does not get deleted — it gets a table:

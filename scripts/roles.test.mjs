@@ -85,6 +85,7 @@ test("roleOf: a role skill, a shared skill, and a third-party unknown", () => {
   assert.equal(roleOf("brainstorm"), "analyst");
   assert.equal(roleOf("bug-hunt"), "qa");
   assert.equal(roleOf("dispatch"), "shared");
+  assert.equal(roleOf("scouts"), "shared");
   assert.equal(roleOf("some-other-skill"), null);
   assert.equal(knownSkills().includes("some-other-skill"), false);
 });

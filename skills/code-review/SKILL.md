@@ -45,6 +45,18 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   before leaf code): the hot, widely-imported files get the deep read, the cold leaves
   get breadth. A flat pass over a big diff spends its depth on files nobody changes.
 
+### Scouts — parallel deep reads (a large diff)
+
+The review order above is already a mission split, and re-verifying a prior
+report's findings is per-finding work — both fan out read-only through the
+`scouts` skill: one scout per hot file's deep read (the hunk, its callers, the
+module, the repo's patterns), one per carried finding being re-proven at its
+`file:line`. The grant, the mission charter, and the fan-in rules live in
+`scouts`. What stays central regardless: the duplication grep (cross-file by
+definition), the findings table with its pre-report gate, the stale-impact
+lists. Without a grant the same passes run sequentially in this session — the
+report's contract does not change.
+
 ## 2. Quality pass — how it reads
 
 - **Intent vs naming**: do the names say what the code does? A reader should not need

@@ -50,24 +50,19 @@ implementation.
 
 The deep recon splits into independent areas: the repo's docs and conventions, the
 inventory of the affected area, contract counterparts, the in-repo blast radius. When the
-area is large, offer to dispatch read-only scout subagents and keep the mapping (stage 4)
-in the main context:
+area is large, dispatch the `scouts` skill and keep the mapping (stage 4) in the main
+context. The grant (one question — permission and count), the mission charter, and the
+fan-in rules live there; the specifics of this skill:
 
-- **Ask first — always.** One explicit question: may subagent scouts be used, and how
-  many? Name the missions and the recommended count; the granted number is the hard
-  budget for the run — need more, ask again.
-- **Denied, or the host has no subagent mechanism** → run the same missions yourself,
-  sequentially, in narrow passes.
-- **One mission per scout**: "find the counterpart of contract X", "inventory how `<area>`
-  is structured", "who consumes module Y". The `searched:` evidence for anything declared
+- Missions here: "find the counterpart of contract X", "inventory how `<area>` is
+  structured", "who consumes module Y". The `searched:` evidence for anything declared
   new is collected with the same rigor whether by you or by a scout.
 - **Report contract**: citable facts with `file:line`; reuse/extend candidates explicit;
-  uncertainties as their own list. No prose retelling. What leaves for a scout is
-  cleaned of secrets and personal data — delegation must not widen what the git
-  boundary already guards.
-- Scout findings are hypotheses until verified: every change still cites its source, and a
-  scout's word counts as `[found]` only after your check in the main context. Scouts read —
-  never edit.
+  uncertainties as their own list. No prose retelling. The contract applies unchanged
+  whether the missions ran in parallel or — denied, unanswered, or unsupported on the
+  host — sequentially in narrow passes.
+- Scout findings are hypotheses until verified: every change still cites its source, and
+  a scout's word counts as `[found]` only after your check in the main context.
 
 ## 4. Map the changes
 

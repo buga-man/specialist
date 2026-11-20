@@ -105,9 +105,9 @@ node "<skill-dir>/scripts/kb.mjs" status
 ```
 
 The index is not versioned and lives in `.kbindex/` of the project. The plugin's
-gates keep it in sync: in Claude Code and Codex the Stop hook blocks the end of the
-turn until the index is rebuilt; in pi a settle-time follow-up demands the same. In
-hosts without a gate, run `build` by hand after editing documentation.
+gates keep it in sync: in Claude Code, ZCode, and Codex the Stop hook blocks the end
+of the turn until the index is rebuilt; in pi a settle-time follow-up demands the
+same. In hosts without a gate, run `build` by hand after editing documentation.
 
 ## When a document is searched by other words
 

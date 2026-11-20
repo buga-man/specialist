@@ -1,4 +1,4 @@
-# Skills: what each of the twenty-four does
+# Skills: what each of the twenty-five does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
@@ -35,8 +35,9 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
 ## Roles: how the skills ship
 
 The same pipeline installs as one full plugin or as three skills-only role plugins —
-install a role and the session carries only that role's skills. `dispatch` (in every
-plugin) classifies a task by role before any work starts; `role-analyst` / `role-dev` /
+install a role and the session carries only that role's skills. `dispatch` and
+`scouts` ride in every plugin — the router classifies a task by role before any work
+starts, the protocol governs every fan-out; `role-analyst` / `role-dev` /
 `role-qa` are the roles' entry skills. Roles are switched only with the user's explicit
 consent — the options live in `dispatch`.
 
@@ -44,7 +45,7 @@ consent — the options live in `dispatch`.
 |---|---|---|
 | `specialist-analyst` | a raw task to specs and true documentation | brainstorm, system-thinking, decompositor, kb-index, tech-writer, trace-audit, `role-analyst` |
 | `specialist-dev` | a repo spec to spec-driven code | implementation-plan, change-impact, spec-implementation, codestyle, lazy, root-cause, `role-dev` |
-| `specialist-qa` | acceptance, review, bug hunting | spec-review, stand-acceptance, code-review, bug-hunt, `role-qa` |
+| `specialist-qa` | acceptance, review, bug hunting | test-analysis, test-design, spec-review, stand-acceptance, code-review, bug-hunt, defect-triage, `role-qa` |
 | `specialist` (full) | the whole cycle + the guards (hooks) | all of the above |
 
 The role plugins are generated from the roles map (`scripts/roles.mjs`) — one source of
@@ -63,11 +64,14 @@ out-of-role skills are then blocked until the user consents to a switch.
   in the code, or observed behavior. "Looks fine" is not a verdict.
 - **The reviewer does not fix, the writer does not edit silently** — role independence
   matters more than speed.
-- **Scouts by explicit permission.** The recon-heavy skills (brainstorm, system-thinking,
-  decompositor) — and bug-hunt's parallel hunters — may parallelize research with
-  read-only subagent scouts — but only after
-  asking the user: may scouts be used here, and how many. The granted count is the hard
-  budget; without subagents (denied or unsupported) the same missions run sequentially.
+- **Scouts by explicit permission.** Skills whose stages split into independent
+  read-only missions — the recon trio (brainstorm, system-thinking, decompositor),
+  bug-hunt's parallel hunters, and the wide-pass consumers (spec-review, code-review,
+  test-analysis, defect-triage, trace-audit) — parallelize through the `scouts`
+  skill: one question asks permission and the count (`.spec-gate`'s `scouts: <N>`
+  pin can answer it standing), the granted count is the hard budget, and no answer
+  or no host support means the same missions run sequentially. Scouts read — never
+  edit; their reports are hypotheses until re-verified in the main context.
 - **Slug navigation.** All artifacts of a feature carry its slug: `docs/specs/YYYY-MM-DD-<topic>*`
   (business spec, `-implementation`, `-<repo>`, `-<repo>-review`; review reports —
   `-<repo>-quality`, `-<repo>-audit`) and `docs/plans/YYYY-MM-DD-<topic>-<repo>.md`. The
@@ -111,9 +115,9 @@ what was ordered as "new" may already exist in a neighboring repo. Reconnaissanc
 affected repositories, blast radius, contracts between repos (each complete — fields,
 an example pair, an error table, limits or an explicit "no limits"; a change to an
 existing contract is classified breaking/additive, breaking carries a migration plan;
-each with its owning contract test), data migration and rollback, rollout order. Scout
-prompts carry artifacts cleaned of secrets and personal data — delegation must not
-widen what the git boundary guards.
+each with its owning contract test), data migration and rollback, rollout order. Repo
+recon fans out through the `scouts` skill — one scout per repo under the shared
+grant-and-charter protocol (sanitized prompts, artifacts never conversations).
 
 - **Input → output:** business spec → `docs/specs/YYYY-MM-DD-<topic>-implementation.md`
 - **Key rule:** architectural decisions and behavior changes are **always** discussed with
@@ -242,6 +246,9 @@ the code broken (there is no code yet).
 - **Corner-case axes, enumerated not recalled:** boundaries per data element, state
   transitions, dual modes (sandbox/prod, flag on/off — the shared-blind-spot axis),
   permissions (actor × action), concurrency.
+- **Scouts:** a wide spec fans the mining sources and the axes out read-only through
+  the `scouts` skill — the mined diff, its dedupe, and the gaps report stay central;
+  the probe script never fans out.
 - **Grader types on every proposal:** `command` (default) / `stand` / `manual` /
   `model` (a marked last resort — a model grader never proves, it opines).
 - **Key rule:** a hole is a question, not an invention — findings travel to the owning
@@ -308,6 +315,9 @@ broken until proven otherwise".
 - **Cycle line:** the report opens with `Cycle: plan date → accepted date (N days)` —
   derived from the slug dates; no state stored (tech-writer's audit aggregates these
   into a cycle-times table).
+- **Scouts:** a wide spec's criterion walk (and the cases spine, TEST-ID by TEST-ID)
+  fans out read-only through the `scouts` skill — the verdict table, the amendment
+  lifecycle, and the criteria attack stay central.
 - **Key rule:** the reviewer does not fix — fixes go back into the plan for the executor;
   bugs go to root-cause.
 - **When:** "review the implementation", "accept against the spec", "run acceptance".
@@ -339,6 +349,9 @@ effort.
   (`Re-verified: N closed, M not closed, K regressions`); findings live in a countable
   table and the report ends with a `Recurring:` line — the review memory tech-writer
   aggregates into CODESTYLE anti-patterns.
+- **Scouts:** a large diff's churn-ordered deep reads and the re-verification of
+  carried findings fan out read-only through the `scouts` skill — the duplication
+  grep and the findings table stay central.
 - **Key rules:** evidence, not impressions; not a linter — what lint configs catch is a
   pointer, never a re-description; severity honesty — a style nit is a note, never a
   blocker; the reviewer does not fix.
@@ -378,11 +391,12 @@ must never accept.
   immediately; the report never carries live secret values. Outcome: no findings /
   findings listed / exploitable — fix before merge. A two-line debrief closes the
   report — what the charter got right or wrong, where the next hunt should aim first.
-- **Parallel hunters (by explicit permission):** a large target may run 2–3
-  independent hunters with distinct checklist foci (same scout permission rule as the
-  recon skills); the coordinator deduplicates by scenario and resolves disagreements by
-  building the scenario. Re-verification statuses and the `Recurring:` line — the same
-  memory loop as code-review.
+- **Parallel hunters (by explicit permission):** a large target may run independent
+  hunters with distinct checklist foci, dispatched through the `scouts` skill — its
+  grant covers the hunters; the skill's question names the hunt→fix→hunt iterations
+  (recommended ≤3, never silently assumed); the coordinator deduplicates by scenario
+  and resolves disagreements by building the scenario. Re-verification statuses and
+  the `Recurring:` line — the same memory loop as code-review.
 - **Key rules:** the hunter does not fix — fixes go back into the plan (or root-cause
   for a single confirmed bug); a layer, not a substitute — vuln-guard/secrets-guard
   catch the moment of commit, this audits the code itself.
@@ -412,6 +426,9 @@ code, deduped against history, classified so routing is mechanical, not mood.
   unverified / refuted — `unverified` and `needs-info` are honest verdicts.
 - **Completeness:** repro steps, expected vs actual, error text verbatim, version,
   environment — a bug report missing any is `needs-info` with a draft ask.
+- **Scouts:** a large queue's per-item verification (each item at its own SHA) fans
+  out read-only through the `scouts` skill — scenario dedupe, aging, and the draft
+  replies stay central.
 - **Routing:** root-cause's four classes decide it — defect → plan/root-cause, wrong
   test → its owner, environment → handed back, spec mismatch → amendment through the
   analyst; duplicate/already-fixed closed with evidence; **wontfix is the user's
@@ -484,6 +501,9 @@ broken promise: the pipeline auditing itself.
   report, with their age; `Recurring:` classes across consecutive reports become a
   CODESTYLE proposal for tech-writer); the untriaged queue; approval honesty (an
   approved spec without an approval trail).
+- **Scouts:** a wide tree's per-chain judgment walks fan out read-only through the
+  `scouts` skill; the mechanical walk never fans out — walk.mjs is already tree-wide
+  and fast.
 - **Routed, not fixed:** every finding names its owner — spec defects → amendments
   (analyst), missing reviews → qa, open findings → the plan or root-cause, recurring
   classes → tech-writer. The auditor edits nothing.
@@ -617,6 +637,31 @@ produces the wrong artifacts.
 - **Enforcement:** on Claude Code and ZCode the skill-gate blocks out-of-role skill
   calls with a pointer here; on pi, Codex CLI, and OpenCode the skill is advisory —
   follow it honestly.
+
+## scouts — subagents under an explicit grant
+
+The framework's subagent protocol, carried by every plugin. Parallel read-only recon
+and verification by scout subagents — under a grant the user names: one question asks
+permission and the count, and `.spec-gate`'s `scouts: <N>` pin can answer it standing.
+
+- **The grant:** asked once at the first fan-out of a session, it covers every skill
+  in it; no answer, a "no", or a host without subagents → the same missions run
+  sequentially under the same report contract. The count is the hard budget for
+  simultaneous scouts; iteration loops run fresh scouts every round — inherited
+  arguments anchor the new eyes.
+- **The charter:** one mission per scout with a scope boundary (never "look at the
+  repo"), distinct missions by assignment — parallel scouts do not
+  self-differentiate. Prompts carry artifact paths, not contents; never pre-judge a
+  scout — the mission says what to look for, not what to conclude.
+- **The fan-in:** scout reports are hypotheses until re-verified in the main
+  context; dedup by scenario, disagreements built out — never voted; a silent scout
+  is chased, not assumed empty; critical findings surface immediately.
+- **The boundaries:** scouts read — never edit; no recursion (a scout never
+  dispatches scouts); one task at a time stays one task at a time, one charter per
+  session stays one charter, and already-verified work is never re-verified for
+  parallelism's sake.
+- **When:** a skill's stage says "dispatch the scouts skill"; the user asks to
+  parallelize research.
 
 ## bootstrap — set a repository up for the framework
 
