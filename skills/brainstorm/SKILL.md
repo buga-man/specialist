@@ -66,6 +66,9 @@ the specifics of this skill:
 
 - Direct questions are a scarce resource: **at most 10 per round**, batched in one message, most critical first.
 - Ask only questions whose answers would change the spec; each question must name the ambiguity it removes.
+- Order what makes the cut by what it moves — **scope > security/privacy > user
+  experience > technical detail** — and below that line propose the assumption instead
+  of asking: a question a reasonable default answers is noise wearing a question mark.
 - If you can responsibly assume, propose the assumption instead of asking: "I assume X — correct me if wrong."
 - Questions you did not ask become the spec's Open questions, each with your working assumption.
 
@@ -141,9 +144,12 @@ not impression.
 
 ## 4. Business cases
 Only cases that are genuinely distinct (happy path + key alternatives and failures),
-each as an actor → action → outcome sequence.
+each as an actor → action → outcome sequence. Each case carries a priority tier —
+P1 what the value stands on, P2 the important alternatives, P3 the rest — and the
+P1 tier alone is a shippable slice: had nothing else landed, the feature would
+still be worth merging. Priorities are the plan's slicing order.
 
-### Case: <name>
+### Case: <name> (P1)
 1. ...
 
 ## 5. Success metrics
@@ -158,7 +164,9 @@ project can use. A criterion built on an undefined term is unverifiable, however
 | # | Question | Working assumption | Risk if the assumption is wrong | Blocking |
 
 Blocking = yes means downstream skills must not start before it is resolved —
-"one coherent picture" is enforced here, not in the next stage.
+"one coherent picture" is enforced here, not in the next stage. More than three
+blocking rows means the picture is not one yet: resolve or split with the user
+instead of saving a question farm (check-criteria flags it).
 
 ## 8. Decisions and rationale
 Key business decisions made during brainstorming and why alternatives were rejected.

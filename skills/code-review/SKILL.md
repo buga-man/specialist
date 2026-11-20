@@ -26,7 +26,10 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   isolation lies.
 - `CODESTYLE.md` at the repo root, where present — the documented conventions are the
   oracle for style findings; a style finding cites the rule it breaks. No document —
-  style stays a note at most.
+  style stays a note at most. A `## Principles` section there, where the project
+  keeps one, outranks style: a diff violating a MUST principle is a **blocker** on
+  that alone — the finding quotes the principle and carries the proof a blocker
+  owes; a violated SHOULD principle is a worth-fixing finding citing the principle.
 - The spec chain's **recorded decisions** — the "Decisions and rationale" sections of
   the feature's system/repo specs, where the feature has them. Code that contradicts
   a recorded decision (a rejected alternative implemented, a reversibility promise
@@ -117,6 +120,9 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   — so the next pass and tech-writer's report card can count them.
 - Each finding: location (`file:line`), what and why, a proposed direction — a
   direction, not a patch; the reviewer does not fix.
+- A findings table caps at **50 rows**; the rest collapse into one overflow line —
+  `+N more (X blocker, Y worth fixing, Z note)` — a table nobody finishes protects
+  nothing. Overflow findings still route into the plan; they just do not scroll.
 - **Pre-report gate** — four checks before a finding enters the table; any fail → not
   a finding:
   1. the exact spot can be quoted (`file:line`) — "somewhere in the auth layer" is a
@@ -155,6 +161,10 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   one; filler nits and speculative "consider using X" are the reviewer's chief failure
   mode. Final test of every finding: would a senior engineer on this team actually
   change this in review? No → drop it.
+- **The loop converges or says so**: a re-review after fixes that yields zero blockers
+  and zero worth-fixing findings is terminal — `Converged: pass N` in the header next
+  to the `Re-verified:` line, no new sections written to look busy. Until then every
+  pass names what is still open.
 - Outcome: **clean** / **worth a pass** / **rework required** — clean is an approve,
   never withheld for the look of rigor.
 - Blockers and worth-fixing findings go back into the plan as tasks; notes ride along.

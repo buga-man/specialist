@@ -6,6 +6,9 @@
  *
  *   - error: a malformed TEST-ID (TEST-<TOPIC>-NNN, letters/digits/hyphens, ≥3 digits);
  *   - error: a duplicate TEST-ID — IDs are stable, never renumbered, never reused;
+ *   - note:   a TEST-ID appearing after a higher number of the same topic — the
+ *             table is append-only; an ID inserted between existing rows means the
+ *             table was rewritten, not extended;
  *   - error: a row with a missing Type / Grader / Expected cell;
  *   - error: an unknown grader (command / stand / manual / model) or type;
  *   - error: a criterion reference no spec carries;
@@ -158,6 +161,10 @@ export function checkCases(casesText, specTexts) {
 
   const seen = new Map();
   const covered = new Set();
+  // The highest number seen so far per topic prefix (everything before the final
+  // number): the table is append-only, so a number may not fall back inside its
+  // own topic. Different topics (TEST-A-*, TEST-B-*) are separate spaces.
+  const lastNo = new Map();
   for (const row of rows) {
     const where = `line ${row.line} (${row.id || "no id"})`;
     if (!row.id || !ID_RE.test(row.id)) {
@@ -166,6 +173,14 @@ export function checkCases(casesText, specTexts) {
       errors.push(`${where}: duplicate TEST-ID "${row.id}" — first seen on line ${seen.get(row.id)}; IDs are stable, retired, never reused`);
     } else {
       seen.set(row.id, row.line);
+      const cut = row.id.lastIndexOf("-");
+      const prefix = row.id.slice(0, cut);
+      const num = Number(row.id.slice(cut + 1));
+      const prev = lastNo.get(prefix);
+      if (prev !== undefined && num < prev) {
+        notes.push(`${where}: TEST-ID out of order — ${prefix}-${String(num).padStart(3, "0")} appears after ${prefix}-${String(prev).padStart(3, "0")}; the table is append-only, new rows join the end`);
+      }
+      if (prev === undefined || num > prev) lastNo.set(prefix, num);
     }
     if (!row.type) errors.push(`${where}: no Type cell`);
     else if (!TYPES.has(row.type)) errors.push(`${where}: unknown type "${row.type}" — ${[...TYPES].join(" / ")}`);

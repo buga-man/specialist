@@ -137,7 +137,9 @@ file downstream.
 
 - **One artifact per feature-repository pair** — never one file for a cross-repo
   feature (per-repo cases, mirroring the repo specs).
-- **IDs are stable** — renumbering breaks every reference; retire, never reuse.
+- **IDs are stable and append-only** — renumbering breaks every reference; retire,
+  never reuse; new rows join the end of the table. An ID appearing between existing
+  rows means the table was rewritten, not extended — the script flags it.
 - **Proportionality** — the matrix scales with the blast radius; a fast-lane change
   gets its cases inside the quick plan, not this artifact.
 - **The artifact never invents criteria** — a case exercising behavior no criterion
