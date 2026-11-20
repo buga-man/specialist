@@ -34,10 +34,16 @@ const VAGUE_RE = new RegExp(`\\b(?:${VAGUE.join("|")})\\b`, "i");
 /** EARS stems — a criterion not starting with one is info, not an error. */
 const STEM_RE = /^(?:when |while |if |where |the system (?:shall|should) |untrusted )/i;
 
+/** The criteria-section heading, bilingual: the team's working language may be either.
+ *  Cyrillic branches are prefix stems, not \b-bounded words — JS \b is ASCII-only
+ *  and never fires around Cyrillic letters. */
+const CRITERIA_HEADING_RE =
+  /^#{1,6}\s*(?:\d+[.\s]*)?\s*(?:acceptance criteria\b|критери[а-яё]*\s+при[ёе]мк|при[ёе]мочн[а-яё]*\s+критери[а-яё]*)/i;
+
 const criteriaSection = (lines) => {
   let start = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/^#{1,6}\s*(?:\d+[.\s]*)?\s*acceptance criteria\b/i.test(lines[i])) {
+    if (CRITERIA_HEADING_RE.test(lines[i])) {
       start = i + 1;
       break;
     }

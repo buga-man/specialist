@@ -11,7 +11,9 @@
  *   - error: a criterion reference no spec carries;
  *   - error: a must criterion no case exercises — the artifact's whole point;
  *   - note:   a should criterion without a case; a `—`-criterion that is not a
- *             regression case (defect-sourced rows are the only criterion-less ones).
+ *             regression case (defect-sourced rows are the only criterion-less ones);
+ *             a criterion number carried by more than one given spec — one number
+ *             space; pass only the specs whose numbering is global, or renumber.
  *
  * Usage: node cases.mjs check <cases.md> <spec.md> [more specs...]
  * Exit codes: 0 — holds, 1 — errors, 2 — usage/IO trouble.
@@ -73,6 +75,17 @@ export function parseCases(casesText) {
 /** The numbered acceptance criteria of the given specs, merged:
  *  Map<number, { must, specs: string[] }>. Numbered rows of any
  *  "Acceptance criteria" section count — the business spec is the usual home. */
+/** The criteria-section heading, bilingual: the team's working language may be either.
+ *  Cyrillic branches are prefix stems, not \b-bounded words — JS \b is ASCII-only
+ *  and never fires around Cyrillic letters. */
+const CRITERIA_HEADING_RE =
+  /(?:acceptance criteria\b|критери[а-яё]*\s+при[ёе]мк|при[ёе]мочн[а-яё]*\s+критери[а-яё]*)/i;
+
+/** The numbered acceptance criteria of the given specs, merged:
+ *  Map<number, { must, sources }>. Numbered rows of any criteria section count —
+ *  the business spec is the usual home. Numbers share one space across the given
+ *  specs: a number found in more than one spec (sources > 1) is a collision the
+ *  caller reports, not silently merges. */
 export function parseCriteria(specTexts) {
   const out = new Map();
   for (const text of specTexts) {
@@ -80,7 +93,7 @@ export function parseCriteria(specTexts) {
     let inSection = false;
     for (const line of lines) {
       if (/^#{1,6}\s+/.test(line)) {
-        inSection = /acceptance criteria\b/i.test(line);
+        inSection = CRITERIA_HEADING_RE.test(line);
         continue;
       }
       if (!inSection) continue;
@@ -91,8 +104,9 @@ export function parseCriteria(specTexts) {
       const existing = out.get(no);
       if (existing) {
         existing.must = existing.must || must;
+        existing.sources += 1;
       } else {
-        out.set(no, { must });
+        out.set(no, { must, sources: 1 });
       }
     }
   }
@@ -146,6 +160,11 @@ export function checkCases(casesText, specTexts) {
     }
   }
 
+  for (const [no, { sources }] of [...criteria.entries()].sort((a, b) => a[0] - b[0])) {
+    if (sources > 1) {
+      notes.push(`criterion ${no} is numbered in ${sources} of the given specs — numbers share one space here; pass only the specs whose numbering is global, or renumber`);
+    }
+  }
   for (const [no, { must }] of [...criteria.entries()].sort((a, b) => a[0] - b[0])) {
     if (covered.has(no)) continue;
     if (must) errors.push(`criterion ${no} (must) is exercised by no case — the artifact's whole point`);

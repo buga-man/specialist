@@ -99,6 +99,9 @@ the axis list, not by remembering:
 - **Permissions** — actor × action grid; the empty cells are holes.
 - **Concurrency** — simultaneous edits, double submit, check-then-act on shared state.
 
+This axis list is the canonical one — `test-design` §3 executes the same five as case
+rows; a change here lands there in the same edit, or the two skills drift.
+
 ## 6. Formalize the vague
 
 A vague criterion does not get deleted — it gets a table:

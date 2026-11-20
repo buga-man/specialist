@@ -470,15 +470,19 @@ gets skipped, silently. The skill walks the artifact tree mechanically and repor
 broken promise: the pipeline auditing itself.
 
 - **Input → output:** `docs/specs/` + `docs/plans/` → `docs/specs/YYYY-MM-DD-pipeline-trace.md`
-- **The checks:** orphan criteria (must without a runnable `Verify:` — manual checks
-  listed separately, they wait on a person, not on nothing); traceability desync
-  (`parent`/`children` one-way or dead links, id/slug mismatches); implementation
-  without a review (closed plan tasks, no `*-review` — the release-blocking class;
-  mid-flight chains are "working as intended", not findings); findings that never
-  closed (walked report by report, with their age; `Recurring:` classes across
-  consecutive reports become a CODESTYLE proposal for tech-writer); stuck work
-  (`- Blocked by:` tasks whose question the spec no longer lists); status honesty
-  (a draft with closed implementation, an approved without an approval trail).
+- **The mechanical walk (`scripts/walk.mjs`)** — the promises that need no judgment:
+  orphan criteria (must without a `Verify:`, bilingual criteria headings included);
+  traceability desync (`parent`/`children` one-way or dead links, id/slug mismatches);
+  TEST-ID reuse across the cases registry; stuck work (`- Blocked by:` tasks whose
+  question the spec no longer lists, or naming a spec the tree does not carry); status
+  honesty's mechanical half (a draft with children or closed implementation). Exit 1 —
+  the findings are quoted in the report as stated.
+- **The judgment checks** — what the script cannot see: implementation without a review
+  (closed plan tasks, no `*-review` — the release-blocking class; mid-flight chains are
+  "working as intended", not findings); findings that never closed (walked report by
+  report, with their age; `Recurring:` classes across consecutive reports become a
+  CODESTYLE proposal for tech-writer); the untriaged queue; approval honesty (an
+  approved spec without an approval trail).
 - **Routed, not fixed:** every finding names its owner — spec defects → amendments
   (analyst), missing reviews → qa, open findings → the plan or root-cause, recurring
   classes → tech-writer. The auditor edits nothing.

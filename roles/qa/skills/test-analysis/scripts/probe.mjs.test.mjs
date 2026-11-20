@@ -103,6 +103,23 @@ test("a spec without an acceptance-criteria section is nothing to probe", () => 
   assert.equal(r.mustCount, 0);
 });
 
+test("the criteria-section heading is bilingual — a Russian spec is probed, not skipped", () => {
+  const ru = (heading) => [
+    "# Спека", "",
+    `## ${heading}`, "",
+    "1. Система должна быть удобной. (must)",
+    "2. При ошибке ввода система отклоняет форму. (must) — Verify: manual — QA наблюдает",
+  ].join("\n");
+  for (const heading of ["Критерии приёмки", "Критерии приемки", "Приёмочные критерии", "3. Критерии приёмки"]) {
+    const r = probeSpec(ru(heading));
+    assert.equal(r.found, true, heading);
+    assert.equal(r.errors.filter((e) => /criterion 1 \(must\) has no Verify/.test(e)).length, 1, heading);
+    assert.equal(r.warnings.filter((w) => /"удобной"/.test(w)).length, 1, heading);
+  }
+  // a heading that names none of the section's languages is still nothing to probe
+  assert.equal(probeSpec("# Спека\n\n## Требования\n\n1. Система работает. (must)\n").found, false);
+});
+
 test("CLI: errors exit 1, a clean spec exits 0", () => {
   const dir = mkdtempSync(join(tmpdir(), "probe-cli-"));
   dirs.push(dir);
