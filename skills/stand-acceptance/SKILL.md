@@ -129,6 +129,18 @@ or artifact and what exactly was observed (output, status, row count, screenshot
 READY → merge is the user's call. A defect routes to `root-cause` (above); an open item
 goes back into the plan — never into silence.
 
+## Exploratory charters (a mode of this skill)
+
+Scripted checks (the `stand`-graded rows of the cases artifact) prove what was written
+down; a charter hunts what was not. One charter per session: **mission** (what this
+pass protects — an asset, a flow), **scope** (in / out), **time-box** (25–45 minutes on
+the stand), then explore within it, logging every observation as a one-line note with
+the command/URL that produced it. When the box ends, the report is written with what is
+in hand — an honest partial beats an overrun. Findings land as PASS/FAIL + evidence
+lines like any other acceptance line; FAIL routes to `defect-triage`, and the debrief's
+two lines (what the charter got right, where the next one should aim) ride along — the
+next charter inherits the aim, not just the findings.
+
 ---
 
 Moved from a command skill (2026-11-06): personal paths and names replaced with `<placeholders>`.

@@ -23,8 +23,10 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
 ## 1. Gather the artifact tree
 
 - All specs in `docs/specs/` (business, `-implementation`, `-<repo>`, reports
-  `*-quality` / `*-audit` / `*-review`), all plans in `docs/plans/`. One `ls` each;
-  where `.kbindex/` exists, its index is a cross-check, not a source.
+  `*-quality` / `*-audit` / `*-review`), all plans in `docs/plans/`, the cases
+  artifacts in `docs/tests/` and the QA reports in `docs/qa/` (`*-gaps`,
+  `*-triage`). One `ls` each; where `.kbindex/` exists, its index is a cross-check,
+  not a source.
 - An empty `docs/specs/` — say so and stop: there is nothing to audit.
 - Parse what each check needs: frontmatter (`id`, `parent`, `children`, `status`),
   numbered criteria with their must/should mark and `Verify:` field, plan tasks with
@@ -42,6 +44,11 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
   in the frontmatter matches the file's slug. One-way links, dead links, and id/slug
   mismatches are findings (documentation defects — same class spec-review flags, here
   found repo-wide instead of per feature).
+- **Criterion ↔ case coverage** (where `docs/tests/` holds cases artifacts): a must
+  criterion no case exercises, and a case row exercising a criterion no spec carries,
+  are both findings — `test-design`'s script (`cases.mjs check`) decides them
+  mechanically; this audit quotes its output. A duplicate or retired-then-reused
+  TEST-ID across the artifacts is the same class of breakage as a parent/child desync.
 - **Implementation without a review.** A spec chain whose repo specs have an
   implementation plan with closed tasks but no `*-review` report for the chain: work
   shipped without acceptance. A chain mid-implementation is not a finding — it is
@@ -57,6 +64,10 @@ The auditor reports. Fixes belong to their owning roles: spec defects → amendm
   owning spec still lists as open — the block is honest. A blocked task whose question
   the spec no longer lists (resolved or removed) is stale blocking: work waiting on
   nothing.
+- **The untriaged queue.** Open items in the newest `*-triage` report that no later
+  report re-verified and no plan task carries: findings that fell out of the loop
+  between triage and routing. A `needs-info` item aging across two triages is the
+  same debt, named.
 - **Status honesty.** A spec `status: draft` with downstream children or closed
   implementation tasks — the artifact outgrew its status; a `status: approved` spec
   with no approval trail in Amendments is the reverse finding.

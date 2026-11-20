@@ -38,7 +38,16 @@ export const ROLE_MAP = {
       "root-cause",
       "role-dev",
     ],
-    qa: ["spec-review", "stand-acceptance", "code-review", "bug-hunt", "role-qa"],
+    qa: [
+      "test-analysis",
+      "test-design",
+      "spec-review",
+      "stand-acceptance",
+      "code-review",
+      "bug-hunt",
+      "defect-triage",
+      "role-qa",
+    ],
   },
   shared: ["dispatch", "bootstrap"],
 };
@@ -55,9 +64,10 @@ export const ROLE_DESCRIPTIONS = {
     "implementation plans, tests-first minimal implementation, conventions, bug " +
     "root-causing. Skills-only plugin; the guards ship with the full specialist bundle.",
   qa:
-    "The QA/reviewer role of the specialist framework — acceptance against the specs, " +
-    "live-stand acceptance, quality review, adversarial bug and security hunting. " +
-    "Skills-only plugin; the guards ship with the full specialist bundle.",
+    "The QA/reviewer role of the specialist framework — spec-side test analysis (holes, " +
+    "missed criteria, corner cases), test design, acceptance against the specs, " +
+    "live-stand acceptance, quality review, adversarial bug and security hunting, " +
+    "defect triage. Skills-only plugin; the guards ship with the full specialist bundle.",
 };
 
 /** The role names, in map order. */

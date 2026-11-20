@@ -1,6 +1,6 @@
 {
   "name": "specialist",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "description": "The specialist plugin: a full-cycle feature development framework (skills, hooks, extensions)",
   "keywords": [
     "pi-package"

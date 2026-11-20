@@ -1,16 +1,19 @@
 # specialist-qa
 
-The QA/reviewer role of the specialist framework — acceptance against the specs, live-stand acceptance, quality review, adversarial bug and security hunting. Skills-only plugin; the guards ship with the full specialist bundle.
+The QA/reviewer role of the specialist framework — spec-side test analysis (holes, missed criteria, corner cases), test design, acceptance against the specs, live-stand acceptance, quality review, adversarial bug and security hunting, defect triage. Skills-only plugin; the guards ship with the full specialist bundle.
 
 Generated from the repository's roles map (`scripts/roles.mjs`) — do not edit by
 hand; rebuild with `node scripts/compliance.mjs --fix`.
 
 ## Skills
 
+- `test-analysis`
+- `test-design`
 - `spec-review`
 - `stand-acceptance`
 - `code-review`
 - `bug-hunt`
+- `defect-triage`
 - `role-qa`
 - `dispatch`
 - `bootstrap`

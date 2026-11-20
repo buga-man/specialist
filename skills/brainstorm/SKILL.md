@@ -190,4 +190,6 @@ text under review stays the text that was reviewed.
 ## Next
 
 The approved spec moves to `system-thinking` — which repositories change, which contracts
-connect them, what breaks. Nothing downstream starts from a spec the user has not accepted.
+connect them, what breaks — and, on a nontrivial feature, through `test-analysis` first
+(the qa role's spec-side probe: holes, missed criteria, corner-case axes). Nothing
+downstream starts from a spec the user has not accepted.
