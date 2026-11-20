@@ -60,7 +60,9 @@ a guess wearing a noun.
 - Write the smallest test that reproduces the bug. Run it: it must fail **for the bug's
   reason** — not on a typo, an import, or a setup crash. Wrong failure → fix the test first.
 - This test stays in the suite as the regression guard; deleting it after the fix is
-  forbidden.
+  forbidden. When the feature carries a cases artifact (`docs/tests/*-cases.md`,
+  the `test-design` skill), the regression test joins it under a TEST-ID (source: this
+  bug) — the suite and the registry never drift apart.
 
 ## 5. Minimal fix
 

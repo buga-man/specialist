@@ -39,6 +39,11 @@ review there is.
   the named manual observation) — the verdict cites the run, not an impression. A must
   criterion without a runnable `Verify:` is unverifiable by default; flag it as a spec
   defect (proposed amendment), not a code failure.
+- A cases artifact for the feature (`docs/tests/*-cases.md`, the `test-design` skill)
+  is the verification walk's spine: run it TEST-ID by TEST-ID, each case producing its
+  own evidence-backed result, and the per-criterion table cites the cases that decided
+  it. A criterion with cases but no case result is a gap in this review, not in the
+  artifact.
 - Verdict per item:
   - **passed** — with evidence: a test, a code location, or an observed behavior;
   - **failed** — what differs from the spec and where;

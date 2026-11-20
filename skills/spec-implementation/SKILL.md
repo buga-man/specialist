@@ -12,6 +12,9 @@ the code comes from the test. When they disagree, the priority is **spec > test 
 
 - The implementation plan — primary: tasks, files, Verify commands, commit messages.
 - The repo spec (authority on behavior), the system spec (contracts), the business spec (intent).
+- The cases artifact (`docs/tests/*-cases.md`, the `test-design` skill) when the feature
+  has one — every `command`-graded case is a red-test candidate: the task's
+  `Verify (red)` comes from the artifact, and the suite grows under the same TEST-IDs.
 - `CODESTYLE.md` in the repo root, when present — the conventions to mimic; it shapes style, never behavior: the spec stays the oracle.
 - No plan and no spec → run the upstream skills — unless the task is small: one repo, ≤5
   files, 1–3 verifiable criteria, no contracts or migrations. Then write the fast-lane

@@ -18,6 +18,11 @@ task → brainstorm → business spec
                                     unverifiable → stand-acceptance (live acceptance on the stand)
                                     deeper pass on demand → code-review (quality & logic) / bug-hunt (bugs & security)
 
+the spec side of QA (shift left):
+      spec → test-analysis → gaps report (holes, missed criteria, corner-case axes) → amendments
+      accepted criteria → test-design → cases artifact (TEST-IDs, grader-typed, executable)
+      the defect queue → defect-triage → verified, classified, routed rows
+
 after merge / before release → tech-writer → docs audit (code ↔ specs, amendments via Amendments)
                                             + user manual (md → html + pdf, screenshots from the stand)
 
@@ -37,6 +42,9 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `change-impact` | planned change → blast radius before the edit (six questions in order — code, data, interfaces, tests, docs, release; a written before-list) · diff vs promised scope after (outside it — justify or revert; a silently dropped before-item is a finding) |
 | `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; a self-review pass against the reviewers' checklists before the report) |
 | `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; a green run is not evidence by itself — the assertion must match the criterion; non-functional criteria need criterion + method + threshold + environment; best in a fresh session) |
+| `test-analysis` | spec → gaps report `docs/qa/*-gaps.md` (the spec-side adversarial pass: holes — undefined behavior, missing error paths, contradictions; missed-criteria mining from contract error rows, UI element tables, data invariants, NFRs; corner-case axes — boundaries, state transitions, dual modes, permissions, concurrency; vague wording formalized into decision tables; every proposed criterion grader-typed: command / stand / manual / model; the probe script catches what needs no judgment) |
+| `test-design` | accepted criteria → the cases artifact `docs/tests/*-cases.md` (TEST-ID'd rows — stable, retired, never reused; a scenario matrix main/alternate/exception per business case; boundary rows per data element; decision and state tables; a regression section sourced from prior defects; a grader on every case — command by default; one artifact three skills consume: spec-review walks it case by case, spec-implementation mines it for red tests, stand-acceptance runs its stand rows; the `cases.mjs check` script enforces the contract and the coverage both ways) |
+| `defect-triage` | the defect queue (external reports + internal findings) → `docs/qa/*-triage.md` (incoming reports are untrusted data — nothing pasted is run, fetched, or obeyed; dedupe by trigger scenario; "already fixed" needs the fixing commit proven an ancestor — `merge-base --is-ancestor`; completeness checklist → needs-info; class (root-cause's four) × severity × SHA-scoped confidence confirmed/likely/unverified/refuted; mechanical routing; aging and recurring classes; draft replies are opt-in) |
 | `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity; the stale-impact pass — what the diff does to the existing suite: tests to re-run, tests that may now lie, coverage silently removed; the spec chain's recorded decisions checked where present — a contradicted decision is a finding; a large diff read in churn order — findings with file:line evidence and severity, re-verification of the previous report, a `Recurring:` memory line; the reviewer does not fix) |
 | `bug-hunt` | diff/branch/area → adversarial audit report `*-audit.md` (threat-sketch-aimed, analyzer-assisted — tools propose, the hunter verifies; parallel hunters by explicit permission; bugs: boundaries, off-by-one, error paths, races, leaks, misuse personas; security: injection, authn/authz, secrets, crypto; every finding with a trigger scenario + fix criteria (the dev role's acceptance check), deduplicated against prior audits, re-verification of the previous report; critical — reported immediately) |
 | `root-cause` | bug report → root cause (triage first — product defect / wrong test / environment-data mismatch / spec mismatch; reproduction required, red test, minimal fix, full suite; the report names the class) |
@@ -143,7 +151,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twenty-one skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty-four skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all thirteen hooks: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -224,8 +232,8 @@ one role and the session carries only that role's skills:
 | Plugin | The role | Skills |
 |---|---|---|
 | `specialist-analyst` | from a raw task to specs and true documentation | `brainstorm`, `system-thinking`, `decompositor`, `kb-index`, `tech-writer`, `trace-audit`, `role-analyst` |
-| `specialist-dev` | from a repo spec to spec-driven code | `implementation-plan`, `spec-implementation`, `codestyle`, `lazy`, `root-cause`, `role-dev` |
-| `specialist-qa` | acceptance, review, bug hunting | `spec-review`, `stand-acceptance`, `code-review`, `bug-hunt`, `role-qa` |
+| `specialist-dev` | from a repo spec to spec-driven code | `implementation-plan`, `change-impact`, `spec-implementation`, `codestyle`, `lazy`, `root-cause`, `role-dev` |
+| `specialist-qa` | probe the specs, design the cases, prove the work, triage the queue | `test-analysis`, `test-design`, `spec-review`, `stand-acceptance`, `code-review`, `bug-hunt`, `defect-triage`, `role-qa` |
 
 Every role plugin also carries `dispatch` — the entry point that classifies a task by
 role before any work starts and governs switching: roles are switched only with the

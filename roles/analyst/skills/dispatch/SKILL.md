@@ -19,9 +19,11 @@ Read the task and name the role:
   "audit the pipeline's artifacts".
 - **dev** — making it. Repo spec → plan → code, fixes, refactors, conventions. Signals:
   "implement", "fix", "refactor", "add a dependency", "make it work".
-- **qa** — proving it. Acceptance against the specs, quality review, bug and security
-  hunting, live-stand acceptance. Signals: "review", "does it match the spec",
-  "find bugs", "accept the feature".
+- **qa** — proving it. Probing the specs for holes and missed criteria, test design,
+  acceptance against the specs, quality review, bug and security hunting, live-stand
+  acceptance, defect triage. Signals: "review", "does it match the spec",
+  "find bugs", "accept the feature", "find gaps in the spec", "write test cases",
+  "triage these defects".
 - **outside the framework** — ops, git chores, questions about the repo, plain chat.
   Say so in one line and just do the work; no role skill is needed.
 
@@ -68,7 +70,7 @@ even if the producing role's skills are not installed on that side.
 |---|---|
 | analyst → dev | the repo specs (`docs/specs/*-<repo>.md`): changes, patterns, criteria |
 | dev → qa | the executed plan — tasks with `Verify:` commands — plus the executor's report with its touched-surface map (what the change reaches beyond the diff, where regression risk sits) |
-| qa → dev | the findings report (`*-review` / `-quality` / `-audit`): every finding with a trigger scenario |
+| qa → dev | the findings report (`*-review` / `-quality` / `-audit`): every finding with a trigger scenario; the cases artifact (`docs/tests/*-cases.md`) — every command-graded case is a red-test candidate for the implementing task |
 | qa → analyst | proposed amendments (spec gaps) inside the same report — the user approves them |
 | any → user | decisions only a human makes: changed intent, risk, scope |
 
