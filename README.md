@@ -341,6 +341,26 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
   https://github.com/earendil-works/pi/tree/main/packages/coding-agent/docs
 - Claude Code documentation (plugins): https://code.claude.com/docs/en/plugins
 
+### Sources
+
+The public projects several ideas were adapted from. This section is the attribution
+record: the repository's documents and skills carry no donor names by policy and are
+written from scratch — no donor text, code, or skills ship here.
+
+- [Clean Code for AI Agents](https://akitaonrails.com/en/2026/04/20/clean-code-for-ai-agents/)
+  — code's primary reader is an agent: why-comments, headless tests, agent readability (v0.29.0)
+- [mattpocock/skills](https://github.com/mattpocock/skills) — the interview frontier, the
+  red-capable-loop diagnosis gates, tracer-bullet tickets (planned v0.41.0)
+- [obra/superpowers](https://github.com/obra/superpowers) — the subagent dispatch doctrine (v0.38.0)
+- [affaan-m/ecc](https://github.com/affaan-m/ecc) — issue-review, eval-harness graders,
+  TEST-ID collaboration (v0.32.0, v0.37.0, v0.38.0)
+- [github/spec-kit](https://github.com/github/spec-kit) — gap classes, the convergence
+  contract, question budgets, the versioned principles (v0.39.0)
+- [backnotprop/plannotator](https://github.com/backnotprop/plannotator) — the change map,
+  the skill-size cap (v0.40.0)
+- [affaan-m/agentshield](https://github.com/affaan-m/agentshield) — source-kind, the
+  false-positive feedback loop (v0.40.1)
+
 ## Principles
 
 The frame everything above hangs on:

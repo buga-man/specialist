@@ -139,26 +139,26 @@ place, on the roles.mjs principle.
   context; scouts supply material, not conclusions.
 - **No recursion.** A scout never dispatches scouts — the budget lives with the
   lead. A worker-spawned helper or reviewer is a duplicate seat, not extra
-  assurance (superpowers: every reviewer a worker spawned duplicated the task
+  assurance (one source: every reviewer a worker spawned duplicated the task
   review the controller dispatched anyway).
 - **Prompts reference, they do not paste.** The mission charter carries artifact
   paths, not their contents, and the scout returns conclusions plus a pointer to
   its report, not a dump — everything pasted into a dispatch stays resident in
-  the lead's context for the rest of the session (superpowers: a real dispatch
+  the lead's context for the rest of the session (one source: a real dispatch
   hit 42k chars, 99% of it pasted history).
 - **Never pre-judge a scout.** The mission states what to look for, never what
   to conclude — a "don't flag X" or an "at most minor" in the prompt defeats the
-  fresh eyes the scout was dispatched for (superpowers' reviewer rule).
+  fresh eyes the scout was dispatched for (a source's reviewer rule).
 - **A silent scout is chased, not assumed empty.** A scout that never reported
   is a coordinator finding; an empty pass is written empty only after the scout
-  actually returned (superpowers' bounded-wait doctrine, adapted to prose).
+  actually returned (a source's bounded-wait doctrine, adapted to prose).
 - **Distinct missions by assignment.** The lead assigns each scout its focus —
   parallel agents do not self-differentiate; overlapping missions are a
-  coordinator defect, not redundancy (ECC/disler: uniqueness via assignment).
+  coordinator defect, not redundancy (a source's rule: uniqueness via assignment).
 - **Where the host allows a per-subagent model:** mechanical recon takes the
   cheap tier, judgment stays with the lead, and the model is named explicitly —
   an omitted model silently inherits the session's most expensive one; turn
-  count beats token price (superpowers). Hosts without the knob ignore the line.
+  count beats token price (a source's rule). Hosts without the knob ignore the line.
 
 Consumers keep a short section — "Scouts — dispatch the `scouts` skill" — plus their
 specifics: bug-hunt keeps iterations and coordinator dedup; the recon skills keep
@@ -171,20 +171,22 @@ their mission splits; new consumers add their independence tables (§3).
 | A `scout-gate` hook blocking the Task/Agent tool without recorded consent | Hooks are stateless between calls and absent as a PreToolUse model on Codex/pi; the question plus the no-answer default gives the same guarantee with no new entity to keep honest |
 | A cross-session permission file (beyond the `.spec-gate` pin) | A second source of truth for what the session already remembers; the pin covers the only case worth persisting (a stable subscription) |
 | Fanning out plan tasks / stand checks / fixes | §3's anti-fan-out list — the doctrine lines those skills already carry |
-| Unconditional parallel dispatch — ECC's "ALWAYS use parallel Task execution", deep-research's "just research it" defaults | The consent question IS the feature; both sources dispatch by default and neither asks |
-| Parallel implementers / subagent-driven writing (superpowers SDD, ECC/disler waves) | Even superpowers serializes its implementers ("never dispatch multiple implementation subagents in parallel — conflicts"); spec-implementation's one-task-at-a-time stands. What SDD actually parallelizes is context freshness — which implementation-plan already has ("a task executable by a fresh agent holding only that task") |
-| The SDD ledger file (progress.md per plan workspace) | The plan file with its `- Done:` markers is already the state that survives a compact; a second ledger duplicates it |
-| dmux/tmux-pane orchestration (ECC dmux-workflows) | An external tool dependency; the doctrine stays host-agnostic |
-| "Rulings, not stalls" continuous execution (superpowers) | The stop-and-ask gates are deliberate; their four-stop list (irreversible, security, outward, plan-broken) matches ours already |
-| Infinite waves "until context is exhausted" (ECC/disler) | The budget is the user's grant, not the context limit |
+| Unconditional parallel dispatch — the always-parallel defaults of two surveyed sources ("ALWAYS use parallel Task execution", "just research it") | The consent question IS the feature; both sources dispatch by default and neither asks |
+| Parallel implementers / subagent-driven writing (two sources' wave designs) | One of them serializes its implementers ("never dispatch multiple implementation subagents in parallel — conflicts"); spec-implementation's one-task-at-a-time stands. What the pattern actually parallelizes is context freshness — which implementation-plan already has ("a task executable by a fresh agent holding only that task") |
+| The pattern's ledger file (progress.md per plan workspace) | The plan file with its `- Done:` markers is already the state that survives a compact; a second ledger duplicates it |
+| tmux-pane orchestration (one source's workflow tooling) | An external tool dependency; the doctrine stays host-agnostic |
+| "Rulings, not stalls" continuous execution (one source) | The stop-and-ask gates are deliberate; their four-stop list (irreversible, security, outward, plan-broken) matches ours already |
+| Infinite waves "until context is exhausted" (one source) | The budget is the user's grant, not the context limit |
 
-Survey provenance (2026-11-20): github.com/obra/superpowers — `dispatching-parallel-agents`
-(no consent question at all — the contrast that keeps ours the point), `subagent-driven-development`
-(the no-recursion contract, file-based briefs/reports, never-pre-judge, bounded waiting, model
-tiering; its reviewer-per-artifact loops for specs and plan chunks are the working precedent for
-wave 2), the document-review-system design; github.com/affaan-m/ECC — re-surveyed with the
-subagent lens after the 0.32/0.37 mining (autonomous-loops' two-prompt orchestrator and
-assignment-based uniqueness; dmux-workflows; the always-parallel rules — rejected above).
+Survey provenance (2026-11-20): two public sources, both credited in the README's links
+section — a skill library built around parallel agents (its dispatch skill carries no
+consent question at all — the contrast that keeps ours the point; its subagent-driven
+development design: the no-recursion contract, file-based briefs/reports, never-pre-judge,
+bounded waiting, model tiering; its reviewer-per-artifact loops for specs and plan chunks
+are the working precedent for wave 2; the document-review-system design) and a large
+harness-optimization repository — re-surveyed with the subagent lens after the earlier
+mining passes (a two-prompt loop orchestrator, assignment-based uniqueness, pane-based
+orchestration tooling, the always-parallel rules — rejected above).
 
 ## 6. Consumers and migration
 
