@@ -160,6 +160,9 @@ export function scopeChangeNotes(toolInput) {
   const filesLine = (s) =>
     /^\s*[-*+]\s*files?\s*:/i.test(s) || /^\s*[-*+]\s*files?\s*:/i.test(s.replace(/^[+-]/, ""));
   const touchesFilesLine = deltas.some((d) => d.split(/\r?\n/).some(filesLine));
+  const statusLine = (s) =>
+    /^\s*status\s*:/i.test(s) || /^\s*[-+]\s*status\s*:/i.test(s.replace(/^[+-]/, ""));
+  const touchesStatusLine = deltas.some((d) => d.split(/\r?\n/).some(statusLine));
 
   for (const target of targets) {
     const p = norm(target);
@@ -180,6 +183,14 @@ export function scopeChangeNotes(toolInput) {
             "the scope change is visible in the plan's git diff.",
         );
       }
+      if (touchesStatusLine && toolInput.content === undefined) {
+        notes.push(
+          "spec-gate: the approval status of a plan in docs/plans/ was just edited — what the " +
+            "gate authorizes changes with it. `status: approved` opens code edits, and only the " +
+            "user's approval puts it there. If this was not the user's decision, revert the " +
+            "edit; the change is visible in the plan's git diff.",
+        );
+      }
     }
   }
   return [...new Set(notes)];
@@ -187,7 +198,14 @@ export function scopeChangeNotes(toolInput) {
 
 /** Collect docs/plans/*.md and extract the file paths of all open (unticked) tasks.
  *  Also reports which plan files still have open work and the open tasks' titles —
- *  plan-context uses these to orient a fresh session; spec-gate ignores them. */
+ *  plan-context uses these to orient a fresh session; spec-gate ignores them.
+ *
+ *  A plan authorizes code edits only once the user has approved it — its frontmatter
+ *  carries `status: approved`. Anything else (draft, missing) leaves the plan a
+ *  proposal: its tasks open nothing, and its name lands in `unapprovedPlans` (decide()
+ *  blocks code edits with a "not approved" reason; plan-context surfaces the state).
+ *  The constrained agent cannot grant itself authorization: the flip to `approved` is
+ *  a boundary edit — scopeChangeNotes calls it out, and it lands in the git diff. */
 export function activePlanInfo(projectDir) {
   const result = {
     hasOpenTasks: false,
@@ -195,6 +213,9 @@ export function activePlanInfo(projectDir) {
     openPlans: [],
     openTaskTitles: [],
     openTaskCount: 0,
+    // Plans with open tasks whose frontmatter does not carry `status: approved` —
+    // proposals, not authorizations (see decide()).
+    unapprovedPlans: [],
     // An open task has a "- Files:" line but no backticked paths could be parsed —
     // the plan is malformed, so its scope is unknown (see decide()).
     unparsedFiles: false,
@@ -213,6 +234,7 @@ export function activePlanInfo(projectDir) {
   }
   const openFiles = new Set();
   const openPlans = new Set();
+  const unapprovedPlans = new Set();
   for (const f of files) {
     let text;
     try {
@@ -220,6 +242,9 @@ export function activePlanInfo(projectDir) {
     } catch {
       continue;
     }
+    const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    const statusMatch = fm ? fm[1].match(/^status:\s*(\S[^\r\n]*)$/m) : null;
+    const approved = !!statusMatch && statusMatch[1].trim().toLowerCase() === "approved";
     let inTask = false;
     let taskOpen = false;
     let taskHasFilesLine = false;
@@ -234,12 +259,16 @@ export function activePlanInfo(projectDir) {
     };
     const flush = () => {
       if (inTask && taskOpen) {
-        result.hasOpenTasks = true;
-        result.openTaskCount++;
-        openPlans.add(f);
-        result.openTaskTitles.push(taskTitle || "(untitled task)");
-        for (const p of taskFiles) openFiles.add(p);
-        if (taskHasFilesLine && taskFiles.length === 0) result.unparsedFiles = true;
+        if (approved) {
+          result.hasOpenTasks = true;
+          result.openTaskCount++;
+          openPlans.add(f);
+          result.openTaskTitles.push(taskTitle || "(untitled task)");
+          for (const p of taskFiles) openFiles.add(p);
+          if (taskHasFilesLine && taskFiles.length === 0) result.unparsedFiles = true;
+        } else {
+          unapprovedPlans.add(f);
+        }
       }
       inTask = false;
       taskOpen = false;
@@ -296,6 +325,7 @@ export function activePlanInfo(projectDir) {
   }
   result.openFiles = [...openFiles];
   result.openPlans = [...openPlans];
+  result.unapprovedPlans = [...unapprovedPlans];
   return result;
 }
 
@@ -385,6 +415,22 @@ export function decide({ projectDir, filePath, mode }) {
         "update the implementation plan (add the file to the proper task) and mark tasks done " +
         "with a `- Done:` line as you finish them — or stop and discuss the change with the user. " +
         "Docs/specs/plan files are always allowed.",
+    };
+  }
+  // A plan with open tasks that the user has not approved is a proposal, not an
+  // authorization: its tasks open nothing, so it gates every code edit until the
+  // frontmatter carries `status: approved` — the flip is a boundary edit the
+  // git diff shows (scopeChangeNotes notes it). Checked before the hard-mode
+  // fallback: the "not approved" reason is more specific than "no active plan".
+  if (info.unapprovedPlans.length > 0) {
+    return {
+      action: "block",
+      reason:
+        `spec-gate: the plan ${info.unapprovedPlans.join(", ")} in docs/plans/ is not approved ` +
+        "yet — its frontmatter does not carry `status: approved`, and a plan authorizes code " +
+        "edits only after the user approves it. Docs (docs/specs, docs/plans, *.md) stay " +
+        "editable: finish the plan, get the user's approval, then set the status — the flip " +
+        "is visible in the git diff.",
     };
   }
   if (mode === "hard") {
