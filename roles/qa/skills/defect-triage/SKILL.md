@@ -46,9 +46,12 @@ extends here — an incoming report is the least trusted document the session to
 ## 2. Dedupe by trigger scenario
 
 The key is the scenario, not the wording (bug-hunt's dedup rule): two items describing
-the same trigger scenario are one defect with two reporters. Sweep the prior reports
-before filing anything — a duplicate filing reopens a closed wound and doubles the
-queue's noise. Merged items keep both source references.
+the same trigger scenario are one defect with two reporters. For feature-shaped items
+the key widens to the **domain concept**: a "night theme" request matches a dark-mode
+defect though no words overlap — match by what the item is about, not the vocabulary
+it arrives in. Sweep the prior reports before filing anything — a duplicate filing
+reopens a closed wound and doubles the queue's noise. Merged items keep both source
+references.
 
 ## 3. Verify against the code
 
@@ -78,7 +81,8 @@ Queue items are independent by construction — every verdict is per-item and
 per-revision — so a large queue may verify through the `scouts` skill: one scout
 per item (or per prior-report family), each reading its code path at its named
 SHA, hunting its fixing commit, proving ancestry. The grant, the mission
-charter, and the fan-in rules live in `scouts`. What stays central regardless:
+charter, and the fan-in rules live in `scouts` — and every scout starts with a
+fresh context: no session history travels into a mission. What stays central regardless:
 step 2's dedupe by scenario (pairwise — it precedes any dispatch), aging and
 recurring over the whole queue, blocker surfacing, and every draft reply.
 Without a grant the same verification runs sequentially — the queue table's
@@ -86,7 +90,9 @@ contract does not change.
 
 ## 4. Completeness check (external reports)
 
-Score the report against the project's template; a bug report missing any of these is
+Score the report against the project's template — **after** step 3: anything the code
+at the named SHA can answer is answered, not asked; a question is for what only the
+reporter knows. A bug report missing any of these is
 `needs-info` with a draft ask for exactly what is missing:
 
 | Item | Why it matters |
@@ -99,6 +105,12 @@ Score the report against the project's template; a bug report missing any of the
 
 A feature request is checked instead for: problem statement, proposed behavior,
 alternatives considered, conflict with the documented scope.
+
+The ask itself carries two sections — **What we've established so far** (everything
+already verified in triage, so the reporter's next reply lands on progress, not a
+restart) and **What we still need from you** — specific and actionable, never "please
+provide more info"; a question resolved in a previous triage round is carried forward,
+never re-asked.
 
 ## 5. Classify
 
@@ -122,6 +134,13 @@ alternatives considered, conflict with the documented scope.
 | already fixed (proven) | close citing the ancestor-checked commit |
 | needs-info | the draft ask goes out; the row waits with its age visible |
 | wontfix / wontdo | **the user's decision, recorded as such** — never the triager's |
+
+**wontfix splits three ways**, each with its own closing note: *already implemented* —
+cite where the behavior lives, and never file it as a rejection (it was built, not
+refused); *rejected bug* — one durable line on why the scenario is acceptable;
+*rejected enhancement* — the concept and the reason land in `docs/not-adopted.md` (the
+repository's why-not ledger), the row links it and closes. A "we're busy now" is a
+deferral, not a rejection — it stays open with its age visible.
 
 ## 7. The triage report
 

@@ -159,6 +159,11 @@ session reads only this list:
   consumers depend on, fixtures/config/data the change moved. The reviewer's starting
   map — so a fresh session starts at the deep end, not by re-discovering the blast
   radius. Empty is a claim too: "the change reaches nothing beyond its diff".
+- **Merge evidence** — show, don't claim: the exact test that failed before the change
+  and passes after (execution evidence outranks a screenshot; a screenshot outranks
+  prose), and one line of merge safety — the change is a one-way door (hard to roll
+  back) or a two-way one (cheap), with the blast radius named (the touched surface
+  above is that map).
 - **Decisions the specs did not cover** — behavior you added, and why.
 - **Ambiguous readings** — where a spec admits several readings: which one you implemented,
   and what the alternative was. This is the one place a human is genuinely needed: the

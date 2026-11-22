@@ -14,19 +14,11 @@ The spec answers **what and why**. It never answers how at the code level.
 ## Flow
 
 ```
-1 read the request → 2 study docs → 3 recon the system → 4 ask questions (≤10, batched)
-                                                                  │
-                                                                  ▼
-                                                    5 process answers — gaps left?
-                                                     │ yes              │ no
-                                                     ▼                  │
-                                              refine (one more round)   │
-                                                     │                  │
-                                                     ▼                  ▼
-                                              6 one coherent picture → write the spec
+1 read the request → 2 study docs → 3 recon the system → 4 ask the frontier (≤10, batched)
+→ 5 process answers — gaps left? one refine round → 6 one coherent picture → write the spec
 ```
 
-Move through the stages in order. Never ask the human what you can find out yourself.
+Move through the stages in order. **Facts are yours to find** — recon, docs, scouts; **decisions are the user's** — a question is spent only when the answer is a decision only they can make. Never ask the human what you can find out yourself.
 
 ## 1. Read the request
 
@@ -64,22 +56,39 @@ the specifics of this skill:
 
 ## 4. Ask the human
 
-- Direct questions are a scarce resource: **at most 10 per round**, batched in one message, most critical first.
+- **Ask the whole frontier.** Recompute it at the start of each round: every question
+  whose prerequisites are already settled — askable *now* without guessing at answers
+  not yet heard — and ask all of it in one batched message; a question hanging on an
+  open answer belongs to a later round.
+- Direct questions are a scarce resource: **at most 10 per round**, most critical first.
+- Every question carries its recommendation, phrased so "yes" accepts it —
+  `➡️ recommended: X, because …`. The user confirms in a word or corrects; an open-ended
+  question spends the scarcest resource on reading instead of deciding.
 - Ask only questions whose answers would change the spec; each question must name the ambiguity it removes.
 - Order what makes the cut by what it moves — **scope > security/privacy > user
-  experience > technical detail** — and below that line propose the assumption instead
-  of asking: a question a reasonable default answers is noise wearing a question mark.
-- If you can responsibly assume, propose the assumption instead of asking: "I assume X — correct me if wrong."
+  experience > technical detail**. Below the line, and anywhere a reasonable default
+  exists, propose the assumption instead — "I assume X — correct me if wrong": a question
+  a good default answers is noise wearing a question mark.
 - Questions you did not ask become the spec's Open questions, each with your working assumption.
 
 ## 5. Process the answers
 
-- Integrate the answers into scope and criteria.
-- If contradictions or new unknowns appeared, run one more short round under the same rules. Two rounds is the normal maximum; leftovers go to Open questions.
+- Integrate the answers into scope and criteria — facts found, decisions recorded.
+- Recompute the frontier: contradictions and new unknowns may have settled prerequisites —
+  one more short round under the same rules; two rounds is the normal maximum, leftovers
+  go to Open questions. The interview is done when the frontier is empty: nothing left
+  silently assumed, every gap resolved or on record with a working assumption.
 
 ## 6. Write the spec — only when everything forms one picture
 
 - If it does not, say exactly what is missing and stop. A spec built on guesses the user could have resolved is waste.
+- **A genuinely foggy effort is not forced into one spec**: spec the settled part and
+  name the fog as decision areas in Open questions — ticket a question when you can
+  state it precisely *now*, not when you can answer it; vaguer than that, it stays out
+  until it sharpens.
+- **A decision that resists prose gets a prototype**: a throwaway artifact the user reacts
+  to beats a paragraph they puzzle over. It lives on a throwaway branch, never in the
+  spec — the spec records the verdict and links the branch as the decision's primary source.
 - Before the criteria are final, run the quality bar (references/ears-patterns.md) over every
   must criterion and walk the set for completeness: every business case is covered by at least
   one criterion, error paths and boundaries (limits, empty, maximum, permission edges) are
@@ -93,9 +102,8 @@ the specifics of this skill:
   - **Problem, not solution** — strip every mention of implementation from the summary and
     criteria; the need must still stand on its own. If the "problem" collapses without the
     how, the spec described a solution looking for a problem — go back and name the pain.
-  - **No gold-plating** — every criterion traces to the stated value. A criterion beyond
-    what the value needs is a finding (cost without a customer), not a bonus; cut it or
-    split it into its own feature.
+  - **No gold-plating** — every criterion traces to the stated value; a criterion beyond
+    what the value needs is cost without a customer — cut it or split it into its own feature.
 - Save as `docs/specs/YYYY-MM-DD-<topic>.md` in the main repository of the task; if the location is unclear, ask once.
 - After the user approves the spec, this skill is done. Planning and implementation are separate work.
 
@@ -133,9 +141,9 @@ Numbered, verifiable statements; a business person can check each one.
 Mark every criterion's source: [request], [docs], [answer #N].
 Mark each must (the feature fails without it) or should (valuable, negotiable) — plans and reviews lean on the difference.
 The markers and the Verify label are bilingual — `(обязательно)` carries exactly the weight of `(must)`, the should class is `(should)`/`(желательно)`/`(опционально)`/`(необязательно)`, and `Проверка:` is `Verify:` (the gates read them all; a should-class marker never reads as must).
-Shape each criterion with an EARS pattern (see references/ears-patterns.md) so a fresh
-agent parses it without guessing: a fixed stem — "When <trigger>, the system shall …",
-"While <state>, …", "If <condition>, … shall not …", or a plain always-true property.
+Shape each criterion with an EARS pattern (references/ears-patterns.md) — a fixed stem:
+"When <trigger>, the system shall …" / "While <state>, …" / "If <condition>, … shall not …"
+/ a plain always-true property — so a fresh agent parses it without guessing.
 Every must criterion carries a `Verify:` — the command that decides it, or an honest
 manual check. spec-review runs or inspects exactly that, so the verdict is evidence,
 not impression.
@@ -163,10 +171,9 @@ project can use. A criterion built on an undefined term is unverifiable, however
 ## 7. Open questions
 | # | Question | Working assumption | Risk if the assumption is wrong | Blocking |
 
-Blocking = yes means downstream skills must not start before it is resolved —
-"one coherent picture" is enforced here, not in the next stage. More than three
-blocking rows means the picture is not one yet: resolve or split with the user
-instead of saving a question farm (check-criteria flags it).
+Blocking = yes means downstream skills must not start before it resolves —
+"one coherent picture" is enforced here. More than three blocking rows: the picture
+is not one yet — resolve or split with the user (check-criteria flags it).
 
 ## 8. Decisions and rationale
 Key business decisions made during brainstorming and why alternatives were rejected.
@@ -178,8 +185,7 @@ A change request against an approved spec is classified by impact before it land
 wording only → apply as an amendment; touches an acceptance criterion → the user
 re-confirms the criterion — never edited silently; contradicts a recorded decision →
 a conflict, raised and decided, not resolved in place. While the spec sits with an
-external reviewer, edits stop: changes land as amendments after the verdict, so the
-text under review stays the text that was reviewed.
+external reviewer, edits stop — changes land as amendments after the verdict.
 ```
 
 ## Rules
@@ -190,7 +196,8 @@ text under review stays the text that was reviewed.
   (copy their field set). Downstream skills append to this spec's `children` — a parent
   with downstream docs and an empty `children` is a traceability defect; if you can already
   see it stale, fix it.
-- **Every acceptance criterion is verifiable** by a business person, not only by a developer — a must criterion names its `Verify:` (a command or an explicit manual observation), and its shape follows an EARS pattern (references/ears-patterns.md).
+- **Every acceptance criterion is verifiable** by a business person — a must criterion
+  names its `Verify:` and follows an EARS pattern (references/ears-patterns.md).
 - Write the spec in the team's working language, which may differ from the language of this skill.
 
 ## Next

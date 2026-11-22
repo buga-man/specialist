@@ -73,7 +73,8 @@ convenience.
 
 Repo recon splits naturally by repository: one read-only scout per repo, identical mission
 shape. When the change touches several repos — or one repo with a wide blast radius —
-dispatch the `scouts` skill and keep the analysis (stage 4) in the main context. The grant
+dispatch the `scouts` skill — every scout a fresh context, no session history traveling
+into a mission — and keep the analysis (stage 4) in the main context. The grant
 (one question — permission and count), the mission charter, and the fan-in rules live
 there; the specifics of this skill:
 
@@ -181,7 +182,11 @@ reversible alternative, and the revert cost: these outlive the feature, and ever
 downstream skill — and tech-writer's audit — reads them first.
 Records are **append-only**: a superseded decision is never edited away — a new record
 is appended, referencing the one it replaces and naming why; the history of decisions is
-itself architecture memory.
+itself architecture memory. A record may be one paragraph — the value is that the
+decision and its reason exist, not its length. Two qualifications earn a record even
+with no alternative weighed: **deliberate deviations** from the obvious path (the record
+is what stops the next reader from "fixing" what was deliberate) and **constraints not
+visible in the code** (a license window, a residency rule).
 
 ## 8. Amendments
 Append-only log of approved changes to this spec (a spec may change — never silently):

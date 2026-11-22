@@ -18,6 +18,7 @@ hand; rebuild with `node scripts/compliance.mjs --fix`.
 - `dispatch`
 - `bootstrap`
 - `scouts`
+- `retro`
 
 ## Install
 

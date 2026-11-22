@@ -105,6 +105,18 @@ Rules of the table:
   `command` never ships as a `model`.
 - **State / input** and **Expected** — concrete enough to run: exact inputs, exact
   observable outcomes. "Works correctly" is not an expected value.
+- **The expected value is an independent literal** — a known truth from the spec, a
+  document, or a worked example, never recomputed by the same algorithm the code runs:
+  a case that derives its expectation the way the code does passes by construction and
+  can never disagree.
+
+The dependency a case touches decides the strategy: in-process — call it directly;
+local-substitutable (the clock, the RNG, the filesystem) — substitute with a fixture;
+remote-but-owned (the team's own service) — exercise the documented contract; a true
+external — mock **at the boundary only**, with the seam named in the row. Never mock
+anything the repository owns: a case whose mock reimplements the logic tests the mock.
+A case that breaks when the implementation changes but no behavior did is testing past
+the interface — rewrite it at the boundary.
 
 ## 6. Check — the script
 
@@ -127,7 +139,9 @@ file downstream.
 - **spec-review** — the verdict walk runs case by case: each TEST-ID gets its own
   evidence-backed result; the per-criterion table cites the cases that decided it.
 - **spec-implementation** — each `command`-graded case is a red-test candidate
-  (`Verify (red)`); the executor implements against the same table.
+  (`Verify (red)`); the executor implements against the same table. A red candidate is
+  confirmed to fail **at the commit the executor starts from** — an expected failure
+  that cannot happen there verifies nothing.
 - **stand-acceptance** — the `stand`-graded rows are the stand script.
 - **root-cause** — a fixed defect's regression test joins the registry under its
   TEST-ID (the plan task names it), so the artifact and the suite never drift apart.

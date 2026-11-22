@@ -32,12 +32,14 @@ questions live in the plan, never in conversation.
 ## 2. Map changes to tasks
 
 - Every repo-spec change maps to one or more tasks; every task cites its change (`[repo spec §N]`). A task with no source is scope creep — cut it or raise it.
-- Slice vertically where the code allows: a task delivers a working, verifiable path (data + logic + entry point), not a whole layer.
+- Slice vertically where the code allows: a task delivers a working, verifiable path (data + logic + entry point), not a whole layer — and it is **demoable on its own**: had nothing else landed, the slice still shows its change working end to end.
 
 ## 3. Order, slice, right-size
 
 - Order by dependency and the system spec's rollout; the repo should build and its tests pass after every task. High-risk work goes early.
-- Size: one task = one coherent change across ~1–5 files. Bigger → split. A title containing "and" is two tasks. A task whose verification depends on a later task is ordered wrong.
+- Size: one task = one coherent change across ~1–5 files, sized to **one fresh context window of work** — steps, verification, and the reading they need fit one sitting. Bigger → split. A title containing "and" is two tasks. A task whose verification depends on a later task is ordered wrong.
+- Declare the dependencies the numbering hides: a task may carry `- Blocked by: <task N, task M>`; the executor works the **frontier** — any task whose blockers are all closed. In a strictly linear plan the order says it; an edge is for what the order alone cannot show.
+- **A wide refactor does not pretend to be a slice**: a mechanical change whose blast radius fans across many call sites (a rename, a signature change, a type move) cannot land green as one vertical slice. Sequence it **expand–contract**: expand — add the new form beside the old; migrate the call sites in batches sized by the blast radius, each batch a green task; contract — delete the old form once no caller remains. Make the change easy, then make the easy change. When even a batch cannot stay green alone, the plan states in writing, before Task 1, that green is promised on the branch tip — not per task.
 - When the repo spec defines tests for a change, they belong to the task: prefer running the test first (red) and making it pass (green), where the repo's conventions support it.
 
 ## 4. Write the plan
@@ -52,6 +54,7 @@ questions live in the plan, never in conversation.
   main checkout stays on `main` while the risky work runs isolated.
 - Per task, use the format below. Steps are single, concrete actions. Verify holds exact commands and their exact expected results. Commit holds the message; one task = one commit.
 - List every file the task will touch on the Files line, in backticks, on one line — the spec-gate hook enforces exactly that scope during implementation. Globs are allowed when a task genuinely spans many files (`src/**/*.css`); prefer exact paths.
+- **The steps are a brief, not coordinates**: name the behavior and the outcome a step must produce — "the export rejects an empty dataset with a field-level error" — not the file, line, and keystroke that gets there. Paths go stale between writing and executing; the Files line is the mechanical scope, the steps are the durable intent, and a step that says "open X and change line N" rots before the executor reads it.
 - Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves), `- Verify (red):` (tests-first tasks — the exact command showing the failure the unimplemented feature must produce; a red test that cannot fail checks nothing, and the task's `Verify:` then flips it green). The spec-gate hook ignores every line it does not parse — these are for the executor and the reviewer.
 - Plans of more than one task — or with any risky task — end with two plan-level sections, written after the last task (the gate reads `## ...` headers as task boundaries, so plan-level sections must not sit between tasks): `## Revert` — the per-task undos in reverse execution order plus one post-rollback verify command — and a final full-suite task (`### Task N: full suite green`, `Verify: <full test command> → exit 0, no previously-passing test regressed`). Per-task `Verify:` commands alone do not guarantee the whole suite is green.
 - Leave closure to the executor: a task is closed by a `- Done: <commit hash>` line in its section. Checkbox ticks (`- [x]`) are progress notes — the gate ignores them for closure. **Never put a `- Done:` line in the plan you write** — the gate reads any Done marker as closure, so a template line would close every task before work starts.
@@ -64,7 +67,7 @@ questions live in the plan, never in conversation.
 - Executability: every task has Files, single-action steps, runnable Verify, Commit; no step says "implement the feature".
 - Authority: no task requires a decision the specs do not make. If one surfaces, stop and raise it — the plan translates decisions, never invents them.
 - Reuse: a task creating something new cites the repo spec's `searched:` evidence; no citation — raise it, the plan does not invent duplicates.
-- Ordering: no verification depends on a later task; coupled tasks name their interface.
+- Ordering: no verification depends on a later task; coupled tasks name their interface; every `- Blocked by:` names a real, earlier task — the frontier only works when the edges are honest.
 - Rollback: multi-task plans carry `## Revert` and the full-suite gate task; every task's `Verify (red)` really fails before the implementation exists.
 - Proportionality: the plan stays roughly proportional to the repo spec.
 - Hand the plan to the user for approval. This skill ends at the approved plan; execution is separate work.
