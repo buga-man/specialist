@@ -46,7 +46,10 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
 - **A large diff gets a review order before it gets a review.** Rank the touched files
   by churn — `git log --follow` commit frequency — and by centrality (shared modules
   before leaf code): the hot, widely-imported files get the deep read, the cold leaves
-  get breadth. A flat pass over a big diff spends its depth on files nobody changes.
+  get breadth. A flat pass spends its depth on files nobody changes.
+- **The diff is committed work**: a branch diff does not see staged or uncommitted
+  changes — commit first, then review; reviewing a working tree reviews work nobody
+  asked to accept.
 
 ### Scouts — parallel deep reads (a large diff)
 

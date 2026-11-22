@@ -32,20 +32,37 @@ Cannot classify without seeing it happen → reproduce first (step 1), then clas
 evidence over assumption. The report always names the class; "bug" without a class is
 a guess wearing a noun.
 
-## 1. Reproduce
+## 1. Reproduce — build the loop
 
 - See the bug happen before touching anything: exact steps, input, environment, the wrong
   output. A bug you cannot reproduce you cannot fix — you can only guess.
-- Cannot reproduce after an honest attempt → report exactly what you tried and ask for
-  the missing environment details. Never "fixed it, probably".
+- **The loop is the deliverable**: one named command, already run at least once, that shows
+  the user's **exact symptom** — not "runs without erroring" — and is deterministic, fast
+  (seconds, not minutes), and runnable without a human. No such command → the diagnosis has
+  not started: do not read code for theories first, jumping to a hypothesis before the loop
+  exists is the failure this step exists to prevent.
+- Tighten the loop where you can: faster; sharper signal (assert the specific symptom, not
+  "didn't crash"); more deterministic (pin the clock, seed the RNG, freeze the network).
+- A flaky bug is chased toward a **higher reproduction rate**, not a lucky pass — a 50%
+  flake is debuggable, 1% is not. Cannot reproduce after an honest attempt → report
+  exactly what you tried and ask for the missing environment details. Never "fixed it, probably".
 
 ## 2. Isolate
 
 - Narrow the entry point: which request, which input, which code path. Bisect the
   pipeline — logs, direct calls, minimal inputs — until the wrong step is one call away.
+- Minimize the loop until **every remaining element is load-bearing**: removing any one of
+  them turns the command green — that is the exit criterion, not "small enough".
+- Instrument with a unique prefix per investigation (`[DEBUG-a4f2]`): cleanup at the end
+  is a single grep, and a tagged log cannot leak into a commit unnoticed.
 
 ## 3. Name the root cause
 
+- **Rank 3–5 hypotheses before testing any of them** — a single first-plausible theory
+  anchors the whole diagnosis. Rank by likelihood and by cheapness to falsify, and give
+  each the falsifiable shape: "if X is the cause, then changing Y makes the loop go
+  green". Test the cheapest falsification first; the loop tells the truth, the ranking
+  only sets the order.
 - One sentence: "X happens because Y". The crash site is rarely the cause — walk the data
   flow backward to where the wrong value was born.
 - Grep every caller of the code you are about to touch: the same cause often surfaces at
@@ -82,6 +99,8 @@ a guess wearing a noun.
 
 - The triage class first (product defect / wrong test / environment-data mismatch /
   spec mismatch) — the reader's first question is "what kind of failure was this?".
-- Root cause in one sentence; the fix in one sentence; the regression test by name.
+- Root cause in one sentence; the fix in one sentence; the regression test by name; the
+  hypothesis that turned out correct stated explicitly — the next debugger starts from
+  it, not from the ranked list.
 - Same-cause call sites checked (list them), and anything left suspicious nearby.
 - Risky fix (shared core, data, security) → send it through spec-review in a fresh session (the qa role; if it is not installed, a fresh review session before merge).

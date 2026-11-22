@@ -64,7 +64,9 @@ review there is.
   asserts less than the criterion demands (checks the status code, not the payload the
   criterion names; checks the happy path, not the error contract) is a passed run over
   an uncovered criterion — verdict unverifiable, and the gap becomes a proposed
-  amendment sharpening the test, not a quiet pass.
+  amendment sharpening the test, not a quiet pass. The expectation side gets the same
+  scrutiny (test-design's rule): an expected value recomputed by the same algorithm the
+  code runs agrees by construction — such a pass verifies nothing.
 - **Non-functional criteria must be measurable to be verifiable**: performance,
   availability, capacity, resilience criteria carry **criterion + measurement method +
   threshold + environment** (e.g. "p95 response ≤ 500 ms — k6 load test, 100 concurrent
