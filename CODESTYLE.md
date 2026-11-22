@@ -158,3 +158,24 @@ messages, docs. tech-writer is its scribe; the versioning rule of §8 applies.
 - **The no-op test**: a line that does not change what the executor does is deleted —
   settled by running the document against the default behavior, not by debate. The
   test is model-relative: does *this* executor behave differently without the line?
+
+## 12. Authoring skills
+
+The doctrine for writing the skills themselves — the input to §6's clean room.
+
+- **Baseline first**: watch an agent attempt the skill's task WITHOUT the skill and
+  name the failure that was seen — a skill written against an imagined failure teaches
+  the wrong thing; the clean-room run then proves the delta, not the intent.
+- **Match the form to the failure**: a discipline violation takes a prohibition plus
+  the rationalization table; a wrong output shape takes a positive recipe; an omitted
+  element takes a structural slot; conditional behavior takes an observable predicate.
+  A prohibition aimed at a shaping problem measurably produces more of the unwanted
+  behavior than no guidance at all — the form is chosen from the observed failure, not
+  from taste.
+- **No nuance clauses**: "don't X unless it matters" reopens the negotiation the rule
+  closed — state the rule and name the exception's owner instead.
+- **Regex-enforceable → automate**: if a check can be a script, it is a script (the
+  hooks and the `scripts/` gates own the mechanical); documentation holds only judgment.
+- **Self-evaluation is not evidence**: "did you violate any rules?" always answers no.
+  A gate demands the concrete artifact — the file list, the command output, the
+  importer grep — because the investigation itself is what changes the answer.
