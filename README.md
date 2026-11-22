@@ -56,6 +56,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
 | `scouts` *(cross-cutting)* | the subagent protocol behind every fan-out — parallel read-only recon and verification under an explicit grant: one question asks permission and count (`.spec-gate`'s `scouts: <N>` answers it standing), the granted count is the hard budget, no answer or no host support → the same missions sequentially; mission charters (one mission per scout, artifact paths not pastes, never pre-judged), fan-in (reports are hypotheses until re-verified, dedup by scenario, a silent scout is chased), read-only, no recursion |
 | `bootstrap` *(cross-cutting)* | repository → framework-ready: surveys what exists, proposes and creates the confirmed pieces (`.spec-gate`, `docs/specs/` + `docs/plans/`, `CODESTYLE.md` via codestyle, optional `.suite-gate` / `.kbindex/`); legacy documentation migrates under the port-never-rewrite rule (pilot first, the user reviews); idempotent, confirm-before-create, no commits |
+| `retro` *(cross-cutting)* | a session / feature run / release → environment improvements: mechanical friction → a deterministic check (build-first — a check the repo runs beats a rule the agent must remember), judgement friction → a CODESTYLE convention; an existing-but-unwired check is the finding; the no-op hunt; the user picks from the proposal table, wiring lands where it executes — the mistake cannot happen the same way again |
 
 **Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
 `specialist-dev`, `specialist-qa` — alongside the full bundle. `dispatch` classifies a
@@ -98,7 +99,7 @@ hooks/                           the hooks: hooks.json registers them in Claude 
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, suite-gate.ts, edit-guard.ts, plan-context.ts, git-watch.ts, codestyle-reminder.ts, kb-gate.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                           documentation: skills, hooks, installation; design notes; the skill template
-scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the generated docs/skill-index.md and roles/; check-extensions.mjs — the TypeScript-surface guard (part of npm test); skill CLIs live in the skill directories — skills/<name>/scripts/
+scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the router sync (dispatch names only real skills and every role entry), the fresh-context rule on every scout-dispatching skill, the generated docs/skill-index.md and roles/; check-extensions.mjs — the TypeScript-surface guard (part of npm test); skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
 ## Hooks and extensions: one logic, five hosts
@@ -153,7 +154,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twenty-five skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty-six skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all thirteen hooks: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -161,6 +162,8 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
   the design rationale behind the two skills.
 - [Plugin schema notes](docs/plugin-schema-notes.md) — the host and marketplace traps the
   repository has already hit: symptom → cause → rule.
+- [Not adopted](docs/not-adopted.md) — the why-not ledger: rejected concepts with their
+  durable reasons, so the same candidate is not re-litigated every few months.
 - [Skill template](docs/skill-template/) — the starting point for a new skill.
 
 ## Installation
@@ -241,9 +244,9 @@ Every role plugin also carries `dispatch` — the entry point that classifies a 
 role before any work starts and governs switching: roles are switched only with the
 user's explicit consent (switch here / a new session with the role / a role subagent /
 stay and record the task for the other role) — `scouts` (the subagent protocol behind
-every fan-out), and `bootstrap`, the cross-cutting
-repository primer. The role rows above name each role's own skills; the three shared
-ones ride in every plugin.
+every fan-out), `bootstrap`, the cross-cutting repository primer, and `retro`, the
+environment-improving retrospective. The role rows above name each role's own skills;
+the four shared ones ride in every plugin.
 
 - **Claude Code / ZCode** — the same marketplace, another plugin:
   `/plugin install specialist-qa@specialist`; the ZCode marketplace page lists all four.
@@ -282,10 +285,11 @@ In this mode hooks and extensions are **not** installed — skills only.
 1. Copy `docs/skill-template/` to `skills/<skill-name>/`.
 2. Fill in `SKILL.md`: `name` — matches the folder name (kebab-case, up to 64 characters);
    `description` — up to 1024 characters, the main autoload trigger ("what it does and
-   when to apply it"). The template carries two optional sections — **Boundaries**
-   (can do autonomously / requires confirmation / will not do) and **Troubleshooting**
-   (symptom → likely cause → what to do) — add them when the skill's scope is easy to
-   overstep or it has known failure shapes.
+   when to apply it"). The template carries three optional sections — **Boundaries**
+   (can do autonomously / requires confirmation / will not do), **Troubleshooting**
+   (symptom → likely cause → what to do), and **It's working if** (observable success
+   criteria with their failure tells) — add them when the skill's scope is easy to
+   overstep, it has known failure shapes, or its success is observable.
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
    Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in
@@ -350,7 +354,7 @@ written from scratch — no donor text, code, or skills ship here.
 - [Clean Code for AI Agents](https://akitaonrails.com/en/2026/04/20/clean-code-for-ai-agents/)
   — code's primary reader is an agent: why-comments, headless tests, agent readability (v0.29.0)
 - [mattpocock/skills](https://github.com/mattpocock/skills) — the interview frontier, the
-  red-capable-loop diagnosis gates, tracer-bullet tickets (planned v0.41.0)
+  red-capable-loop diagnosis gates, tracer-bullet tickets (v0.41.0)
 - [obra/superpowers](https://github.com/obra/superpowers) — the subagent dispatch doctrine (v0.38.0)
 - [affaan-m/ecc](https://github.com/affaan-m/ecc) — issue-review, eval-harness graders,
   TEST-ID collaboration (v0.32.0, v0.37.0, v0.38.0)

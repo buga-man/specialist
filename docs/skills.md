@@ -1,9 +1,16 @@
-# Skills: what each of the twenty-five does
+# Skills: what each of the twenty-six does
 
 A pipeline for the full feature development cycle — from a raw task to code backed by a
 spec and up-to-date documentation. Each skill is a separate role with a clear input and
 output; the output of the previous stage is the contractual input of the next. Decisions
 are made at the top (in the specs) and recorded; at the bottom they are only executed.
+
+Two invocation tiers hold the composition: **entry skills** (dispatch, the role entries,
+bootstrap, retro) orient the session and orchestrate — they are reached for at the start
+of work or asked for directly; **pipeline skills** carry the discipline each stage
+executes. An entry skill hands work to pipeline skills; a pipeline skill never routes
+the session to another entry — switching roles or re-orienting is dispatch's one
+decision to make.
 
 ```
 task → brainstorm → business spec
@@ -35,9 +42,10 @@ repo conventions → codestyle → CODESTYLE.md (mimicry: agent code is indistin
 ## Roles: how the skills ship
 
 The same pipeline installs as one full plugin or as three skills-only role plugins —
-install a role and the session carries only that role's skills. `dispatch` and
-`scouts` ride in every plugin — the router classifies a task by role before any work
-starts, the protocol governs every fan-out; `role-analyst` / `role-dev` /
+install a role and the session carries only that role's skills. `dispatch`, `scouts`,
+`bootstrap`, and `retro` ride in every plugin — the router classifies a task by role
+before any work starts, the protocol governs every fan-out, the primer sets a repository
+up, the retro improves the environment after real work; `role-analyst` / `role-dev` /
 `role-qa` are the roles' entry skills. Roles are switched only with the user's explicit
 consent — the options live in `dispatch`.
 
@@ -722,6 +730,31 @@ port the content, never rewrite its meaning.
   runs. Metadata (id/parent/children) is scaffolding added around the ported content.
 - **When:** "set up specialist here", "initialize this repo for the framework",
   onboarding a repository; ends by pointing at `dispatch` for the first real task.
+
+## retro — the environment, not the code
+
+**Why:** the same friction twice is an environment defect, not an agent defect — the
+check that would have caught it either does not exist or sits unwired. A retrospective
+over real work turns the friction into mechanisms that execute, so the mistake cannot
+happen the same way again.
+
+- **Input → output:** a session, a feature run, or a release → a proposal table
+  (friction | class | mechanism | what it would have caught) → the user picks → wiring
+  lands where it executes + a `docs/specs/YYYY-MM-DD-<topic>-retro.md` report with
+  `file:line` on every wired line.
+- **Mechanical vs judgement:** a deterministic shape gets a deterministic check —
+  build-first, a check the repo runs beats a rule the agent must remember; friction
+  needing taste gets a documented convention (CODESTYLE via codestyle). The first
+  question before building: does the framework already carry it?
+- **The candidates that come first:** unwired checks (present but not connected — a
+  linter outside edit-guard, a commented-out `.suite-gate`) and no-ops (instructions
+  that change nothing versus the default — settled by comparing behavior, not wording).
+- **Boundaries:** the retro proposes and records; the user wires. Relaxing a guard or a
+  linter config is outside it (config-guard's block is correct); product code is
+  root-cause's.
+- **When:** work ends and the user asks what to improve, the same friction costs a
+  second session, or a `Recurring:` class returns across reports. Shared: ships in
+  every plugin; the next retro re-raises last time's unwired proposals first.
 
 ## role-analyst — enter the analyst role
 

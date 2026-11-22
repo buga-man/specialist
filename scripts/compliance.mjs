@@ -36,6 +36,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
+  knownSkills,
   pluginSkills,
   roleNames,
   rolePluginManifests,
@@ -311,6 +312,44 @@ function piExtensions() {
     .sort();
 }
 
+/** The router cannot lie: dispatch is the entry point every task starts from, so every
+ *  skill it references must exist in the roles map, and every role's entry skill must be
+ *  named — a router pointing at a phantom, or one that forgets a role, routes work
+ *  nowhere. Backticked tokens outside the skill namespace (the `specialist*` plugin
+ *  names, `.spec-gate`, host terms) are skipped by shape, not by an allowlist. */
+export function validateRouter(dispatchText, knownSkillNames) {
+  const findings = [];
+  const known = new Set(knownSkillNames);
+  for (const token of new Set([...dispatchText.matchAll(/`([^`]+)`/g)].map((m) => m[1]))) {
+    if (!/^[a-z][a-z0-9-]*$/.test(token) || token.startsWith("specialist")) continue;
+    if (!known.has(token)) {
+      findings.push(`dispatch references \`${token}\` — not a skill in the roles map (a router that lies)`);
+    }
+  }
+  for (const role of roleNames()) {
+    if (!dispatchText.includes(`role-${role}`)) {
+      findings.push(`dispatch does not name the role-entry skill \`role-${role}\``);
+    }
+  }
+  return findings;
+}
+
+/** The fresh-context rule: any skill referencing the scouts protocol — the backticked
+ *  `scouts` skill reference, the shape every dispatching consumer uses — carries the
+ *  fresh-context line: a scout inherits the session's anchors unless the dispatching
+ *  skill states the mission starts fresh. A plain "scouts" mention (the `.spec-gate`
+ *  pin's name, prose) does not trigger the rule. The doctrine lives centrally in the
+ *  scouts skill; the consumer repeats it in one line so its own contract is stated
+ *  where its own dispatch happens. */
+export function freshContextFindings(name, text) {
+  if (/`scouts`/.test(text) && !/fresh/i.test(text)) {
+    return [
+      `${name}: dispatches scouts but carries no fresh-context rule — every scout starts with a fresh context`,
+    ];
+  }
+  return [];
+}
+
 function main() {
   const fix = process.argv.includes("--fix");
   if (process.argv.slice(2).some((a) => !a.startsWith("--"))) {
@@ -330,6 +369,11 @@ function main() {
     infos.push({ name, description: parseFrontmatterStrict(text).data.description ?? "", role: roleOf(name) });
   }
   findings.push(...validateRoleMap(names));
+
+  findings.push(...validateRouter(read(join("skills", "dispatch", "SKILL.md")), knownSkills()));
+  for (const name of names) {
+    findings.push(...freshContextFindings(name, read(join("skills", name, "SKILL.md"))));
+  }
 
   // The EARS mirror: spec-review ships its own copy of brainstorm's reference so the
   // quality bar travels with the qa plugin (which carries no brainstorm). The mirror
