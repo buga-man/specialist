@@ -70,7 +70,11 @@ questions live in the plan, never in conversation.
 - Ordering: no verification depends on a later task; coupled tasks name their interface; every `- Blocked by:` names a real, earlier task — the frontier only works when the edges are honest.
 - Rollback: multi-task plans carry `## Revert` and the full-suite gate task; every task's `Verify (red)` really fails before the implementation exists.
 - Proportionality: the plan stays roughly proportional to the repo spec.
-- Hand the plan to the user for approval. This skill ends at the approved plan; execution is separate work.
+- Hand the plan to the user for approval with the granularity quiz, not a silent hand-off:
+  Does the granularity feel right — too coarse (a task hides two commits) or too fine
+  (a task that cannot fail on its own)? Are the `- Blocked by:` edges correct and
+  complete? Should any two tasks merge, or one split further? This skill ends at the
+  approved plan; execution is separate work.
 
 ## Plan format
 
