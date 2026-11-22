@@ -109,6 +109,17 @@ Rules of the table:
   document, or a worked example, never recomputed by the same algorithm the code runs:
   a case that derives its expectation the way the code does passes by construction and
   can never disagree.
+- **The mutation check**: before writing a case, name the production change that would
+  make it fail — then mentally run the realistic mutations (the boundary off by one, the
+  branch inverted, the error path skipped) and confirm some case fires for each. A
+  mutation nothing catches marks the behavior unprotected or the case as tautological; a
+  case that survives an intentional redesign is a change detector — it fires on the
+  redesign and sleeps through bugs.
+- **Assert behavior, not text**: run the artifact and assert its observable outcome —
+  never grep the source for a string the implementation happens to contain.
+- **Timing**: wait for the actual condition — a poll with a timeout that names what it
+  waited for; a sleep guesses at duration. A timed wait is legitimate only when the
+  timing itself is the behavior under test.
 
 The dependency a case touches decides the strategy: in-process — call it directly;
 local-substitutable (the clock, the RNG, the filesystem) — substitute with a fixture;

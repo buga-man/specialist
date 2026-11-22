@@ -149,6 +149,23 @@ cannot resolve — uncertain edges, suspicious spots without a proof — carries
 final report as self-review notes, so the reviewer starts at the deep end, not at the
 surface.
 
+## Receiving review findings
+
+Findings arrive from spec-review, code-review, and bug-hunt — receiving them is its own
+discipline, not a to-do dump:
+
+- **Verify before implementing**: read the finding's `file:line` at the current revision
+  and confirm the problem is real. A finding that does not reproduce goes back with the
+  evidence — not into a fix commit.
+- **Unclear stops all**: one finding you cannot interpret stops every fix — partial
+  understanding produces wrong implementations. Ask; never guess an intent.
+- **No performative agreement**: "you're absolutely right" and thanks add nothing —
+  actions speak. Fix it, or push back with specifics.
+- **YAGNI check**: before "implementing properly", grep what exists — the repo may
+  already carry the answer the finding asks for.
+- **Pushback is legitimate and one round**: a wrong finding is answered with evidence;
+  a lost pushback is conceded in one line and fixed.
+
 ## Final report
 
 State what was implemented (tasks, commits), then the review points — a human or the next

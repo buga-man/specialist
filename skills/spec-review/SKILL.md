@@ -28,7 +28,9 @@ review there is.
   guessing the criteria.
 - Traceability metadata, end-to-end: every artifact's `parent` appears in that parent's
   `children`, and every `children` entry resolves to an existing file. A desync is a
-  finding (documentation defect) — reported, never silently fixed here.
+  finding (documentation defect) — reported, never silently fixed here. Task checkboxes
+  and `- Done:` markers are the executor's claims, not evidence — the walk re-verifies
+  regardless of their state.
 
 ## 2. Verify criterion by criterion
 
@@ -109,6 +111,12 @@ the same walk runs sequentially — the verdicts' contract does not change.
   one name. A downstream artifact (plan, cases artifact, tests) renaming a defined
   term, or the spec itself carrying two names for one concept, is a documentation
   finding: propose the amendment that restores the one name, never adopt the drift.
+  The canon is maintained inline as terms resolve — a glossary written in a burst at
+  the end is a session summary, not the session's output; it lists rejected synonyms
+  (`Avoid:`) at the naming boundaries (modules, tables, status enums, CLI commands),
+  carries only concepts unique to this context (a general programming concept belongs
+  nowhere), and the reviewer quotes the code back wherever the code and the terms
+  disagree.
 - Grep the diff's new symbols against the repo: code duplicating existing functionality is
   a finding even when the spec ordered it — the spec's `searched:` failed; propose the
   amendment (extend the existing piece instead), never pass it silently.
@@ -143,7 +151,10 @@ the same walk runs sequentially — the verdicts' contract does not change.
   line>)`. The reviewer records the decision, never makes it. An amendment left
   `proposed` stays open across reports: the next review re-verifies the gap and carries
   the amendment forward with its age — a proposal nobody decided on is a debt the
-  pipeline owes, visible until paid. An amendment that changes an existing contract or
+  pipeline owes, visible until paid. An accepted clarification appends to the spec's
+  session-dated journal (`- Q: <question> → A: <answer>`) and the touched section is
+  edited atomically — no obsolete contradictory text survives next to the answer. An
+  amendment that changes an existing contract or
   public interface carries its blast-radius class — **breaking** (some existing
   consumer breaks; a migration note is part of the amendment) or **additive** — so the
   user decides on the blast radius, not just the wording.
@@ -155,7 +166,10 @@ the same walk runs sequentially — the verdicts' contract does not change.
   failed rows and walks fresh ground; a pass with zero failed criteria and zero
   actionable deviations is terminal — report it as `Converged: pass N`, and write
   nothing new to look busy (a re-review that invents filler findings has stopped
-  reviewing). Until then every report names what is still open.
+  reviewing). Until then every report names what is still open — and opens with the
+  verdict deltas, not only the findings: previously-passed criteria that now fail are
+  regressions named first (`12/16 → 15/16 items passing`), previously-unverifiable ones
+  that gained evidence are progress.
 
 ## Rules
 

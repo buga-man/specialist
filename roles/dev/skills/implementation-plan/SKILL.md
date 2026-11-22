@@ -10,10 +10,9 @@ single-action steps, runnable verification, commit points. The specs made the de
 the plan only arranges the work.
 
 The plan is written for an executor with fresh context: the task plus the repo spec must
-be all it needs. Written plans survive session boundaries and context compaction — plans
-in a head do not. The plan also outlives its session: the next agent — or this one after
-a compact — resumes from the file alone, so task status, the next step, and open
-questions live in the plan, never in conversation.
+be all it needs. Plans survive session boundaries and compaction — plans in a head do
+not — and the next agent, or this one after a compact, resumes from the file alone: task
+status, the next step, and open questions live in the plan, never in conversation.
 
 ## Flow
 
@@ -54,8 +53,11 @@ questions live in the plan, never in conversation.
   main checkout stays on `main` while the risky work runs isolated.
 - Per task, use the format below. Steps are single, concrete actions. Verify holds exact commands and their exact expected results. Commit holds the message; one task = one commit.
 - List every file the task will touch on the Files line, in backticks, on one line — the spec-gate hook enforces exactly that scope during implementation. Globs are allowed when a task genuinely spans many files (`src/**/*.css`); prefer exact paths.
+- **The capture rule**: anything the executor would have to search the codebase for is
+  captured in the plan now — the anchor snippet, the pattern name, the config location;
+  a plan that makes the executor re-explore has shifted its own work downstream.
 - **The steps are a brief, not coordinates**: name the behavior and the outcome a step must produce — "the export rejects an empty dataset with a field-level error" — not the file, line, and keystroke that gets there. Paths go stale between writing and executing; the Files line is the mechanical scope, the steps are the durable intent, and a step that says "open X and change line N" rots before the executor reads it.
-- Optional per-task lines, when they earn their place: `- Risk:` (what makes this task risky — supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo: flag flip, revert, migration-down), `- Criteria:` (which business acceptance criteria this task serves), `- Verify (red):` (tests-first tasks — the exact command showing the failure the unimplemented feature must produce; a red test that cannot fail checks nothing, and the task's `Verify:` then flips it green). The spec-gate hook ignores every line it does not parse — these are for the executor and the reviewer.
+- Optional per-task lines, when they earn their place: `- Risk:` (supports the ordering rule and gives spec-review something to audit), `- Revert:` (the one-line undo), `- Criteria:` (the business criteria this task serves), `- Verify (red):` (tests-first tasks — the exact command showing the failure the unimplemented feature must produce; the task's `Verify:` then flips it green). The spec-gate hook ignores every line it does not parse — these are for the executor and the reviewer.
 - Plans of more than one task — or with any risky task — end with two plan-level sections, written after the last task (the gate reads `## ...` headers as task boundaries, so plan-level sections must not sit between tasks): `## Revert` — the per-task undos in reverse execution order plus one post-rollback verify command — and a final full-suite task (`### Task N: full suite green`, `Verify: <full test command> → exit 0, no previously-passing test regressed`). Per-task `Verify:` commands alone do not guarantee the whole suite is green.
 - Leave closure to the executor: a task is closed by a `- Done: <commit hash>` line in its section. Checkbox ticks (`- [x]`) are progress notes — the gate ignores them for closure. **Never put a `- Done:` line in the plan you write** — the gate reads any Done marker as closure, so a template line would close every task before work starts.
 - When two tasks share an interface, name it in both (what one produces, the other consumes).
@@ -63,16 +65,22 @@ questions live in the plan, never in conversation.
 
 ## 5. Self-review, then hand off
 
-- Coverage: every repo-spec change is mapped; every task has a source.
+- Coverage: every repo-spec change is mapped; every task has a source. Business-KPI
+  outcomes no buildable task can satisfy are excluded from the denominator — never
+  faked into tasks to make the coverage honest-looking.
 - Executability: every task has Files, single-action steps, runnable Verify, Commit; no step says "implement the feature".
 - Authority: no task requires a decision the specs do not make. If one surfaces, stop and raise it — the plan translates decisions, never invents them.
+- Builder check: a fresh scout reads the plan as a builder who cannot ask the author
+  (see Scouts) and returns only the places a wrong guess would matter, ranked — each is
+  resolved before approval ("a default the reader never heard is one they could not reject").
 - Reuse: a task creating something new cites the repo spec's `searched:` evidence; no citation — raise it, the plan does not invent duplicates.
 - Ordering: no verification depends on a later task; coupled tasks name their interface; every `- Blocked by:` names a real, earlier task — the frontier only works when the edges are honest.
 - Rollback: multi-task plans carry `## Revert` and the full-suite gate task; every task's `Verify (red)` really fails before the implementation exists.
 - Proportionality: the plan stays roughly proportional to the repo spec.
 - Hand the plan to the user for approval with the granularity quiz, not a silent hand-off:
   Does the granularity feel right — too coarse (a task hides two commits) or too fine
-  (a task that cannot fail on its own)? Are the `- Blocked by:` edges correct and
+  (a task that cannot fail on its own)? Does each task carry a **single dominant risk**
+  (a task balancing three risks is two tasks)? Are the `- Blocked by:` edges correct and
   complete? Should any two tasks merge, or one split further? This skill ends at the
   approved plan; execution is separate work.
 
@@ -143,7 +151,7 @@ Undos in reverse execution order, then one post-rollback verify:
   (copy their field set); creating it is **two edits** — set its `parent` (the repo spec)
   and append the plan's `id` to that spec's `children`; a parent with downstream docs and
   an empty `children` is a traceability defect.
-- **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language). A long `- Files:` list may wrap — the gate reads the continuation lines as the same scope line; keep every path in backticks and no blank line inside the list.
+- **Machine-readable markers**: `### Task`, `- Files:`, `- Done:` — the spec-gate hook parses exactly these (English-only markers; the prose around them is the team's language). A long `- Files:` list may wrap — the gate reads the continuation lines as the same scope line; every path in backticks, no blank line inside the list.
 - **A one-task plan is a complete artifact**: for small work it is the whole fast lane — mini-spec in the header, one commit, `- Done:`, spec-review batched later (the qa role; if it is not installed, a fresh review pass before merge); do not inflate it into a full spec chain.
 - Write the plan in the team's working language, which may differ from the language of this skill.
 

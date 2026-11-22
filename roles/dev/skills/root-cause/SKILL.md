@@ -43,8 +43,14 @@ a guess wearing a noun.
   exists is the failure this step exists to prevent.
 - Tighten the loop where you can: faster; sharper signal (assert the specific symptom, not
   "didn't crash"); more deterministic (pin the clock, seed the RNG, freeze the network).
+- The loop's shape follows the bug, in preference order: a failing test; a curl/HTTP
+  script; a CLI invocation diffed against a known-good snapshot; a headless browser
+  script; a replayed capture; a throwaway harness; a property/fuzz loop for "sometimes
+  wrong output"; a bisection harness handed to `git bisect run`; a differential loop (same
+  input, old version against new); a human-in-the-loop script last.
 - A flaky bug is chased toward a **higher reproduction rate**, not a lucky pass — a 50%
-  flake is debuggable, 1% is not. Cannot reproduce after an honest attempt → report
+  flake is debuggable, 1% is not — loop the trigger, parallelise, add stress, inject
+  delays until the rate moves. Cannot reproduce after an honest attempt → report
   exactly what you tried and ask for the missing environment details. Never "fixed it, probably".
 
 ## 2. Isolate
@@ -55,6 +61,9 @@ a guess wearing a noun.
   them turns the command green — that is the exit criterion, not "small enough".
 - Instrument with a unique prefix per investigation (`[DEBUG-a4f2]`): cleanup at the end
   is a single grep, and a tagged log cannot leak into a commit unnoticed.
+- A multi-component system gets **boundary instrumentation before any fix**: log what
+  enters and leaves each component's boundary and run once — see WHERE the values go
+  wrong before theorizing why.
 
 ## 3. Name the root cause
 
@@ -63,6 +72,11 @@ a guess wearing a noun.
   each the falsifiable shape: "if X is the cause, then changing Y makes the loop go
   green". Test the cheapest falsification first; the loop tells the truth, the ranking
   only sets the order.
+- **Three failed fixes are the architecture talking.** Each fix that reveals new coupling
+  in a different place is not a failed hypothesis — the pattern says the design, not the
+  code, is wrong. Stop fixing, name the pattern, and take it to the user: an architecture
+  discussion, not attempt #4. Before concluding "no root cause", go back to §2 — an
+  incomplete investigation explains almost every such verdict.
 - One sentence: "X happens because Y". The crash site is rarely the cause — walk the data
   flow backward to where the wrong value was born.
 - Grep every caller of the code you are about to touch: the same cause often surfaces at
@@ -80,6 +94,9 @@ a guess wearing a noun.
   forbidden. When the feature carries a cases artifact (`docs/tests/*-cases.md`,
   the `test-design` skill), the regression test joins it under a TEST-ID (source: this
   bug) — the suite and the registry never drift apart.
+- No correct seam exists for such a test — say so instead of writing one that gives false
+  confidence: the missing seam is itself a finding (an architecture defect), reported
+  with the fix.
 
 ## 5. Minimal fix
 
@@ -87,6 +104,9 @@ a guess wearing a noun.
   no drive-by refactoring, shortest working diff.
 - Run the red test — green. Then the full suite — a fix that breaks its neighbors is not
   a fix; any failure is reported by name before moving on.
+- **Then make the bug impossible, not just fixed**: validate at every layer the bad data
+  passes through — entry checks, business logic, environment guards — one test per layer.
+  Each layer has caught bugs the others missed.
 - If the fix turns out to change behavior or contracts beyond the bug — the "bug" was a
   design decision — stop: that is an amendment through spec-implementation's protocol,
   not a quiet redesign.

@@ -39,7 +39,9 @@ extends here — an incoming report is the least trusted document the session to
 ## 1. Gather the queue
 
 - External: `gh issue view` / `gh issue list` (or the pasted text) — the issue's
-  number, title, body, environment, linked PRs.
+  number, title, body, environment, linked PRs. A bulk listing is not evidence —
+  it returns bodies but not comments, so each item's comments are read before any
+  verdict.
 - Internal: the topic's prior `*-audit`, `*-quality`, `*-gaps` reports and the spec
   reviews — their open findings are already half-triaged; carry them with status.
 
@@ -154,8 +156,8 @@ deferral, not a rejection — it stays open with its age visible.
   anti-patterns; a class that keeps returning means the fixes treat the symptom.
 - **Draft reply** for external reporters — written, shown to the user, posted only on
   their explicit say-so (an outward action, like every outward action in this
-  framework). The draft never contains secrets, personal data, or internal paths the
-  reporter should not see.
+  framework). The draft carries an AI-generated disclaimer line and never contains
+  secrets, personal data, or internal paths the reporter should not see.
 
 ## Rules
 

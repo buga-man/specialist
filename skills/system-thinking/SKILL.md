@@ -185,7 +185,8 @@ is appended, referencing the one it replaces and naming why; the history of deci
 itself architecture memory. A record may be one paragraph — the value is that the
 decision and its reason exist, not its length. Two qualifications earn a record even
 with no alternative weighed: **deliberate deviations** from the obvious path (the record
-is what stops the next reader from "fixing" what was deliberate) and **constraints not
+stops the next reader from "fixing" the deliberate — and names the simpler alternative
+it beat and why that fails; no alternative named, not justified) and **constraints not
 visible in the code** (a license window, a residency rule).
 
 ## 8. Amendments

@@ -45,6 +45,10 @@ its missions to name), ask exactly one question:
 
 ## The mission charter — one mission per scout
 
+- **Preflight before the first dispatch**: the fixed point resolves, the diff is
+  non-empty, the mission's artifacts exist — a bad input fails in front of the lead,
+  not inside two scouts.
+
 - A mission names its scope boundary the way a charter does: what to walk, where
   to stop. "Look at the repo" is not a mission.
 - **Distinct missions by assignment.** The lead assigns each scout its focus —

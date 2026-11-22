@@ -23,7 +23,9 @@ advice ("remember to…") has produced a wish list, not a retro.
 - Walk what actually happened: the session's detours (what was re-done, re-found,
   re-asked), the review reports' `Recurring:` classes, the triage report's aging and
   recurring classes, the hooks that fired or should have, the context spent on something
-  one command could have found.
+  one command could have found — plus the three quiet categories: **navigation** (what
+  one grep would have found and nobody grepped), **access** (a log teed to a file the
+  session could have read), **tooling** (streamline or replace what the friction sat in).
 - A candidate names the friction, not the fix: "the suite was run four times for one
   task" — not "run the suite less".
 - **Unwired checks come first**: a check that already exists but sits unwired or
@@ -34,6 +36,10 @@ advice ("remember to…") has produced a wish list, not a retro.
   the default — in steering files, skill text, or plans. The test is model-relative:
   would *this* executor behave differently without the line? Settle it by comparing
   behavior, not by debating the wording.
+- **Check-pruning runs too**: the checks wired by previous retros are re-audited — a
+  rule that fires constantly on good code is the sign to remove it, and the steering
+  file gets shorter over time, not longer. A check whose cost outran its catches is a
+  candidate for retirement, proposed like any other wiring change.
 
 ## 2. Sort — mechanical or judgement
 
