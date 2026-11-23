@@ -2,10 +2,12 @@
 
 This repository **is** the plugin: it lives in the git repository
 `github.com/buga-man/specialist` and installs through the standard mechanisms of
-**Claude Code**, **ZCode**, **pi agent**, **Codex CLI**, and **OpenCode**. Skills are
+**Claude Code**, **ZCode**, **pi agent**, **oh-my-pi**, **Codex CLI**, and **OpenCode**.
+Skills are
 written once and work in every host
 (the shared Agent Skills format); hooks and extensions are four wrappers of one logic —
-Claude Code and ZCode (one protocol), Codex, OpenCode, pi ([more detail](hooks.md)).
+Claude Code and ZCode (one protocol), Codex, OpenCode, pi, oh-my-pi
+([more detail](hooks.md)).
 
 ## What is needed for full operation
 
@@ -15,7 +17,7 @@ Claude Code and ZCode (one protocol), Codex, OpenCode, pi ([more detail](hooks.m
 |---|---|---|
 | Access to github.com | installation via git (marketplace / `pi install` / clone) | `git ls-remote https://github.com/buga-man/specialist.git` |
 | **Node.js ≥ 18** | every hook runs as `node <script>`; pi and OpenCode themselves run on Node | `node --version` |
-| Claude Code, ZCode, pi agent, Codex CLI, or OpenCode | the host; the skills work in every one, hooks where the host has an interception point | — |
+| Claude Code, ZCode, pi agent, oh-my-pi, Codex CLI, or OpenCode | the host; the skills work in every one, hooks where the host has an interception point | — |
 
 Important: **the plugin itself carries no npm dependencies** — the hooks use only the
 Node standard library. Everything below is a dependency of *your projects*, not of the
@@ -108,6 +110,22 @@ pi install .
 Updates: `pi update`. Pinning a version — by tag: `git:...specialist.git@v<release-tag>`.
 After editing or adding extensions: `/reload` inside pi.
 
+## Installing into oh-my-pi (omp)
+
+oh-my-pi is a pi fork: the repository installs whole there too — the manifest is the root
+`package.json`, and omp reads its `omp` key (shipped alongside the legacy `pi` key):
+
+```bash
+omp install github:buga-man/specialist
+```
+
+Updating: omp checks plugin updates at startup (`/marketplace` → upgrade). After editing
+extensions: `/reload-plugins` — and a session restart for a changed extension module
+(omp refreshes skills and commands live; extension modules load per session). One wiring
+differs from pi: omp has no `agent_settled`, so the
+kb-gate block goes through omp's blocking `session_stop` stop hook
+([hooks.md](hooks.md)); the other extensions run unchanged.
+
 ## Roles — analyst / developer / QA
 
 The framework installs as one full plugin or as three skills-only role plugins
@@ -122,7 +140,7 @@ the task for the other role.
   **ZCode** — the marketplace page lists all four plugins. Switching roles day-to-day =
   enabling/disabling the installed plugins.
 - **pi / skills-only** — `bash scripts/copy-skills.sh <target> --role qa` copies only
-  that role's skills.
+  that role's skills (`pi` for pi, `omp` for oh-my-pi).
 - `.spec-gate` can pin the session to one role (`role: qa`) — on Claude Code and ZCode
   the skill-gate then blocks out-of-role skills until the user consents to a switch.
 
@@ -138,6 +156,7 @@ git clone https://github.com/buga-man/specialist.git
 cd specialist
 bash scripts/copy-skills.sh claude   # → ~/.claude/skills
 bash scripts/copy-skills.sh pi       # → ~/.pi/agent/skills
+bash scripts/copy-skills.sh omp      # → ~/.omp/agent/skills (oh-my-pi; omp does not read ~/.pi/agent/skills)
 bash scripts/copy-skills.sh agents   # → ~/.agents/skills (cross-harness)
 bash scripts/copy-skills.sh claude --role qa   # only the qa role's skills
 ```
@@ -177,4 +196,5 @@ while a plan is open) — the modes are changed by a human.
 
 - Pointwise: `.spec-gate` = `off`, `.vuln-guard` = `off` in a specific project.
 - Fully: `/plugin uninstall specialist@specialist` (Claude Code; in ZCode —
-  **Settings → Plugins** → uninstall), `pi remove specialist` (pi).
+  **Settings → Plugins** → uninstall), `pi remove specialist` (pi),
+  `omp plugin uninstall specialist` (oh-my-pi).

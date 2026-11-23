@@ -25,6 +25,12 @@ test("budgetFindings: within the line cap but over the byte cap is a finding —
   assert.match(findings[0], /^20005 UTF-8 bytes \(budget 13312\)/);
 });
 
+test("budgetFindings: CRLF counts as LF — an autocrlf working copy pays no byte per line", () => {
+  const text = ("ы".repeat(2000) + "\r\n").repeat(5);
+  const lfText = ("ы".repeat(2000) + "\n").repeat(5);
+  assert.deepEqual(budgetFindings(text), budgetFindings(lfText));
+});
+
 test("stripFences: links inside a fenced block are cut, links outside stay", () => {
   const text = [
     "see [living](references/a.md)",

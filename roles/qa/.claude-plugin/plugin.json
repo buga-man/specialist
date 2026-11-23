@@ -1,7 +1,7 @@
 {
   "name": "specialist-qa",
   "description": "The QA/reviewer role of the specialist framework — spec-side test analysis (holes, missed criteria, corner cases), test design, acceptance against the specs, live-stand acceptance, quality review, adversarial bug and security hunting, defect triage. Skills-only plugin; the guards ship with the full specialist bundle.",
-  "version": "0.41.0",
+  "version": "0.42.0",
   "author": {
     "name": "Specialist"
   },

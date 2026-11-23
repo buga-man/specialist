@@ -2,13 +2,14 @@
 
 The pipeline's rules live in skills, but a skill is a request to the model. A hook is a
 barrier at the tool level: an edit outside the plan does not go through, a secret never
-reaches git, a broken formatter is fixed on the spot. One logic, four wrappers for five
+reaches git, a broken formatter is fixed on the spot. One logic, four wrappers for six
 hosts: the shared core in `hooks/lib/*.mjs`, plus one adapter per host — the Claude Code
 hook (stdin JSON, exit 2 = block), shared verbatim with ZCode, which speaks the same hook
 protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 `apply_patch` edits, `additionalContext` on PostToolUse/SessionStart, `{"decision":
 "block"}` on Stop; registered by `hooks/hooks-codex.json`), the pi extension
-(`pi.on(...)`, TypeScript in `extensions/`), and the OpenCode plugin
+(`pi.on(...)`, TypeScript in `extensions/`) — the same files the oh-my-pi fork loads
+(omp; kb-gate's wiring is the one divergence, below), and the OpenCode plugin
 (`plugins/opencode/`, blocking by throwing from `execute.before`).
 
 ## Host support
@@ -28,6 +29,11 @@ protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 | `codestyle-reminder` | ✅ session start | ✅ session start | ✅ session start | ✅ session start (persistent message) | ✅ with the session orientation |
 | `kb-gate` | ✅ Stop blocks (exit 2) | ✅ Stop blocks (exit 2) | ✅ Stop blocks (`{"decision": "block"}`) | ✅ settle-time follow-up (`agent_settled` → a continuation turn) | — (no turn-end interception point) |
 | `skill-gate` | ✅ Skill tool | ✅ Skill tool | — (no Skill tool) | — (no interception point) | — (no interception point) |
+
+oh-my-pi (omp, a pi fork) runs the same `extensions/*.ts` — every row above reads as the
+pi column there too, except `kb-gate`: omp has no `agent_settled`, so the same block
+goes through omp's blocking `session_stop` stop hook. The `omp` key in package.json
+(the legacy `pi` key alongside it) registers the extensions.
 
 The ZCode column mirrors Claude Code on purpose: ZCode speaks the same hook protocol
 (the same events, the same `startup/resume/clear/compact` matchers, `${CLAUDE_PLUGIN_ROOT}`,
@@ -51,7 +57,7 @@ documented boundary, not a silent gap.
 ## Overview
 
 The overview maps the Claude Code and pi wiring; the Host support table above covers all
-five hosts.
+six hosts (oh-my-pi counts through the pi column — the note under the table).
 
 | Hook | Claude Code | pi | What it does | Dependency | Project config |
 |---|---|---|---|---|---|
@@ -67,7 +73,7 @@ five hosts.
 | `edit-guard` | PostToolUse: Edit/Write/MultiEdit | `tool_result` edit/write | after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order | Node + the project's prettier/eslint/ruff/ktlint | — |
 | `plan-context` | SessionStart (startup/resume/clear/compact) | `before_agent_start` | orients a fresh session to the plan | Node | — |
 | `codestyle-reminder` | SessionStart (startup/resume/clear/compact) | `session_start` | reminds about a stale CODESTYLE.md | Node, git | — |
-| `kb-gate` | Stop | `agent_settled` | the documentation index diverged from disk — blocked until rebuilt | Node | — |
+| `kb-gate` | Stop | `agent_settled` follow-up; oh-my-pi: `session_stop` block | the documentation index diverged from disk — blocked until rebuilt | Node | — |
 
 All hooks are **fail-safe**: a hook failure, garbage in the config, a missing dependency →
 the work is skipped, not blocked. Messages are in English (the model's language); plan and
@@ -446,6 +452,17 @@ index somewhere other than where the hook looks for it, and the block would repe
   second safety fuse — `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, 8 by default); the hook writes
   that to stderr and lets the turn go;
 - any error inside the hook — fail-safe, as with every hook of the plugin.
+
+**On pi and oh-my-pi (omp)** the verdict is the same, the wiring per host
+(`extensions/kb-gate.ts`). On pi the settle boundary (`agent_settled`) is
+notification-only — the gate pushes a `triggerTurn` follow-up that starts one
+continuation turn, and the settle that follows a forced continuation is skipped (the
+extension keeps its own latch — pi names no `stop_hook_active` here), so there is never
+a loop. On omp the boundary is the blocking `session_stop` stop hook — a
+`{ decision: "block", reason }` return, the Claude Stop twin down to the fuse's name:
+the event carries `stop_hook_active`, and the gate skips the settle that follows a
+forced continuation. The host is told apart by its extension API: omp carries members
+pi does not (`registerLinkScheme` and friends).
 
 ## How to check a hook by hand
 

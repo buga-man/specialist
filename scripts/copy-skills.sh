@@ -7,7 +7,8 @@
 # Targets:
 #   claude   ~/.claude/skills     — personal Claude Code skills (also read by OpenCode)
 #   pi       ~/.pi/agent/skills   — global pi agent skills
-#   agents   ~/.agents/skills     — cross-harness directory (read by pi and OpenCode)
+#   omp      ~/.omp/agent/skills  — global oh-my-pi skills (omp does not read ~/.pi/agent/skills)
+#   agents   ~/.agents/skills     — cross-harness directory (read by pi, oh-my-pi, and OpenCode)
 #   codex    ~/.codex/skills      — personal Codex CLI skills
 #   opencode ~/.config/opencode/skills — global OpenCode skills
 #   <path>   an arbitrary directory (e.g. .claude/skills or .codex/skills inside a project)
@@ -44,6 +45,7 @@ done
 case "$TARGET_ARG" in
   claude)   DEST="$HOME/.claude/skills" ;;
   pi)       DEST="$HOME/.pi/agent/skills" ;;
+  omp)      DEST="$HOME/.omp/agent/skills" ;;
   agents)   DEST="$HOME/.agents/skills" ;;
   codex)    DEST="$HOME/.codex/skills" ;;
   opencode) DEST="$HOME/.config/opencode/skills" ;;

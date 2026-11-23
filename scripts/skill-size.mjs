@@ -71,17 +71,21 @@ export function localLinks(text) {
 
 /**
  * Budget findings of one SKILL.md, as detail lines without the file name
- * (the caller prefixes it) — empty when within budget.
+ * (the caller prefixes it) — empty when within budget. CRLF is normalized to
+ * LF first: the budget measures the document, not the checkout's line endings —
+ * a `core.autocrlf` working copy must not pay a byte per line that the
+ * committed file does not carry.
  * @param {string} text
  * @returns {string[]}
  */
 export function budgetFindings(text) {
   const findings = [];
-  const lines = String(text ?? "").split("\n").length;
+  const normalized = String(text ?? "").replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n").length;
   if (lines > MAX_LINES) {
     findings.push(`${lines} lines (budget ${MAX_LINES}) — move detail into references/`);
   }
-  const bytes = Buffer.byteLength(text, "utf8");
+  const bytes = Buffer.byteLength(normalized, "utf8");
   if (bytes > MAX_BYTES) {
     findings.push(`${bytes} UTF-8 bytes (budget ${MAX_BYTES}) — move detail into references/`);
   }
