@@ -1,7 +1,7 @@
 # specialist
 
 The repository is the **specialist** plugin: a full-cycle feature development framework
-for **Claude Code**, **ZCode**, **pi agent**, **Codex CLI**, and **OpenCode** — from a raw task to
+for **Claude Code**, **ZCode**, **pi agent**, **oh-my-pi**, **Codex CLI**, and **OpenCode** — from a raw task to
 spec-driven code and up-to-date documentation. Skills are written once and work in every
 host (the shared Agent Skills format); installation uses each host's native mechanisms,
 and the skills can be used without installing the plugin.
@@ -54,7 +54,7 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + review memory (recurring finding classes → CODESTYLE anti-patterns; a review report card) + scribe of CODESTYLE's versioned Principles section (SemVer bump + sync-impact line, after approval) + a manual `md → standalone html + pdf` with screenshots from the stand |
 | `trace-audit` | docs/specs + docs/plans → the pipeline's broken promises (`*-trace.md`): the walk script (walk.mjs) catches what needs no judgment — must criteria without a runnable `Verify:`, parent/children desync, dead links, TEST-ID reuse across the registry, plans blocked on already-resolved questions, draft status outgrown; the judgment checks add implementation shipped without a review and findings that never closed across reports — every finding routed to its owning role; reports only |
-| `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, and pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
+| `kb-index` | documentation corpus → `.kbindex/`: an index of document faces + directory maps, two-tier `kb.mjs search` (the "face" first, then BM25 over section bodies) with the `§<heading>:<line>` anchor, a `related`/`path` graph over links and relations; the gates in Claude Code, Codex, pi, and oh-my-pi do not release a turn with a stale index; `audit` reports broken links, orphans, and stale drafts |
 | `codestyle` *(cross-cutting)* | repository conventions → `CODESTYLE.md`: rules with `file:line` evidence, anti-echo (regeneration only from code), generate/verify modes; the SessionStart hook reminds about staleness |
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
 | `scouts` *(cross-cutting)* | the subagent protocol behind every fan-out — parallel read-only recon and verification under an explicit grant: one question asks permission and count (`.spec-gate`'s `scouts: <N>` answers it standing), the granted count is the hard budget, no answer or no host support → the same missions sequentially; mission charters (one mission per scout, artifact paths not pastes, never pre-judged), fan-in (reports are hypotheses until re-verified, dedup by scenario, a silent scout is chased), read-only, no recursion |
@@ -97,22 +97,23 @@ traceability defect — spec-review and tech-writer check for it.
 .claude-plugin/marketplace.json  marketplace wrapper: the full plugin (source "./") + the three role plugins (source "roles/<role>") — what /plugin install lists
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 .zcode-plugin/plugin.json        ZCode plugin manifest: points ZCode at skills/ and hooks/hooks.json (ZCode speaks the Claude Code hook protocol, so the Claude Code adapters run unchanged)
-package.json                     pi package manifest (pi.skills / pi.extensions)
+package.json                     pi package manifest (pi.skills / pi.extensions); the same omp section for oh-my-pi
 roles/                           the three role plugins (specialist-analyst / specialist-dev / specialist-qa): skills-only, generated from scripts/roles.mjs + skills/ and committed; compliance --fix rebuilds them on drift
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
 hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile and role pin at skill invocation), bash-policy (the provably read-only commands are auto-approved), mutation-guard (agent-run pushes and history rewrites — blocked, opt-in), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red suite from .suite-gate blocks the commit — opt-in), config-guard (an edit of an existing linter/formatter config — blocked), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
-extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, suite-gate.ts, edit-guard.ts, plan-context.ts, git-watch.ts, codestyle-reminder.ts, kb-gate.ts
+extensions/                      the same rules for pi agent and oh-my-pi (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, suite-gate.ts, edit-guard.ts, plan-context.ts, git-watch.ts, codestyle-reminder.ts, kb-gate.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
 docs/                           documentation: skills, hooks, installation; design notes; the not-adopted ledger; the skill template
 scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the router sync (dispatch names only real skills and every role entry), the fresh-context rule on every scout-dispatching skill, the generated docs/skill-index.md and roles/; check-extensions.mjs — the TypeScript-surface guard (part of npm test); skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
-## Hooks and extensions: one logic, five hosts
+## Hooks and extensions: one logic, six hosts
 
-One logic (`hooks/lib/*.mjs` cores), four wrappers for five hosts: the Claude Code
+One logic (`hooks/lib/*.mjs` cores), four wrappers for six hosts: the Claude Code
 adapters, shared verbatim with ZCode (which speaks the same hook protocol — the same
 events, matchers, and `${CLAUDE_PLUGIN_ROOT}`), Codex adapters
-(JSON output protocol, `apply_patch` support), pi extensions (`extensions/*.ts`), and the
+(JSON output protocol, `apply_patch` support), pi extensions (`extensions/*.ts` — the
+same files the oh-my-pi fork loads; only kb-gate's wiring diverges there), and the
 OpenCode plugin (`plugins/opencode/`). Details and the plan contract:
 [docs/hooks.md](docs/hooks.md); the pi extension
 API — [extensions/README.md](extensions/README.md).
@@ -159,7 +160,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 ## Documentation
 
-- [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
+- [Installation and dependencies](docs/installation.md) — all six hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
 - [Skills](docs/skills.md) — a human-readable description of all twenty-six skills: why they exist,
   input → output, when they trigger, key rules.
@@ -207,6 +208,19 @@ pi install git:github.com/buga-man/specialist.git
 
 Updating: `pi update`. Pinning a version — by tag: `git:...specialist.git@v<release-tag>`.
 After edits/extensions: `/reload` inside pi.
+
+### oh-my-pi (omp)
+
+oh-my-pi is a pi fork and installs the same package — the root `package.json` is the
+manifest (omp reads its `omp` key or the legacy `pi` key):
+
+```bash
+omp install github:buga-man/specialist
+```
+
+Updating: omp checks plugin updates at startup (`/marketplace` → upgrade). One wiring
+differs from pi: omp has no `agent_settled` — the kb-gate block goes through omp's
+blocking `session_stop` stop hook; the other extensions run unchanged.
 
 ### Codex CLI
 
@@ -260,8 +274,8 @@ the four shared ones ride in every plugin.
   Switching roles day-to-day = enabling/disabling the installed plugins.
 - **Codex CLI** — `codex plugin add specialist-qa@specialist`.
 - **pi / skills-only** — `bash scripts/copy-skills.sh <target> --role qa` copies only
-  that role's skills; **OpenCode** — point `opencode.json`'s `skills` array at
-  `roles/qa/skills` inside this repository.
+  that role's skills (`pi` for pi, `omp` for oh-my-pi); **OpenCode** — point
+  `opencode.json`'s `skills` array at `roles/qa/skills` inside this repository.
 - On Claude Code and ZCode, `.spec-gate` can pin the session to one role (`role: qa`) —
   the skill-gate then blocks out-of-role skills until the user consents to a switch.
 
@@ -278,7 +292,8 @@ git clone https://github.com/buga-man/specialist.git
 cd specialist
 bash scripts/copy-skills.sh claude   # → ~/.claude/skills (read by Claude Code and OpenCode)
 bash scripts/copy-skills.sh pi       # → ~/.pi/agent/skills
-bash scripts/copy-skills.sh agents   # → ~/.agents/skills (read by pi and OpenCode)
+bash scripts/copy-skills.sh omp      # → ~/.omp/agent/skills (oh-my-pi; omp does not read ~/.pi/agent/skills)
+bash scripts/copy-skills.sh agents   # → ~/.agents/skills (read by pi, oh-my-pi, and OpenCode)
 bash scripts/copy-skills.sh codex    # → ~/.codex/skills
 bash scripts/copy-skills.sh opencode # → ~/.config/opencode/skills
 ```
@@ -298,7 +313,7 @@ In this mode hooks and extensions are **not** installed — skills only.
    criteria with their failure tells) — add them when the skill's scope is easy to
    overstep, it has known failure shapes, or its success is observable.
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
-   Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
+   Host-specifics: Claude Code and Codex hooks → `hooks/`, pi and oh-my-pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in
    SKILL.md are relative (`<skill-dir>`); `${CLAUDE_PLUGIN_ROOT}` and other host
    variables are forbidden in SKILL.md.
@@ -326,7 +341,7 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 - **Codex** → the adapter in `hooks/lib/` (a `-codex` twin when the output protocol
   differs) + a matcher group in `hooks/hooks-codex.json`; the root `plugin.json` points
   Codex at it.
-- **pi agent** → `extensions/<name>.ts`: `export default function (pi) { pi.on(...) }` —
+- **pi agent** and **oh-my-pi** → `extensions/<name>.ts`: `export default function (pi) { pi.on(...) }` —
   see `extensions/README.md`.
 - **OpenCode** → `plugins/opencode/index.ts` (V2 `Plugin.define` + a V1 `server()`
   fallback) on the same cores.
@@ -350,6 +365,7 @@ Skill discovery is recursive: a skill is any directory containing `SKILL.md`.
 - Codex documentation (skills / hooks): https://developers.openai.com/codex
 - pi documentation (skills / packages / extensions):
   https://github.com/earendil-works/pi/tree/main/packages/coding-agent/docs
+- oh-my-pi documentation (skills / plugins / extensions): https://omp.sh/docs
 - Claude Code documentation (plugins): https://code.claude.com/docs/en/plugins
 
 ### Sources

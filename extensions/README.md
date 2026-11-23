@@ -3,8 +3,10 @@
 pi agent has no separate "hook" mechanism — everything is done with extensions:
 TypeScript modules loaded into pi that subscribe to events via `pi.on(...)`.
 
-When this repository is installed as a pi package (`pi install ...`), all
-`extensions/*.ts` and `extensions/*.js` are loaded automatically.
+When this repository is installed as a pi package (`pi install ...`) or as an
+oh-my-pi package (`omp install ...` — omp reads the same manifest, its `omp` key or
+the legacy `pi` key), all `extensions/*.ts` and `extensions/*.js` are loaded
+automatically.
 
 ## The plugin's ready-made extensions
 
@@ -45,10 +47,13 @@ When this repository is installed as a pi package (`pi install ...`), all
 - **codestyle-reminder.ts** — on `session_start` stores one persistent line when
   CODESTYLE.md may be stale (the same verdict and line the Claude Code hook injects).
   Logic: `../hooks/lib/git-watch-host.mjs` + `codestyle-core.mjs`.
-- **kb-gate.ts** — on `agent_settled`: when the documentation index diverged from the
-  disk, pushes the rebuild command as a follow-up message that starts a continuation
-  turn — the pi analog of the Claude Code Stop block (one continuation per settle, no
-  loop; aborted runs are never continued). Logic: `../hooks/lib/kb-gate-core.mjs`.
+- **kb-gate.ts** — when the documentation index diverged from the disk, forces one
+  continuation turn carrying the rebuild command — the pi analog of the Claude Code
+  Stop block (one continuation per settle, no loop; aborted runs are never
+  continued). The wiring is per host: pi — a follow-up message from `agent_settled`
+  (`triggerTurn`); oh-my-pi — a `{ decision: "block" }` refusal from the blocking
+  `session_stop` stop hook (omp has no `agent_settled`). Logic:
+  `../hooks/lib/kb-gate-core.mjs`.
 
 After installing/editing extensions: `/reload`.
 
@@ -77,7 +82,8 @@ After installing/editing extensions: `/reload`.
 - `tool_result` — post-process a tool result
 - `input` — intercept and transform user input
 - `session_start` — session initialization
-- `agent_settled` — the run settled (notification-only; a `triggerTurn` follow-up starts the next turn)
+- `agent_settled` — the run settled (notification-only; a `triggerTurn` follow-up starts the next turn) — pi
+- `session_stop` — the main-session blocking stop hook (a `{ decision: "block", reason }` return forces a continuation) — oh-my-pi
 - `session_compact` — the context was compacted (plan-context re-orients after it)
 
 The full list of events and the extension API:
@@ -85,5 +91,6 @@ https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extens
 
 ## Host specifics
 
-Extensions work **only in pi**. Claude Code hooks go into `hooks/hooks.json`.
-Skills shared by both programs — in `skills/`.
+Extensions work in **pi** and **oh-my-pi** (omp — a pi fork that loads the same
+`extensions/*.ts`; the only divergent wiring is kb-gate's, above). Claude Code hooks
+go into `hooks/hooks.json`. Skills shared by the programs — in `skills/`.
