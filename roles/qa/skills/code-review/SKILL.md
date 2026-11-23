@@ -146,11 +146,11 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   4. the severity survives challenge — see Severity honesty below.
 - **Known false positives — do not report**: error handling a middleware or calling
   layer already owns; "magic numbers" that are the domain's vocabulary — 200/404 in an
-  HTTP handler; "too long" aimed at a dispatch table — length is the shape there; an
-  N+1 over a knowingly tiny set; TODO/FIXME in code the diff did not touch; crypto-hardening demands on code that moves no secrets; production-
-  grade demands on example, fixture, or doc-snippet code — a finding names its
-  source kind (live / fixture / example / dead), and only live code carries
-  production weight.
+  HTTP handler; "too long" aimed at a switch or dispatch table — length is the shape
+  there; an N+1 over a fixed or knowingly tiny set; TODO/FIXME in code the diff did
+  not touch; crypto-hardening demands on code that moves no secrets; production-grade
+  demands on example, fixture, or doc-snippet code — a finding names its source kind
+  (live / fixture / example / dead), and only live code carries production weight.
 - Severity per finding:
   - **blocker** — unmaintainable as is, or the design will hurt every future change;
   - **worth fixing** — real cost, fixable in the normal flow;

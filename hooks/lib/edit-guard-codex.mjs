@@ -26,7 +26,7 @@ try {
   const projectDir = resolveProjectDir(payload);
   const cwd = String(payload?.cwd || process.cwd()); // patch paths are relative to the session cwd
   const rels = editedFilePaths(payload?.tool_input || {});
-  const messages = scopeChangeNotes(payload?.tool_input || {});
+  const messages = scopeChangeNotes(payload?.tool_input || {}, projectDir);
 
   for (const rel of rels) {
     const abs = resolve(cwd, rel);

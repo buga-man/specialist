@@ -4,6 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -23,6 +24,19 @@ function project(files = {}) {
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, content);
   }
+  return dir;
+}
+
+/** A temp project with the files committed — the Write-flip note needs a git HEAD
+ *  to compare against (the only "before" a post-edit hook has). */
+function gitProject(files = {}) {
+  const dir = project(files);
+  const git = (args) => execFileSync("git", args, { cwd: dir, stdio: ["ignore", "ignore", "ignore"] });
+  git(["init", "-q"]);
+  git(["config", "user.email", "t@example.com"]);
+  git(["config", "user.name", "t"]);
+  git(["add", "-A"]);
+  git(["commit", "-qm", "init"]);
   return dir;
 }
 
@@ -85,12 +99,45 @@ test("scopeChangeNotes: a plan status flip is a boundary note", () => {
     new_string: "status: approved",
   });
   assert.ok(notes.some((n) => n.includes("approval status")));
-  // A whole-file Write carries no note — the same rule the Files-line note follows.
+  // Without a projectDir there is no "before" to compare a Write against — the
+  // fail-safe is silence (the Files-line rule: a whole-file Write stays unnoted).
   const written = scopeChangeNotes({
     file_path: "docs/plans/p.md",
     content: APP + "### Task 1: X\n- Files: `src/a.ts`\n",
   });
   assert.deepEqual(written, []);
+});
+
+test("scopeChangeNotes: a Write flipping a plan to approved is a boundary note — git HEAD is the before", () => {
+  const dir = gitProject({ "docs/plans/p.md": "---\nstatus: draft\n---\n### Task 1: X\n- Files: `src/a.ts`\n" });
+  const flip = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n" },
+    dir,
+  );
+  assert.ok(flip.some((n) => n.includes("approval status")), "the Write route to a flip is called out");
+
+  // A routine rewrite of an already-approved plan (a Done line lands) stays silent.
+  const ok = gitProject({ "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n" });
+  const routine = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n- Done: abc123\n" },
+    ok,
+  );
+  assert.deepEqual(routine, []);
+
+  // The fast lane's normal creation — a draft Write — has nothing to flip.
+  const draft = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: "---\nstatus: draft\n---\n### Task 1: X\n- Files: `src/a.ts`\n" },
+    dir,
+  );
+  assert.deepEqual(draft, []);
+
+  // An untracked plan born approved — self-authorization at creation is a flip too.
+  const unborn = project({}); // a git-less dir: git cannot answer, which is "no before"
+  const born = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n" },
+    unborn,
+  );
+  assert.ok(born.some((n) => n.includes("approval status")));
 });
 
 test("readMode: soft by default, hard/off honored, garbage falls back", () => {

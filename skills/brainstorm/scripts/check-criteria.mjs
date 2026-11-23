@@ -6,6 +6,8 @@
  * this script catches the failures that never need judgment:
  *
  *   - error:   a must criterion without a `Verify:` — nobody decided how it is checked;
+ *   - error:   a must criterion without a `Must-not:` — the boundary of the done state
+ *              ("nothing else changes") is as load-bearing as the way to check it;
  *   - warning: unmeasurable wording in a criterion ("fast", "robust", "properly"…)
  *              — every subjective word carries a number, an example, or an oracle;
  *   - warning: the must-criteria count outside the 5–20 band — too few is a scope
@@ -57,6 +59,11 @@ const SHOULD_RE = /\(\s*(?:should|желательн[а-яё]*|опционал�
 /** The Verify label, bilingual: the stem matches through a leading non-letter —
  *  \b is ASCII-only, and «перепроверка:» must not count as a Verify. */
 const VERIFY_RE = /(?:^|[^\p{L}])(?:verify|провер[а-яё]*)\s*:/iu;
+
+/** The Must-not label, bilingual: the boundary of the done state every must criterion
+ *  names — «недопустимо:» carries exactly its weight. The same leading-non-letter
+ *  boundary as VERIFY_RE (JS \b is ASCII-only and never fires around Cyrillic). */
+const MUST_NOT_RE = /(?:^|[^\p{L}])(?:must-not|недопустим[а-яё]*)\s*:/iu;
 
 /** The open-questions section heading, bilingual — a prefix stem for the Cyrillic
  *  side, as everywhere here (\b never fires around Cyrillic letters). */
@@ -153,6 +160,9 @@ export function checkCriteria(text) {
     if (!isMust && SHOULD_RE.test(body)) shouldCount++;
     if (isMust && !VERIFY_RE.test(body)) {
       errors.push(`criterion ${criterionNo} (must) has no Verify — every must criterion names the command or the manual check that decides it`);
+    }
+    if (isMust && !MUST_NOT_RE.test(body)) {
+      errors.push(`criterion ${criterionNo} (must) has no Must-not — the boundary alongside the done state ("nothing else changes, no new endpoints, no silent retries"): a done criterion without its boundary is a license to overreach`);
     }
     const vague = VAGUE_RE.exec(body);
     if (vague) {

@@ -128,7 +128,7 @@ async function afterEdit(projectDir: string, args: EditInput | undefined, contai
   const failure: string[] = [];
   let notes: string[] = [];
   try {
-    notes = scopeChangeNotes(args ?? {});
+    notes = scopeChangeNotes(args ?? {}, projectDir);
     const files = editedFiles(args);
     for (const fp of files) {
       const result = await formatFile({ projectDir, filePath: resolve(projectDir, fp), run });

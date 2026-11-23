@@ -41,7 +41,7 @@ export default function (pi: ExtensionAPI) {
       const abs = resolve(ctx.cwd, filePath);
       const run = (cmd: string, args: string[], opts: Record<string, unknown>) => pi.exec(cmd, args, opts);
 
-      const notes = scopeChangeNotes(event.input ?? {});
+      const notes = scopeChangeNotes(event.input ?? {}, projectDir);
       const failures: string[] = [];
       const formatted = await formatFile({ projectDir, filePath: abs, run });
       if (formatted && !formatted.ok) {

@@ -19,6 +19,7 @@
  * Fail-safe: parsing problems never block work — an unparsable plan yields no
  * restrictions rather than false blocks.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 
@@ -124,17 +125,71 @@ export function editedFilePaths(toolInput, cap = 20) {
   return patchPaths.slice(0, cap).map((p) => p.replace(/^@/, ""));
 }
 
+/** The plan's frontmatter carries `status: approved` — the user's approval that opens
+ *  code edits. Quoted values and trailing comments read as not-approved (conservative:
+ *  the gate blocks rather than opens on an ambiguous status). */
+function planIsApproved(text) {
+  const fm = String(text ?? "").match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return false;
+  const status = fm[1].match(/^status:\s*(\S[^\r\n]*)$/m);
+  return !!status && status[1].trim().toLowerCase() === "approved";
+}
+
+/** The committed version of a file — `git show HEAD:<path>` — or null when git cannot
+ *  answer (untracked, no commits yet, not a repo, no git). Never throws. */
+function committedText(projectDir, rel) {
+  try {
+    const r = spawnSync("git", ["-C", projectDir, "show", `HEAD:./${rel}`], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    return !r.error && r.status === 0 && typeof r.stdout === "string" ? r.stdout : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A whole-file Write of a plan whose content carries `status: approved` while the
+ *  committed version does not (or does not exist) — the flip an Edit's old/new delta
+ *  would have shown, taken through the Write route no delta covers. No projectDir or
+ *  silent git → no flip claimed (fail-safe: the note is advisory, silence is safe). */
+function writesApprovalFlip(path, content, projectDir) {
+  if (!projectDir || !planIsApproved(content)) return false;
+  let rel;
+  try {
+    rel = isAbsolute(path) ? relative(projectDir, path) : path;
+  } catch {
+    return false;
+  }
+  rel = rel.replace(/\\/g, "/");
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) return false; // outside the project — not this gate's plan
+  const committed = committedText(projectDir, rel);
+  return committed === null || !planIsApproved(committed);
+}
+
+const STATUS_FLIP_NOTE =
+  "spec-gate: the approval status of a plan in docs/plans/ was just edited — what the " +
+  "gate authorizes changes with it. `status: approved` opens code edits, and only the " +
+  "user's approval puts it there. If this was not the user's decision, revert the " +
+  "edit; the change is visible in the plan's git diff.";
+
 /** The visibility notes when an edit touches the gates' own boundaries: a "- Files:"
- *  scope line of a plan in docs/plans/, or one of the guard allowlists (.secrets-allow /
- *  .vuln-allow). The gates are discipline, not walls — the agent may edit a plan or an
- *  allowlist — but a boundary change must be seen, not pass silently: each note names
- *  what changed and points at the git diff where the change is reviewable. Returns
- *  string[] (empty — nothing to say). Pure: reads only the edit payload.
+ *  scope line of a plan in docs/plans/, the plan's approval status, or one of the guard
+ *  allowlists (.secrets-allow / .vuln-allow). The gates are discipline, not walls —
+ *  the agent may edit a plan or an allowlist — but a boundary change must be seen, not
+ *  pass silently: each note names what changed and points at the git diff where the
+ *  change is reviewable. Returns string[] (empty — nothing to say). Reads the edit
+ *  payload; the one payload-only exception is a Write's approval flip, which asks git
+ *  for the committed version — the only "before" a post-edit hook still has.
  *
- *  A whole-file Write of a plan produces no note: creating/rewriting a plan is the
- *  normal flow (the fast lane does exactly that); the note is for an Edit that touches
- *  an existing scope line — the shape a quiet self-expansion of scope would take. */
-export function scopeChangeNotes(toolInput) {
+ *  A whole-file Write of a plan produces no Files-line note: creating/rewriting a plan
+ *  is the normal flow (the fast lane does exactly that); that note is for an Edit that
+ *  touches an existing scope line — the shape a quiet self-expansion of scope would
+ *  take. The approval status is the exception: a Write that flips a plan to
+ *  `status: approved` (against git HEAD) is noted like an Edit — the flip is the
+ *  self-authorization the note exists for, and a Write is its quietest route. Git
+ *  trouble or no projectDir → no note (the fail-safe is silence, not noise). */
+export function scopeChangeNotes(toolInput, projectDir) {
   if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) return [];
   const notes = [];
   const norm = (p) => String(p).replace(/^@/, "").replace(/\\/g, "/");
@@ -184,12 +239,10 @@ export function scopeChangeNotes(toolInput) {
         );
       }
       if (touchesStatusLine && toolInput.content === undefined) {
-        notes.push(
-          "spec-gate: the approval status of a plan in docs/plans/ was just edited — what the " +
-            "gate authorizes changes with it. `status: approved` opens code edits, and only the " +
-            "user's approval puts it there. If this was not the user's decision, revert the " +
-            "edit; the change is visible in the plan's git diff.",
-        );
+        notes.push(STATUS_FLIP_NOTE);
+      }
+      if (toolInput.content !== undefined && writesApprovalFlip(p, toolInput.content, projectDir)) {
+        notes.push(STATUS_FLIP_NOTE);
       }
     }
   }
@@ -242,9 +295,7 @@ export function activePlanInfo(projectDir) {
     } catch {
       continue;
     }
-    const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    const statusMatch = fm ? fm[1].match(/^status:\s*(\S[^\r\n]*)$/m) : null;
-    const approved = !!statusMatch && statusMatch[1].trim().toLowerCase() === "approved";
+    const approved = planIsApproved(text);
     let inTask = false;
     let taskOpen = false;
     let taskHasFilesLine = false;

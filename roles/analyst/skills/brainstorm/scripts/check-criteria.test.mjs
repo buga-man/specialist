@@ -19,7 +19,7 @@ const SPEC = (criteria) => [
 test("checkCriteria: a must criterion without Verify is an error; with one — clean", () => {
   const bad = checkCriteria(
     SPEC([
-      "1. When a client uploads a file larger than 100 MB, the system shall reject it with HTTP 413. (must)",
+      "1. When a client uploads a file larger than 100 MB, the system shall reject it with HTTP 413. (must) — Must-not: anything else in the upload path changes",
     ]),
   );
   assert.equal(bad.found, true);
@@ -28,7 +28,7 @@ test("checkCriteria: a must criterion without Verify is an error; with one — c
 
   const good = checkCriteria(
     SPEC([
-      "1. When a client uploads a file larger than 100 MB, the system shall reject it with HTTP 413. (must) — Verify: pytest tests/upload_limit.py → exit 0",
+      "1. When a client uploads a file larger than 100 MB, the system shall reject it with HTTP 413. (must) — Verify: pytest tests/upload_limit.py → exit 0 — Must-not: anything else in the upload path changes",
     ]),
   );
   assert.equal(good.errors.length, 0);
@@ -37,7 +37,7 @@ test("checkCriteria: a must criterion without Verify is an error; with one — c
 test("checkCriteria: unmeasurable wording is a warning naming the word", () => {
   const r = checkCriteria(
     SPEC([
-      "1. The system shall handle uploads fast. (must) — Verify: manual — time the upload",
+      "1. The system shall handle uploads fast. (must) — Verify: manual — time the upload — Must-not: retries are added",
     ]),
   );
   assert.equal(r.errors.length, 0);
@@ -67,7 +67,7 @@ test("checkCriteria: the must-count band — too few and too many warn, the band
 test("checkCriteria: a non-EARS stem is info, not an error (working language may differ)", () => {
   const r = checkCriteria(
     SPEC([
-      "1. Uploads larger than the limit are rejected with HTTP 413. (must) — Verify: cmd → 0",
+      "1. Uploads larger than the limit are rejected with HTTP 413. (must) — Verify: cmd → 0 — Must-not: the limit moves",
     ]),
   );
   assert.equal(r.errors.length, 0);
@@ -76,7 +76,7 @@ test("checkCriteria: a non-EARS stem is info, not an error (working language may
 
   const stemmed = checkCriteria(
     SPEC([
-      "1. When the upload exceeds the limit, the system shall return HTTP 413. (must) — Verify: cmd → 0",
+      "1. When the upload exceeds the limit, the system shall return HTTP 413. (must) — Verify: cmd → 0 — Must-not: the limit moves",
     ]),
   );
   assert.equal(stemmed.infos.length, 0);
@@ -98,9 +98,9 @@ test("checkCriteria: a wrapped criterion keeps its (must) marker and Verify tail
   const r = checkCriteria(
     SPEC([
       "1. When a client uploads a file larger than 100 MB, the system shall reject it",
-      "   with HTTP 413. (must) — Verify: pytest tests/upload_limit.py → exit 0",
+      "   with HTTP 413. (must) — Verify: pytest tests/upload_limit.py → exit 0 — Must-not: anything else changes",
       "2. When the list is empty, the system shall show the empty state",
-      "(must) — Verify: manual — QA observes the empty page",
+      "(must) — Verify: manual — QA observes the empty page — Must-not: the list is rewritten",
     ]),
   );
   assert.equal(r.mustCount, 2);
@@ -109,7 +109,7 @@ test("checkCriteria: a wrapped criterion keeps its (must) marker and Verify tail
   const unverified = checkCriteria(
     SPEC([
       "1. When a client uploads a file larger than 100 MB, the system shall reject it",
-      "   with HTTP 413. (must)",
+      "   with HTTP 413. (must) — Must-not: anything else changes",
     ]),
   );
   assert.equal(unverified.errors.length, 1);
@@ -130,8 +130,8 @@ test("checkCriteria: the must/should/Verify markers are bilingual — Cyrillic s
     [
       "# Спека", "",
       "## Критерии приёмки", "",
-      "1. При отправке система сохраняет запись. (обязательно) — Проверка: manual — QA наблюдает",
-      "2. При ошибке ввода система отклоняет форму. (обязательно)",
+      "1. При отправке система сохраняет запись. (обязательно) — Проверка: manual — QA наблюдает — Недопустимо: запись дублируется",
+      "2. При ошибке ввода система отклоняет форму. (обязательно) — Недопустимо: форма очищается",
       "3. При пустом списке система показывает подсказку. (желательно)",
       "4. Отчёт можно выгрузить. (необязательно)",
     ].join("\n"),
@@ -147,7 +147,7 @@ test("checkCriteria: the section scan stops at the next heading", () => {
   const r = checkCriteria(
     [
       "## 3. Acceptance criteria",
-      "1. When X, the system shall Y. (must)",
+      "1. When X, the system shall Y. (must) — Must-not: Z changes",
       "",
       "## 4. Business cases",
       "1. Actor does something — this numbered item is NOT a criterion",
@@ -179,7 +179,7 @@ const SPEC_WITH_QUESTIONS = (rows) => [
   "# Feature — business specification",
   "",
   "## 3. Acceptance criteria",
-  ...Array.from({ length: 6 }, (_, i) => `${i + 1}. When X${i}, the system shall Y${i}. (must) — Verify: cmd${i} → 0`),
+  ...Array.from({ length: 6 }, (_, i) => `${i + 1}. When X${i}, the system shall Y${i}. (must) — Verify: cmd${i} → 0 — Must-not: anything else changes`),
   "",
   "## 7. Open questions",
   "| # | Question | Working assumption | Risk if wrong | Blocking |",
@@ -239,4 +239,30 @@ test("checkCriteria: no open-questions section or table — blocking check is si
     "No table here — just a prose line mentioning blocking.",
   ].join("\n"));
   assert.equal(proseOnly.blockingOpen, 0);
+});
+
+test("checkCriteria: a must criterion without Must-not is an error — bilingual, and should owes no boundary", () => {
+  const bad = checkCriteria(SPEC(["1. When X, the system shall Y. (must) — Verify: cmd → 0"]));
+  assert.equal(bad.errors.length, 1);
+  assert.match(bad.errors[0], /criterion 1 \(must\) has no Must-not/);
+  assert.match(bad.errors[0], /license to overreach/);
+
+  const good = checkCriteria(
+    SPEC(["1. When X, the system shall Y. (must) — Verify: cmd → 0 — Must-not: anything else changes"]),
+  );
+  assert.equal(good.errors.length, 0);
+
+  // «Недопустимо:» carries exactly the weight of `Must-not:`
+  const ru = checkCriteria([
+    "# Спека", "",
+    "## Критерии приёмки", "",
+    "1. При отправке система сохраняет запись. (обязательно) — Проверка: manual — Недопустимо: запись теряется",
+  ].join("\n"));
+  assert.equal(ru.errors.length, 0);
+
+  // The should class owes no boundary, same as it owes no Verify
+  const should = checkCriteria(
+    SPEC(["1. Where the user has not interacted for 30 seconds, the system should collapse the panel. (should)"]),
+  );
+  assert.equal(should.errors.length, 0);
 });

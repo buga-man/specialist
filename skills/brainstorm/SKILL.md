@@ -71,11 +71,11 @@ criterion or a question.
 
 ## 5. Process the answers
 
-- Integrate the answers into scope and criteria — facts found, decisions recorded.
+- Integrate the answers into scope and criteria.
 - Recompute the frontier: contradictions and new unknowns may have settled prerequisites —
   one more short round under the same rules; two rounds is the normal maximum, leftovers
   go to Open questions. The interview ends when the frontier is empty: nothing silently
-  assumed, every gap resolved or on record with a working assumption.
+  assumed, every gap resolved or on record.
 
 ## 6. Write the spec — only when everything forms one picture
 
@@ -97,10 +97,10 @@ criterion or a question.
   present or explicitly deferred, and no criterion survives the fail test (nothing concrete
   could fail it). 5–15 must criteria is the normal band; over ~20 means
   several features — split with the user. Every must names its **Must-not** —
-  the boundary defined alongside the done state ("nothing else changes, no new endpoints,
-  no silent retries"): a done criterion without its boundary is a license to overreach.
-  The mechanical part of the bar — Verify
-  presence on must, unmeasurable wording, the count band — is checked by
+  the boundary defined alongside the done state ("nothing else changes, no new
+  endpoints"): a done criterion without its boundary is a license to overreach.
+  The mechanical part of the bar — Verify and
+  Must-not presence on must, unmeasurable wording, the count band — is checked by
   `node "<skill-dir>/scripts/check-criteria.mjs" <spec-path>` before saving; fix what it names.
 - **Value-first, above the formal bar**: a formally perfect spec describing the wrong problem
   is worse than a rough spec describing the right one. Two checks before anything else passes:
@@ -146,7 +146,7 @@ outside the project must understand what and why from this section alone.
 Numbered, verifiable statements; a business person can check each one.
 Mark every criterion's source: [request], [docs], [answer #N].
 Mark each must (the feature fails without it) or should (valuable, negotiable) — plans and reviews lean on the difference.
-The markers and the Verify label are bilingual — `(обязательно)` carries exactly the weight of `(must)`, the should class is `(should)`/`(желательно)`/`(опционально)`/`(необязательно)`, and `Проверка:` is `Verify:` (the gates read them all; a should-class marker never reads as must).
+The markers and labels are bilingual — must is `(must)`/`(обязательно)`, the should class is `(should)`/`(желательно)`/`(опционально)`/`(необязательно)`, `Проверка:` is `Verify:`, `Недопустимо:` is `Must-not:` (the gates read them all; a should-class marker never reads as must).
 Shape each criterion with an EARS pattern (references/ears-patterns.md) — a fixed stem:
 "When <trigger>, the system shall …" / "While <state>, …" / "If <condition>, … shall not …"
 / a plain always-true property — so a fresh agent parses it without guessing.

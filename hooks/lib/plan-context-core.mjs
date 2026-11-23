@@ -236,9 +236,14 @@ export function buildPlanContext(projectDir) {
 
     const info = activePlanInfo(projectDir);
     // An unapproved plan (no `status: approved`) gates code edits without opening any
-    // scope — the fresh session must know why every code edit blocks.
+    // scope — the fresh session must know why every code edit blocks. With an approved
+    // plan also carrying open tasks, the draft opens nothing itself — the "every code
+    // edit blocks" claim would lie about the approved plan's scope.
     const unapproved = info.unapprovedPlans.length
-      ? `spec-gate: the plan ${info.unapprovedPlans.join(", ")} is not approved yet (no \`status: approved\`) — code edits stay blocked until the user approves it.\n`
+      ? `spec-gate: the plan ${info.unapprovedPlans.join(", ")} is not approved yet (no \`status: approved\`) — ` +
+        (info.hasOpenTasks
+          ? "its tasks open nothing until the user approves it.\n"
+          : "code edits stay blocked until the user approves it.\n")
       : "";
     if (!info.hasOpenTasks) {
       // No open tasks — the spec chain takes over as the orientation: a mid-flight

@@ -378,3 +378,16 @@ test("an unapproved plan gates code edits — the orientation names it", () => {
   assert.match(text, /not approved/);
   assert.doesNotMatch(text, /open task/);
 });
+
+test("a draft beside an active approved plan — the draft opens nothing, the approved scope stands", () => {
+  const dir = project({
+    "docs/plans/2026-01-01-a.md": APP + "# Plan\n\n### Task 1: A\n- Files: `src/a.ts`\n",
+    "docs/plans/2026-01-02-d.md": "---\nstatus: draft\n---\n\n# Draft\n\n### Task 1: D\n- Files: `src/d.ts`\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.match(text, /plan-context: 1 open task\(s\)[^\n]*2026-01-01-a\.md/, "the approved plan orients the session");
+  assert.match(text, /2026-01-02-d\.md is not approved/);
+  assert.match(text, /its tasks open nothing/);
+  // The "every code edit blocks" claim would lie here — the approved plan's scope is open.
+  assert.doesNotMatch(text, /code edits stay blocked/);
+});

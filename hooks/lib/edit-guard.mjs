@@ -27,7 +27,7 @@ try {
   if (/^(Edit|Write|MultiEdit)$/i.test(tool)) {
     const projectDir = resolveProjectDir(payload);
     const filePath = String(payload?.tool_input?.file_path || "");
-    const messages = scopeChangeNotes(payload?.tool_input || {});
+    const messages = scopeChangeNotes(payload?.tool_input || {}, projectDir);
     if (filePath) {
       const formatted = await formatFile({ projectDir, filePath, run });
       if (formatted && !formatted.ok) {
