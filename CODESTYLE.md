@@ -81,7 +81,11 @@ appears, its aspect moves out of the document into that table.
   produces that a senior would not act on are false positives, and they land in the
   skill's known-false-positives list — the list grows from measurement, not from its
   author's expectations (filed under three states: false positive / real miss /
-  right signal, wrong weight).
+  right signal, wrong weight). The bar itself is an observed failure: a new skill
+  clears it with a real session that went wrong — what was run, what the skill would
+  have changed, what it cost; "it would be better if" does not clear the bar. A
+  candidate composable from existing skills does not get a new skill — every skill is
+  permanent maintenance surface.
 
 ## 7. Comments and language
 
@@ -126,3 +130,52 @@ appears, its aspect moves out of the document into that table.
   (`hooks/lib/vuln-core.mjs:9` — "Design decisions (agreed 2026-11-08)"), the reason a
   workaround exists (`skills/codestyle/scripts/lib/codestyle-core.mjs:103` — the local-date
   note). Deleting one is losing the reason the code looks like this.
+
+## 11. Writing for agents
+
+The doctrine for the repository's agent-facing prose — SKILL.md files, hook block
+messages, docs. tech-writer is its scribe; the versioning rule of §8 applies.
+
+- **Two loads, one budget**: context load — the tokens a document always spends;
+  cognitive load — which documents exist and when to reach for each (the human is the
+  index). The caps in §10 price the first; a navigable docs tree prices the second.
+  Neither is "minimized": they are the price of the document working.
+- **The disclosure ladder**: an in-file step, an in-file reference, a disclosed
+  reference (`skills/brainstorm/SKILL.md` → `references/ears-patterns.md`; detail
+  moving out of a capped skill, §10). The test for going down a rung is branching:
+  inline what every branch of the flow needs; put behind a pointer what only some
+  branches reach.
+- **Completion criteria carry clarity and demand**: a vague bound invites premature
+  completion — sharpen the bound before splitting the document. Demand does the
+  forcing: "a pass with zero failed criteria and zero actionable deviations is
+  terminal" (`skills/spec-review/SKILL.md`) makes the reviewer re-verify instead of
+  re-skim; "every remaining element is load-bearing" (`skills/root-cause/SKILL.md`)
+  makes minimization finish.
+- **Prompt the positive**: a prohibition drags the forbidden behavior into context and
+  makes it more available — steering leads with the desired action, and a block names
+  the way forward (`hooks/lib/kb-gate.mjs:36` — exit 2 with the reason and the rebuild
+  command, not a bare refusal).
+- **The no-op test**: a line that does not change what the executor does is deleted —
+  settled by running the document against the default behavior, not by debate. The
+  test is model-relative: does *this* executor behave differently without the line?
+
+## 12. Authoring skills
+
+The doctrine for writing the skills themselves — the input to §6's clean room.
+
+- **Baseline first**: watch an agent attempt the skill's task WITHOUT the skill and
+  name the failure that was seen — a skill written against an imagined failure teaches
+  the wrong thing; the clean-room run then proves the delta, not the intent.
+- **Match the form to the failure**: a discipline violation takes a prohibition plus
+  the rationalization table; a wrong output shape takes a positive recipe; an omitted
+  element takes a structural slot; conditional behavior takes an observable predicate.
+  A prohibition aimed at a shaping problem measurably produces more of the unwanted
+  behavior than no guidance at all — the form is chosen from the observed failure, not
+  from taste.
+- **No nuance clauses**: "don't X unless it matters" reopens the negotiation the rule
+  closed — state the rule and name the exception's owner instead.
+- **Regex-enforceable → automate**: if a check can be a script, it is a script (the
+  hooks and the `scripts/` gates own the mechanical); documentation holds only judgment.
+- **Self-evaluation is not evidence**: "did you violate any rules?" always answers no.
+  A gate demands the concrete artifact — the file list, the command output, the
+  importer grep — because the investigation itself is what changes the answer.

@@ -37,6 +37,14 @@ A table of the skill's own known ways to go wrong:
 |---|---|---|
 | The output looks right but nobody can act on it | A step skipped its verification | Re-run from the last verified point |
 
+## It's working if (optional — when success is observable)
+
+Two or three observable outcomes with their failure tells — behavior, not vibes:
+
+- The red command is shown with its output before any theory is offered; a theory first
+  means the skill is not running.
+- <observable outcome>; <what it looks like when the skill is skipped>.
+
 <!--
 Checklist for adding a new skill:
 1. Copy this directory to skills/<skill-name>/ — the folder name == the name field

@@ -35,7 +35,10 @@ exit 2 = block), registered by its own manifest (`.zcode-plugin/plugin.json`) th
 at `hooks/hooks.json` — no ZCode-specific adapters exist.
 
 `edit-guard` bundles what follows an edit: the formatter, the linter, the opt-in
-semgrep scan (`.vuln-guard = always`), and the boundary-visibility notes. The edit-scan
+semgrep scan (`.vuln-guard = always`), and the boundary-visibility notes (a plan's
+`- Files:` scope line edited; a plan's approval status flipped — an Edit touching the
+status line, or a Write whose `status: approved` git HEAD does not carry yet; a guard
+allowlist edited). The edit-scan
 column moved there from `vuln-guard`, whose own registration is the commit boundary.
 
 Codex runs untrusted hooks only after explicit trust (`/hooks`), and its PostToolUse is
@@ -78,6 +81,12 @@ Blocks a code edit if the file is not in the file lists of **unclosed** tasks of
 plan. The block returns an explanation and ways forward to the agent (update the plan or
 discuss with the user).
 
+**A plan authorizes code edits only once the user has approved it** — the plan's frontmatter
+must carry `status: approved`. Anything else (draft, missing) leaves the plan a proposal: its
+tasks open nothing, and every code edit blocks with a "not approved" reason (docs stay
+editable). The constrained agent cannot grant itself authorization: the flip to `approved`
+is a boundary edit — edit-guard calls it out, and it lands in the plan's git diff.
+
 **The plan contract** (`docs/plans/*.md`, markers are English-only):
 
 - a task = a `### Task ...` section;
@@ -86,6 +95,7 @@ discuss with the user).
   heading, or a fence (globs are supported: `src/**/*.css`); if the line is present
   but no paths could be parsed from it, the gate blocks with an explanation of the
   format instead of opening silently;
+- approval = the frontmatter `status: approved` — until then the plan gates all code edits;
 - closure = an explicit `- Done: ...` line; `- [x]` checkboxes
   are step progress and do **not** close a task. That is why the plan template contains no
   `- Done:` line — the executor adds it when closing a task.

@@ -213,3 +213,19 @@ test("CLI: findings exit 1, a clean tree exits 0, an empty tree is nothing to ch
   assert.equal(nothing.status, 0);
   assert.match(nothing.stdout, /nothing to check/);
 });
+
+test("dead citations: a task Source citing a section the parent spec does not carry", () => {
+  const docs = happy();
+  docs.specs[1] = {
+    name: "2026-11-01-payments-api.md",
+    text: ["---", "id: payments-api", "parent: payments", "status: approved", "---", "# Repo spec", "", "## 2. Changes", "- the pay endpoint", "", "## 5. Patterns", "- the repo's patterns"].join("\n"),
+  };
+  docs.plans[0] = {
+    name: "2026-11-02-payments-api.md",
+    text: ["---", "id: payments-api-plan", "parent: payments-api", "status: approved", "---", "# Plan", "", "### Task 1: pay", "- Source: [repo spec §2]", "- Files: `src/pay.ts`", "", "### Task 2: patterns", "- Source: [repo spec §9]", "- Files: `src/patterns.ts`", "", "### Task 3: prose", "- Source: [repo spec §2] — payment.id stays canonical"].join("\n"),
+  };
+  const r = auditArtifacts(docs);
+  const dead = r.findings.filter((f) => f.check === "dead citation");
+  assert.equal(dead.length, 1);
+  assert.match(dead[0].finding, /§9/);
+});

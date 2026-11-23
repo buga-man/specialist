@@ -57,9 +57,15 @@ judgment:
   spec the tree does not carry (a dead link).
 - **Status honesty, the mechanical half** — `status: draft` with children, or with a
   plan of the same topic carrying closed tasks.
+- **Dead citations** — a plan task's `- Source: [... spec §N]` citing a section the
+  cited spec does not carry: a section mention co-occurring with a task is not a
+  citation; the citation resolves to a numbered heading that exists.
 
 Exit 1 means findings — quote them in the report as stated (each is a re-derivable
-fact, not a judgment). Silence per directory is reported as "nothing to check", never
+fact, not a judgment). Every judgment finding cites `path:line` too — an observation
+without a citation is dropped, not softened; and "it took too long" is a complaint, not
+a finding — the finding states the problem and its cost, never the grievance. Silence
+per directory is reported as "nothing to check", never
 as passed. What the script cannot see is §3's work.
 
 ## 3. The judgment checks — what the walk cannot see

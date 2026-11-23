@@ -4,6 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -26,7 +27,29 @@ function project(files = {}) {
   return dir;
 }
 
+/** A temp project with the files committed — the Write-flip note needs a git HEAD
+ *  to compare against (the only "before" a post-edit hook has). */
+function gitProject(files = {}) {
+  const dir = project(files);
+  const git = (args) => execFileSync("git", args, { cwd: dir, stdio: ["ignore", "ignore", "ignore"] });
+  git(["init", "-q"]);
+  git(["config", "user.email", "t@example.com"]);
+  git(["config", "user.name", "t"]);
+  git(["add", "-A"]);
+  git(["commit", "-qm", "init"]);
+  return dir;
+}
+
+/** The approval prefix: a plan authorizes code edits only with `status: approved` in
+ *  its frontmatter (the self-owned escape hatch — the agent cannot grant itself
+ *  authorization). Inline fixtures below prepend it; APP is the minimal form. */
+const APP = "---\nstatus: approved\n---\n";
+
 const PLAN = [
+  "---",
+  "status: approved",
+  "---",
+  "",
   "# Plan",
   "",
   "### Task 1: Add export endpoint",
@@ -42,6 +65,80 @@ const PLAN = [
   "- Files: `src/**/*.css`",
   "",
 ].join("\n");
+
+test("gate: a draft plan is a proposal — it authorizes no code edits", () => {
+  const dir = project({ "docs/plans/p.md": "---\nstatus: draft\n---\n\n### Task 1: X\n- Files: `src/a.ts`\n" });
+  const edit = (p) => decide({ projectDir: dir, filePath: p, mode: "soft" });
+  assert.equal(edit("src/a.ts").action, "block");
+  assert.match(edit("src/a.ts").reason, /not approved/);
+  assert.match(edit("src/a.ts").reason, /status: approved/);
+  assert.equal(edit("docs/specs/x.md").action, "allow"); // docs stay editable
+  const info = activePlanInfo(dir);
+  assert.deepEqual(info.unapprovedPlans, ["p.md"]);
+  assert.equal(info.hasOpenTasks, false);
+});
+
+test("gate: a plan without frontmatter is unapproved too; hard mode names the same reason", () => {
+  const dir = project({ "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n" });
+  const soft = decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" });
+  assert.equal(soft.action, "block");
+  assert.match(soft.reason, /not approved/);
+  const hard = decide({ projectDir: dir, filePath: "src/a.ts", mode: "hard" });
+  assert.match(hard.reason, /not approved/); // more specific than "no active plan"
+});
+
+test("gate: `status: approved` restores the plan's authorization", () => {
+  const dir = project({ "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n" });
+  assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "allow");
+});
+
+test("scopeChangeNotes: a plan status flip is a boundary note", () => {
+  const notes = scopeChangeNotes({
+    file_path: "docs/plans/p.md",
+    old_string: "status: draft",
+    new_string: "status: approved",
+  });
+  assert.ok(notes.some((n) => n.includes("approval status")));
+  // Without a projectDir there is no "before" to compare a Write against — the
+  // fail-safe is silence (the Files-line rule: a whole-file Write stays unnoted).
+  const written = scopeChangeNotes({
+    file_path: "docs/plans/p.md",
+    content: APP + "### Task 1: X\n- Files: `src/a.ts`\n",
+  });
+  assert.deepEqual(written, []);
+});
+
+test("scopeChangeNotes: a Write flipping a plan to approved is a boundary note — git HEAD is the before", () => {
+  const dir = gitProject({ "docs/plans/p.md": "---\nstatus: draft\n---\n### Task 1: X\n- Files: `src/a.ts`\n" });
+  const flip = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n" },
+    dir,
+  );
+  assert.ok(flip.some((n) => n.includes("approval status")), "the Write route to a flip is called out");
+
+  // A routine rewrite of an already-approved plan (a Done line lands) stays silent.
+  const ok = gitProject({ "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n" });
+  const routine = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n- Done: abc123\n" },
+    ok,
+  );
+  assert.deepEqual(routine, []);
+
+  // The fast lane's normal creation — a draft Write — has nothing to flip.
+  const draft = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: "---\nstatus: draft\n---\n### Task 1: X\n- Files: `src/a.ts`\n" },
+    dir,
+  );
+  assert.deepEqual(draft, []);
+
+  // An untracked plan born approved — self-authorization at creation is a flip too.
+  const unborn = project({}); // a git-less dir: git cannot answer, which is "no before"
+  const born = scopeChangeNotes(
+    { file_path: "docs/plans/p.md", content: APP + "### Task 1: X\n- Files: `src/a.ts`\n" },
+    unborn,
+  );
+  assert.ok(born.some((n) => n.includes("approval status")));
+});
 
 test("readMode: soft by default, hard/off honored, garbage falls back", () => {
   const dir = project({});
@@ -126,7 +223,7 @@ test("activePlanInfo: open tasks, globs, ./ stripping", () => {
 test("closure: only explicit Done-markers close a task", () => {
   const open = (marker) =>
     activePlanInfo(
-      project({ "docs/plans/p.md": `### Task 1: X\n- Files: \`src/a.ts\`\n${marker}\n` }),
+      project({ "docs/plans/p.md": APP + `### Task 1: X\n- Files: \`src/a.ts\`\n${marker}\n` }),
     ).hasOpenTasks;
   assert.equal(open("- Done: abc123"), false);
   assert.equal(open("- done — verified"), false);
@@ -138,7 +235,7 @@ test("closure: only explicit Done-markers close a task", () => {
 
 test("regression: a stray progress checkbox keeps the gate active (was: silent fail-open)", () => {
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n- Do:\n  1. step\n- [x] step done\n",
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n- Do:\n  1. step\n- [x] step done\n",
   });
   assert.equal(activePlanInfo(dir).hasOpenTasks, true);
   assert.equal(decide({ projectDir: dir, filePath: "src/other.ts", mode: "soft" }).action, "block");
@@ -147,7 +244,7 @@ test("regression: a stray progress checkbox keeps the gate active (was: silent f
 test("regression: mid-task checkbox does not block the task's own files (was: false block)", () => {
   const dir = project({
     "docs/plans/p.md":
-      "### Task 1: X\n- Files: `src/a.ts`\n- [x] step\n\n### Task 2: Y\n- Files: `src/b.ts`\n",
+      APP + "### Task 1: X\n- Files: `src/a.ts`\n- [x] step\n\n### Task 2: Y\n- Files: `src/b.ts`\n",
   });
   assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "allow");
 });
@@ -178,14 +275,14 @@ test("decide: soft without a plan allows, off allows, hard blocks and defers to 
 test("decide: a closed task's files are blocked while another task is open", () => {
   const dir = project({
     "docs/plans/p.md":
-      "### Task 1: A\n- Files: `src/a.ts`\n- Done: abc\n\n### Task 2: B\n- Files: `src/b.ts`\n",
+      APP + "### Task 1: A\n- Files: `src/a.ts`\n- Done: abc\n\n### Task 2: B\n- Files: `src/b.ts`\n",
   });
   assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "block");
   assert.equal(decide({ projectDir: dir, filePath: "src/b.ts", mode: "soft" }).action, "allow");
 });
 
 test("decide: plan without parsable Files lines is fail-safe (allow)", () => {
-  const dir = project({ "docs/plans/p.md": "### Task 1: X\n- Do: something\n" });
+  const dir = project({ "docs/plans/p.md": APP + "### Task 1: X\n- Do: something\n" });
   assert.equal(decide({ projectDir: dir, filePath: "src/x.ts", mode: "soft" }).action, "allow");
 });
 
@@ -194,8 +291,8 @@ test("regression: a Files line with no backticked paths blocks instead of silent
   // gate fell open, so every edit anywhere was allowed without a word.
   // A closed task is out of scope by design — only open tasks can trigger this.
   const cases = [
-    "### Task 1: X\n- Files: src/a.ts\n", // no backticks
-    "### Task 1: X\n- Files:\n  1. src/a.ts\n", // paths only in a nested list
+    APP + "### Task 1: X\n- Files: src/a.ts\n", // no backticks
+    APP + "### Task 1: X\n- Files:\n  1. src/a.ts\n", // paths only in a nested list
   ];
   for (const plan of cases) {
     const dir = project({ "docs/plans/p.md": plan });
@@ -207,7 +304,7 @@ test("regression: a Files line with no backticked paths blocks instead of silent
 
 test("regression: a wrapped Files line keeps its paths in scope (was: false block)", () => {
   const dir = project({
-    "docs/plans/p.md": [
+    "docs/plans/p.md": APP + [
       "### Task 1: importer",
       "- Files: `src/import.js`,",
       "  `src/utils/files.js`,",
@@ -239,7 +336,7 @@ test("regression: the plan template's Done placeholder closes nothing it should 
   // The old template shipped the literal line "- Done: <commit hash> (added by the executor…)",
   // which the gate reads as a real closure — a plan copied from it was fully closed.
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n",
   });
   assert.equal(activePlanInfo(dir).hasOpenTasks, true);
   assert.equal(decide({ projectDir: dir, filePath: "src/other.ts", mode: "soft" }).action, "block");
@@ -257,7 +354,7 @@ test("decide: paths outside the project are not our concern", () => {
 
 test("task headings match case-insensitively; paths compare case-insensitively on Windows", () => {
   const dir = project({
-    "docs/plans/p.md": "### TASK 1: X\n- Files: `src/api/export.ts`\n",
+    "docs/plans/p.md": APP + "### TASK 1: X\n- Files: `src/api/export.ts`\n",
   });
   const info = activePlanInfo(dir);
   assert.equal(info.hasOpenTasks, true);
@@ -322,7 +419,7 @@ test("editedFilePaths: explicit file, patch files (capped), unknown shape", () =
 
 test("decide: an apply_patch payload is checked file by file — one out-of-scope file blocks", () => {
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n",
   });
   const patch = "*** Begin Patch\n*** Update File: src/a.ts\n*** Add File: src/escape.ts\n*** End Patch";
   assert.equal(decide({ projectDir: dir, filePath: "src/a.ts", mode: "soft" }).action, "allow");
@@ -337,7 +434,7 @@ test("a fenced example inside a plan is prose, never the contract", () => {
   // A plan that shows the closing contract as an example must not have that example
   // read as a real closure (the fence spans the marker).
   const dir = project({
-    "docs/plans/p.md": [
+    "docs/plans/p.md": APP + [
       "### Task 1: X",
       "- Files: `src/a.ts`",
       "- Do:",
@@ -360,7 +457,7 @@ test("a fenced example inside a plan is prose, never the contract", () => {
 
 test("unbalancedFence: EOF inside a fence flags the plan — the swallowed tail is diagnosable", () => {
   const dir = project({
-    "docs/plans/p.md": [
+    "docs/plans/p.md": APP + [
       "### Task 1: X",
       "- Files: `src/a.ts`",
       "",
@@ -374,12 +471,12 @@ test("unbalancedFence: EOF inside a fence flags the plan — the swallowed tail 
   // The gate itself stays fail-open (documented); the flag is for plan-context's warning.
   assert.equal(decide({ projectDir: dir, filePath: "src/other.ts", mode: "soft" }).action, "block");
 
-  const balanced = project({ "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n```md\nx\n```\n" });
+  const balanced = project({ "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n```md\nx\n```\n" });
   assert.equal(activePlanInfo(balanced).unbalancedFence, false);
 });
 
 test("path comparison follows the filesystem: case-insensitive on Windows and macOS, sensitive on Linux", () => {
-  const dir = project({ "docs/plans/p.md": "### Task 1: X\n- Files: `src/API/export.ts`\n" });
+  const dir = project({ "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/API/export.ts`\n" });
   const verdict = decide({ projectDir: dir, filePath: "src/api/export.ts", mode: "soft" });
   if (process.platform === "win32" || process.platform === "darwin") {
     assert.equal(verdict.action, "allow", "case-insensitive fs: the same file, no false block");
@@ -436,7 +533,7 @@ test("scopeChangeNotes: an edit to a plan's - Files: line, and to an allowlist, 
 
 test("regression: Verify/Revert/Decision-log extras and plan-level sections do not perturb the gate", () => {
   const dir = project({
-    "docs/plans/p.md": [
+    "docs/plans/p.md": APP + [
       "### Task 1: X",
       "- Source: [repo spec §2]",
       "- Files: `src/a.ts`",

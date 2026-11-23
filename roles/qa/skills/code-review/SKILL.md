@@ -36,17 +36,20 @@ Run in a fresh session when possible; the reviewer does not fix what it reviews.
   broken) is a finding even when it is clean and passes its tests: recorded decisions
   are load-bearing history, not suggestions. No spec chain — nothing to check here;
   never hunt for decisions in commit messages instead.
-- The change-impact **before-list**, when the dev role left one in the plan task or the
-  report — it is the promised scope: the diff is read against it, and a before-item
-  that got neither its change nor a "not needed" mark is a finding.
+- The change-impact **before-list**, when the dev role left one — the promised scope: the
+  diff is read against it; a before-item that got neither its change nor a "not needed"
+  mark is a finding.
 - The tests the diff carries: code and tests are reviewed as one judgment, not two.
 - A previous `*-quality` report for the topic (one glob: `ls docs/specs/*<topic>*`) →
   open by re-verifying its findings (see §5), then review fresh ground. The old report
   is input, never truth: a finding marked fixed is re-proven, not believed.
 - **A large diff gets a review order before it gets a review.** Rank the touched files
   by churn — `git log --follow` commit frequency — and by centrality (shared modules
-  before leaf code): the hot, widely-imported files get the deep read, the cold leaves
-  get breadth. A flat pass over a big diff spends its depth on files nobody changes.
+  before leaf code): hot widely-imported files get the deep read, cold leaves get
+  breadth; a flat pass spends its depth on files nobody changes.
+- **The diff is committed work**: a branch diff does not see staged or uncommitted
+  changes — commit first, then review; reviewing a working tree reviews work nobody
+  asked to accept.
 
 ### Scouts — parallel deep reads (a large diff)
 
@@ -64,8 +67,8 @@ report's contract does not change.
 
 - **Intent vs naming**: do the names say what the code does? A reader should not need
   the body to trust the name.
-- **Structure**: a function or module does one job; nesting depth and branch counts a
-  reader can hold in their head; long parameter lists; levels of abstraction mixed.
+- **Structure**: one job per function or module; nesting and branch counts a reader can
+  hold in their head; long parameter lists; mixed abstraction levels.
 - **Duplication**: grep the diff's new symbols against the repo — code duplicating
   existing functionality is a finding even when the plan ordered it; the fix goes back
   into the plan, not in here.
@@ -145,34 +148,35 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
   layer already owns; "magic numbers" that are the domain's vocabulary — 200/404 in an
   HTTP handler; "too long" aimed at a switch or dispatch table — length is the shape
   there; an N+1 over a fixed or knowingly tiny set; TODO/FIXME in code the diff did
-  not touch; crypto-hardening demands on code that moves no secrets; production-
-  grade demands on example, fixture, or doc-snippet code — a finding names its
-  source kind (live / fixture / example / dead), and only live code carries
-  production weight.
+  not touch; crypto-hardening demands on code that moves no secrets; production-grade
+  demands on example, fixture, or doc-snippet code — a finding names its source kind
+  (live / fixture / example / dead), and only live code carries production weight.
 - Severity per finding:
   - **blocker** — unmaintainable as is, or the design will hurt every future change;
   - **worth fixing** — real cost, fixable in the normal flow;
   - **note** — the reader should know; style nits live here.
-  - A blocker carries proof: the snippet, its line, the scenario of hurt, and why the
-    defenses already in place — tests, types, middleware — do not catch it. No proof →
-    downgrade or drop.
+  - A blocker carries proof: the snippet, its line, the hurt scenario, and why the
+    defenses in place — tests, types, middleware — do not catch it. No proof → downgrade.
 - **Re-verification** (when a previous report exists): its carried findings get a
-  status — **closed** (re-proven: the problem is gone at that location), **not
-  closed**, or **fixed with regression** (the old problem gone, a new one opened — a
-  fresh finding, severity one step up). The header line: `Re-verified: N closed, M not
-  closed, K regressions`.
-- The stale-impact lists (§4) close the report: re-run / may-now-lie / no-longer-
-  covered, each entry with its Must/Should/Optional tag. An empty pass is written as
-  empty, not omitted — "the diff leaves the existing suite untouched" is itself a
-  claim the report owns.
-- The report ends with `Recurring: <class>[, <class>…]` — the finding classes this
-  report shares with its predecessor (`Recurring: none` when empty). That line is the
-  pipeline's review memory: tech-writer aggregates these into CODESTYLE.md
+  status — **closed** (re-proven gone), **not closed**, or **fixed with regression**
+  (old problem gone, a new one opened — a fresh finding, severity one step up).
+  Header line: `Re-verified: N closed, M not closed, K regressions`.
+- The stale-impact lists (§4) close the report — re-run / may-now-lie / no-longer-covered,
+  each entry with its Must/Should/Optional tag; an empty pass is written as empty ("the
+  diff leaves the existing suite untouched" is a claim the report owns).
+- The report ends with `Recurring: <class>[, <class>…]` — the finding classes shared with
+  the previous report (`none` when empty); tech-writer aggregates them into CODESTYLE.md
   anti-pattern proposals.
-- **Zero findings is a valid verdict** — a clean review is a real result, not a failed
-  one; filler nits and speculative "consider using X" are the reviewer's chief failure
-  mode. Final test of every finding: would a senior engineer on this team actually
-  change this in review? No → drop it.
+- **Spec silence is not permission**: unnamed behavior is graded by its effect on a
+  reasonable user, not waved through because no criterion mentions it — the spec chain's
+  `unrequested` class routes on it. Grading a finding Minor because the spec was silent
+  has graded the spec, not the effect.
+- **The set-aside list**: everything considered but not judged — the smell dismissed, the
+  risky pattern read as deliberate — lands in the report, one line each; the executor
+  rules on each, and nothing dies silently in the reviewer's head.
+- **Zero findings is a valid verdict** — filler nits and speculative "consider using X"
+  are the reviewer's chief failure mode. Final test of every finding: would a senior
+  here actually change this? No → drop it.
 - **The loop converges or says so**: a re-review after fixes that yields zero blockers
   and zero worth-fixing findings is terminal — `Converged: pass N` in the header next
   to the `Re-verified:` line, no new sections written to look busy. Until then every
@@ -185,11 +189,10 @@ path is a Must; a leaf's coverage gap is Optional. The three lists ride in the r
 
 - **Evidence, not impressions**: every finding cites a code location — and a CODESTYLE
   rule where the finding is stylistic.
-- **Not a linter**: what the project's lint configs already catch is a one-line pointer
-  to the config, never a re-description of the rule.
-- **The reviewer does not fix**: fixes return to the plan and the executor.
-- **Severity honesty**: a style nit inflated to a blocker burns the trust that makes the
-  next report worth reading.
+- **Not a linter**: what lint configs already catch is a one-line pointer, never a
+  re-description.
+- **The reviewer does not fix**: fixes return to the plan and the executor. **Severity
+  honesty**: a style nit inflated to a blocker burns the trust the next report needs.
 - Write the report in the team's working language, which may differ from the language of
   this skill.
 

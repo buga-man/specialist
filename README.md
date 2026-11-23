@@ -29,25 +29,28 @@ after merge / before release → tech-writer → docs audit (code ↔ specs, ame
 bugs → root-cause → reproduction → root cause → red test → minimal fix
       (risky fix → spec-review in a fresh session)
 
+the work's environment → retro → wired checks and conventions
+      (recurring friction → a check or rule that executes, never advice to remember)
+
 small tasks → fast lane → mini-spec + one-task plan (one artifact) → code → batch spec-review
       (profile `fast` in .spec-gate: stage skills — only on an explicit user request)
 ```
 
 | Skill | Input → Output |
 |---|---|
-| `brainstorm` | raw task → business spec (no code; ≤10 questions per round ordered by what they move — scope > security/privacy > UX > technical detail, assumptions proposed below that line; acceptance criteria; business cases as P1/P2/P3 slices where the P1 tier alone is shippable; ≤3 blocking open questions or the picture is not one yet — check-criteria enforces) |
+| `brainstorm` | raw task → business spec (no code; the frontier interview — every askable question in one batch, recomputed each round, ≤10 per round ordered by what they move — scope > security/privacy > UX > technical detail, assumptions proposed below that line; every must criterion carries its `Verify:` and a `Must-not:` boundary — check-criteria enforces; business cases as P1/P2/P3 slices where the P1 tier alone is shippable; ≤3 blocking open questions or the picture is not one yet) |
 | `system-thinking` | business spec → system spec (which repositories change, contracts, blast radius; architecture changes are always explicit; contracts carry a completeness checklist and breaking/additive classification) |
 | `decompositor` | system spec → repo spec (change sites, repo patterns, anchor snippets) |
-| `implementation-plan` | repo spec → task plan for the agent (vertical slices, Verify "command → expected result", one task = one commit) |
+| `implementation-plan` | repo spec → task plan for the agent (vertical slices demoable on their own, Verify "command → expected result", one task = one commit; `- Blocked by:` edges worked as a frontier; a wide refactor sequences expand–contract — green batches, the contract last) |
 | `change-impact` | planned change → blast radius before the edit (six questions in order — code, data, interfaces, tests, docs, release; a written before-list) · diff vs promised scope after (outside it — justify or revert; a silently dropped before-item is a finding) |
-| `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; a self-review pass against the reviewers' checklists before the report) |
-| `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; every failure carries a gap class — missing/partial/contradicts/unrequested, the axis the fix routes by; a green run is not evidence by itself — the assertion must match the criterion; non-functional criteria need criterion + method + threshold + environment; terminology drift against the glossary; a violated CODESTYLE MUST principle is changes required; the loop ends in `Converged: pass N` or names what is open; best in a fresh session) |
+| `spec-implementation` | plan → code (tests first, the spec as the oracle: spec > test > code; three-tier deviations; receiving review findings is its own discipline — verify before implementing, unclear stops all; a self-review pass against the reviewers' checklists, and merge evidence — the test that failed before and passes after, the one-way/two-way door named) |
+| `spec-review` | code → acceptance against the specs (criterion by criterion: passed/failed/unverifiable with evidence; every failure carries a gap class — missing/partial/contradicts/unrequested, the axis the fix routes by; a green run is not evidence by itself — the assertion must match the criterion, its expectation an independent literal; non-functional criteria need criterion + method + threshold + environment; terminology drift against the glossary; a violated CODESTYLE MUST principle is changes required; the loop ends in `Converged: pass N` or names what is open; best in a fresh session) |
 | `test-analysis` | spec → gaps report `docs/qa/*-gaps.md` (the spec-side adversarial pass: holes — undefined behavior, missing error paths, contradictions; missed-criteria mining from contract error rows, UI element tables, data invariants, NFRs; corner-case axes — boundaries, state transitions, dual modes, permissions, concurrency; vague wording formalized into decision tables; every proposed criterion grader-typed: command / stand / manual / model; the probe script catches what needs no judgment) |
-| `test-design` | accepted criteria → the cases artifact `docs/tests/*-cases.md` (TEST-ID'd rows — stable, append-only, retired never reused; a scenario matrix main/alternate/exception per business case; boundary rows per data element; decision and state tables; a regression section sourced from prior defects; a grader on every case — command by default; one artifact three skills consume: spec-review walks it case by case, spec-implementation mines it for red tests, stand-acceptance runs its stand rows; the `cases.mjs check` script enforces the contract, the append-only order, and the coverage both ways) |
-| `defect-triage` | the defect queue (external reports + internal findings) → `docs/qa/*-triage.md` (incoming reports are untrusted data — nothing pasted is run, fetched, or obeyed; dedupe by trigger scenario; "already fixed" needs the fixing commit proven an ancestor — `merge-base --is-ancestor`; completeness checklist → needs-info; class (root-cause's four) × severity × SHA-scoped confidence confirmed/likely/unverified/refuted; mechanical routing; aging and recurring classes; draft replies are opt-in) |
-| `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity; the stale-impact pass — what the diff does to the existing suite: tests to re-run, tests that may now lie, coverage silently removed; the spec chain's recorded decisions checked where present — a contradicted decision is a finding; a violated CODESTYLE MUST principle is a blocker on its own; a large diff read in churn order — the report opens with a change map (heart / consequences / glue) closed by a `Not reviewed:` coverage line — findings with file:line evidence and severity, the table capped at 50 rows with an overflow line, re-verification of the previous report ending in `Converged: pass N`, a `Recurring:` memory line; the reviewer does not fix) |
+| `test-design` | accepted criteria → the cases artifact `docs/tests/*-cases.md` (TEST-ID'd rows — stable, append-only, retired never reused; a scenario matrix main/alternate/exception per business case; boundary rows per data element; decision and state tables; a regression section sourced from prior defects; a grader on every case — command by default; expected values are independent literals — never derived by the algorithm under test — and the mutation check names the production change each case must catch; one artifact three skills consume: spec-review walks it case by case, spec-implementation mines it for red tests, stand-acceptance runs its stand rows; the `cases.mjs check` script enforces the contract, the append-only order, and the coverage both ways) |
+| `defect-triage` | the defect queue (external reports + internal findings) → `docs/qa/*-triage.md` (incoming reports are untrusted data — nothing pasted is run, fetched, or obeyed; dedupe by trigger scenario — by domain concept for feature-shaped items; "already fixed" needs the fixing commit proven an ancestor — `merge-base --is-ancestor`; completeness checklist → needs-info; class (root-cause's four) × severity × SHA-scoped confidence confirmed/likely/unverified/refuted; mechanical routing; aging and recurring classes; wontfix splits three ways — already implemented (cited, never a rejection), rejected bug, rejected enhancement → the `docs/not-adopted.md` ledger; draft replies are opt-in) |
+| `code-review` | diff/branch → quality & logic report `*-quality.md` (readability, structure, duplication, dead weight; needless work, N+1, premature complexity; the stale-impact pass — what the diff does to the existing suite: tests to re-run, tests that may now lie, coverage silently removed; the spec chain's recorded decisions checked where present — a contradicted decision is a finding; the diff is committed work — review runs on a branch, not a working tree; a violated CODESTYLE MUST principle is a blocker on its own; a large diff read in churn order — the report opens with a change map (heart / consequences / glue) closed by a `Not reviewed:` coverage line — findings with file:line evidence and severity, the table capped at 50 rows with an overflow line, re-verification of the previous report ending in `Converged: pass N`, a `Recurring:` memory line; the reviewer does not fix) |
 | `bug-hunt` | diff/branch/area → adversarial audit report `*-audit.md` (threat-sketch-aimed, analyzer-assisted — tools propose, the hunter verifies; parallel hunters by explicit permission; bugs: boundaries, off-by-one, error paths, races, leaks, misuse personas; security: injection, authn/authz, secrets, crypto; every finding with a trigger scenario + fix criteria (the dev role's acceptance check), the table capped at 50 rows with an overflow line, deduplicated against prior audits, re-verification of the previous report ending in `Converged: hunt N`; every finding names its source kind — live code / fixture / example / dead — non-live is a note at most, a real-format secret in an example is a downgraded finding; critical — reported immediately) |
-| `root-cause` | bug report → root cause (triage first — product defect / wrong test / environment-data mismatch / spec mismatch; reproduction required, red test, minimal fix, full suite; the report names the class) |
+| `root-cause` | bug report → root cause (triage first — product defect / wrong test / environment-data mismatch / spec mismatch; the loop is the deliverable — one named, deterministic, red-capable command showing the user's exact symptom before any theory, 3–5 ranked falsifiable hypotheses; red test, minimal fix, then the bug made impossible at every layer; full suite; the report names the class) |
 | `stand-acceptance` | acceptance on the project's live stand: login, token, API/UI in a browser, logs/DB, rebuild (sanitized placeholders) |
 | `tech-writer` | code+specs → up-to-date specs and a user manual: code ↔ spec drift audit (amendments only via Amendments, after approval) + review memory (recurring finding classes → CODESTYLE anti-patterns; a review report card) + scribe of CODESTYLE's versioned Principles section (SemVer bump + sync-impact line, after approval) + a manual `md → standalone html + pdf` with screenshots from the stand |
 | `trace-audit` | docs/specs + docs/plans → the pipeline's broken promises (`*-trace.md`): the walk script (walk.mjs) catches what needs no judgment — must criteria without a runnable `Verify:`, parent/children desync, dead links, TEST-ID reuse across the registry, plans blocked on already-resolved questions, draft status outgrown; the judgment checks add implementation shipped without a review and findings that never closed across reports — every finding routed to its owning role; reports only |
@@ -56,13 +59,16 @@ small tasks → fast lane → mini-spec + one-task plan (one artifact) → code 
 | `lazy` *(cross-cutting)* | a behavioral overlay for any coding: the minimal complete change, the reuse ladder, no deliberation loops |
 | `scouts` *(cross-cutting)* | the subagent protocol behind every fan-out — parallel read-only recon and verification under an explicit grant: one question asks permission and count (`.spec-gate`'s `scouts: <N>` answers it standing), the granted count is the hard budget, no answer or no host support → the same missions sequentially; mission charters (one mission per scout, artifact paths not pastes, never pre-judged), fan-in (reports are hypotheses until re-verified, dedup by scenario, a silent scout is chased), read-only, no recursion |
 | `bootstrap` *(cross-cutting)* | repository → framework-ready: surveys what exists, proposes and creates the confirmed pieces (`.spec-gate`, `docs/specs/` + `docs/plans/`, `CODESTYLE.md` via codestyle, optional `.suite-gate` / `.kbindex/`); legacy documentation migrates under the port-never-rewrite rule (pilot first, the user reviews); idempotent, confirm-before-create, no commits |
+| `retro` *(cross-cutting)* | a session / feature run / release → environment improvements: mechanical friction → a deterministic check (build-first — a check the repo runs beats a rule the agent must remember), judgement friction → a CODESTYLE convention; an existing-but-unwired check is the finding; the no-op hunt; the user picks from the proposal table, wiring lands where it executes — the mistake cannot happen the same way again |
 
 **Roles.** The same pipeline ships as three skills-only role plugins — `specialist-analyst`,
 `specialist-dev`, `specialist-qa` — alongside the full bundle. `dispatch` classifies a
 task by role before any work starts; `role-analyst` / `role-dev` / `role-qa` are the
-roles' entry skills (mission, working cycle, principles, switching); `.spec-gate` can pin
-the session to one role (`role: qa`) — the skill-gate then blocks out-of-role skills
-until the user consents to a switch. [Installation by role](#roles-analyst--developer--qa).
+roles' entry skills (mission, working cycle, principles, switching); dispatch also owns
+the context-boundary call at phase ends (continue → clear session → role subagent →
+compact with an instruction — decided at the boundary, never mid-phase); `.spec-gate`
+can pin the session to one role (`role: qa`) — the skill-gate then blocks out-of-role
+skills until the user consents to a switch. [Installation by role](#roles-analyst--developer--qa).
 
 Each spec is the contract input of the next skill; decisions are made and recorded at
 the top, everything below only executes. Specs are living documents: deviations during
@@ -97,8 +103,8 @@ skills/                          pipeline skills (the same ones for every host);
 hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile and role pin at skill invocation), bash-policy (the provably read-only commands are auto-approved), mutation-guard (agent-run pushes and history rewrites — blocked, opt-in), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red suite from .suite-gate blocks the commit — opt-in), config-guard (an edit of an existing linter/formatter config — blocked), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
 extensions/                      the same rules for pi agent (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, suite-gate.ts, edit-guard.ts, plan-context.ts, git-watch.ts, codestyle-reminder.ts, kb-gate.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
-docs/                           documentation: skills, hooks, installation; design notes; the skill template
-scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the generated docs/skill-index.md and roles/; check-extensions.mjs — the TypeScript-surface guard (part of npm test); skill CLIs live in the skill directories — skills/<name>/scripts/
+docs/                           documentation: skills, hooks, installation; design notes; the not-adopted ledger; the skill template
+scripts/                         helper scripts: copy-skills.sh (supports --role), roles.mjs (the roles map + the generator's source of truth), compliance.mjs — the self-audit (`npm run compliance`): strict SKILL.md frontmatter, docs parity, the router sync (dispatch names only real skills and every role entry), the fresh-context rule on every scout-dispatching skill, the generated docs/skill-index.md and roles/; check-extensions.mjs — the TypeScript-surface guard (part of npm test); skill CLIs live in the skill directories — skills/<name>/scripts/
 ```
 
 ## Hooks and extensions: one logic, five hosts
@@ -113,7 +119,7 @@ API — [extensions/README.md](extensions/README.md).
 
 | Hook | When | What it does |
 |---|---|---|
-| `spec-gate` | before Edit/Write | blocks code edits outside the files of **open** tasks of a `docs/plans/` plan. Modes — the `.spec-gate` file at the project root: `soft` (default; active only with an active plan), `hard` (blocks code even without a plan — run the pipeline first), `fast` (the file gate as in `soft` + the process profile: fast lane by default), `off` |
+| `spec-gate` | before Edit/Write | blocks code edits outside the files of **open** tasks of a `docs/plans/` plan; a plan authorizes code edits only with `status: approved` in its frontmatter — the user approves before code starts, a draft plan gates every code edit (docs stay editable), and the status flip is a boundary edit the diff shows. Modes — the `.spec-gate` file at the project root: `soft` (default; active only with an active plan), `hard` (blocks code even without a plan — run the pipeline first), `fast` (the file gate as in `soft` + the process profile: fast lane by default), `off` |
 | `skill-gate` | skill invocation (Skill) | in the `fast` profile blocks autonomous launch of brainstorm / system-thinking / decompositor — small tasks go through the fast lane (a mini-spec in the header of a one-task plan); an explicit user request — via temporarily switching the profile to `soft`. With `.spec-gate` pinning `role: <analyst/dev/qa>` — blocks the other roles' skills until the user consents to a switch (the block points to the dispatch protocol); silent otherwise |
 | `secrets-guard` | before Bash | blocks `git add` of sensitive files (`.env`, keys, credentials; `git add .`/`-A`, bare directories and wildcard paths are checked against the index with untracked files expanded, quoted non-ASCII paths unescaped, `.env.example` is allowed) and `git commit`/`git push` with secrets in the diff (two pattern tiers: definite/likely; a push without an upstream — the first push of a branch — scans the commits the remote does not hold); legitimate fixtures — a regex in `.secrets-allow` at the root; a finding never echoes the secret's value; `git -C <dir>` is checked against the given directory |
 | `vuln-guard` | before Bash (git commit) | semgrep over the commit's staged files — findings block; no semgrep on PATH — silent. `.vuln-guard` at the root: `always`/`edit` = scan edits too (inside edit-guard), `off` = the hook is fully off; false positives — `# nosemgrep:` / `.vuln-allow` |
@@ -122,13 +128,15 @@ API — [extensions/README.md](extensions/README.md).
 | `mutation-guard` | before Bash | blocks agent-run `git push`, `reset --hard`, `rebase`, `clean`, `stash drop/clear`, `branch -D`, `checkout --`/`checkout <ref> --`/`restore` discards (`restore --worktree` counts even next to `--staged`), and the hook bypasses (`commit`/`push --no-verify`, `core.hooksPath`) — outward and history-mutating operations run on the user's explicit command, not the agent's initiative; leading global options (`git -c user.name=x push`) do not hide the shape. Commits are not gated (one task = one commit is the framework's loop). Opt-in: silent until `.spec-gate` carries `mutation-guard: on`; unknown shapes and errors — silent (fail-safe) |
 | `config-guard` | before Edit/Write | an edit of an **existing** linter/formatter config (eslint, prettier, biome, ruff, stylelint, markdownlint — flat and rc styles) or its ignore file — blocked: relaxing a rule or silencing a path is the user's decision. Creating a config where none exists is allowed (bootstrap); deletion counts as an edit |
 | `git-watch` | after Bash | after tree-changing git operations (commit/checkout/merge/rebase/pull/reset/cherry-pick/stash pop) it reconciles derived artifacts with the disk: the kb-index index — a signal to rebuild (a data derivative), CODESTYLE.md — a signal to ask the user (the document is committed); silent when everything is fine |
-| `edit-guard` | after Edit/Write | one adapter, one deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:` scope line or of `.secrets-allow`/`.vuln-allow` is called out), the project's formatter (prettier / ruff), the project's linter (eslint / ruff / ktlint, each `--fix`-ing what it can), and — under `.vuln-guard = always` — a semgrep scan; unfixable errors and violations are returned to the agent to repair |
-| `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; with the `fast` profile — also the profile block, even without a plan; with a role pin (`role:` in `.spec-gate`) — the pin line, even in mode `off` (the pin gates skills, not files); with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; with no open tasks — the spec-chain line: the newest incomplete chain in `docs/specs/`, its stage and the skill to resume with (derived from the slugs and `status:` metadata — no state file; no marker needed — a `docs/specs/` tree is itself the opt-in); silent at `off` (without a pin), and in soft/hard when no chain is mid-flight and onboarding has nothing to report |
+| `edit-guard` | after Edit/Write | one adapter, one deterministic order: the boundary-visibility notes (an edit of a plan's `- Files:` scope line, a plan's approval-status flip — by Edit, or by a Write that git HEAD shows newly `approved` — or of `.secrets-allow`/`.vuln-allow` is called out), the project's formatter (prettier / ruff), the project's linter (eslint / ruff / ktlint, each `--fix`-ing what it can), and — under `.vuln-guard = always` — a semgrep scan; unfixable errors and violations are returned to the agent to repair |
+| `plan-context` | session start | injects a brief orientation into the context: the active plan, open tasks, the spec-gate mode; an unapproved plan is named as such (its tasks open nothing until the user approves — with no approved plan active, code edits stay blocked); with the `fast` profile — also the profile block, even without a plan; with a role pin (`role:` in `.spec-gate`) — the pin line, even in mode `off` (the pin gates skills, not files); with `.spec-gate` — an onboarding line about a missing `CODESTYLE.md` / kb-index index; with no open tasks — the spec-chain line: the newest incomplete chain in `docs/specs/`, its stage and the skill to resume with (derived from the slugs and `status:` metadata — no state file; no marker needed — a `docs/specs/` tree is itself the opt-in); silent at `off` (without a pin), and in soft/hard when no chain is mid-flight and onboarding has nothing to report |
 | `codestyle-reminder` | session start | if `CODESTYLE.md` sits at the root: counts code commits from the recorded `base` (the threshold — 30 code commits or 30 days) and injects a single reminder line; **never blocks**; the staleness verdict — `skills/codestyle/scripts/codestyle.mjs status` |
 | `kb-gate` | Stop | reconciles the documentation index (`.kbindex/index.json`) with the disk by hashes: a document changed, appeared, or disappeared — the end of the turn is blocked with a rebuild command; without an index, at `stop_hook_active`, and on any error — silent |
 
 All are fail-safe: a hook failure never blocks work. `docs/**` and `*.md` are always
-editable under spec-gate. The plan contract — `docs/hooks.md`: sections
+editable under spec-gate. The plan contract — `docs/hooks.md`: approval — the
+frontmatter `status: approved`, without which a plan gates every code edit and its
+flip is a boundary edit; sections
 `### Task`, task files from `- Files:` (globs are supported, a wrapped list's
 continuation lines count; a
 line whose paths cannot be parsed — a block with an explanation, not a silent opening;
@@ -153,7 +161,7 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
 
 - [Installation and dependencies](docs/installation.md) — all five hosts and skills-only;
   what is needed for full operation, project configuration files, verification after installation.
-- [Skills](docs/skills.md) — a human-readable description of all twenty-five skills: why they exist,
+- [Skills](docs/skills.md) — a human-readable description of all twenty-six skills: why they exist,
   input → output, when they trigger, key rules.
 - [Hooks](docs/hooks.md) — all thirteen hooks: events, what they block,
   configuration, boundaries, and fail-safe behavior.
@@ -161,6 +169,8 @@ capability matrix: [docs/hooks.md](docs/hooks.md#host-support).
   the design rationale behind the two skills.
 - [Plugin schema notes](docs/plugin-schema-notes.md) — the host and marketplace traps the
   repository has already hit: symptom → cause → rule.
+- [Not adopted](docs/not-adopted.md) — the why-not ledger: rejected concepts with their
+  durable reasons, so the same candidate is not re-litigated every few months.
 - [Skill template](docs/skill-template/) — the starting point for a new skill.
 
 ## Installation
@@ -241,9 +251,9 @@ Every role plugin also carries `dispatch` — the entry point that classifies a 
 role before any work starts and governs switching: roles are switched only with the
 user's explicit consent (switch here / a new session with the role / a role subagent /
 stay and record the task for the other role) — `scouts` (the subagent protocol behind
-every fan-out), and `bootstrap`, the cross-cutting
-repository primer. The role rows above name each role's own skills; the three shared
-ones ride in every plugin.
+every fan-out), `bootstrap`, the cross-cutting repository primer, and `retro`, the
+environment-improving retrospective. The role rows above name each role's own skills;
+the four shared ones ride in every plugin.
 
 - **Claude Code / ZCode** — the same marketplace, another plugin:
   `/plugin install specialist-qa@specialist`; the ZCode marketplace page lists all four.
@@ -282,10 +292,11 @@ In this mode hooks and extensions are **not** installed — skills only.
 1. Copy `docs/skill-template/` to `skills/<skill-name>/`.
 2. Fill in `SKILL.md`: `name` — matches the folder name (kebab-case, up to 64 characters);
    `description` — up to 1024 characters, the main autoload trigger ("what it does and
-   when to apply it"). The template carries two optional sections — **Boundaries**
-   (can do autonomously / requires confirmation / will not do) and **Troubleshooting**
-   (symptom → likely cause → what to do) — add them when the skill's scope is easy to
-   overstep or it has known failure shapes.
+   when to apply it"). The template carries three optional sections — **Boundaries**
+   (can do autonomously / requires confirmation / will not do), **Troubleshooting**
+   (symptom → likely cause → what to do), and **It's working if** (observable success
+   criteria with their failure tells) — add them when the skill's scope is easy to
+   overstep, it has known failure shapes, or its success is observable.
 3. The skill must be portable — no machine-specific paths, credentials, or settings.
    Host-specifics: Claude Code and Codex hooks → `hooks/`, pi extensions → `extensions/`, OpenCode → `plugins/opencode/`.
    Skill scripts live in the skill's directory (`skills/<name>/scripts/`), paths in
@@ -350,7 +361,7 @@ written from scratch — no donor text, code, or skills ship here.
 - [Clean Code for AI Agents](https://akitaonrails.com/en/2026/04/20/clean-code-for-ai-agents/)
   — code's primary reader is an agent: why-comments, headless tests, agent readability (v0.29.0)
 - [mattpocock/skills](https://github.com/mattpocock/skills) — the interview frontier, the
-  red-capable-loop diagnosis gates, tracer-bullet tickets (planned v0.41.0)
+  red-capable-loop diagnosis gates, tracer-bullet tickets (v0.41.0)
 - [obra/superpowers](https://github.com/obra/superpowers) — the subagent dispatch doctrine (v0.38.0)
 - [affaan-m/ecc](https://github.com/affaan-m/ecc) — issue-review, eval-harness graders,
   TEST-ID collaboration (v0.32.0, v0.37.0, v0.38.0)

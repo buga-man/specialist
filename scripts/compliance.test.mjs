@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildCatalog, parseFrontmatterStrict, validateSkill } from "./compliance.mjs";
+import { buildCatalog, freshContextFindings, parseFrontmatterStrict, validateRouter, validateSkill } from "./compliance.mjs";
 
 const fm = (body) => `---\n${body}\n---\n\n# Title\n`;
 
@@ -122,4 +122,34 @@ test("buildCatalog: alphabetical rows, role column, links, pipes escaped", () =>
   assert.match(rows[0], /\[alpha\]\(\.\.\/skills\/alpha\/SKILL\.md\) \| — \| First one/);
   assert.match(rows[1], /\[zeta\]\(\.\.\/skills\/zeta\/SKILL\.md\) \| qa \| Last \\[|] one/);
   assert.match(md, /\| Skill \| Role \| Description \(the autoload trigger\) \|/);
+});
+
+test("validateRouter: a backticked reference to a non-skill is a lie the router cannot tell", () => {
+  const text =
+    "Entries: `role-analyst`, `role-dev`, `role-qa`. Use `spec-implementation` and `phantom-skill`.";
+  const findings = validateRouter(text, ["spec-implementation", "role-analyst", "role-dev", "role-qa"]);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /phantom-skill/);
+  assert.match(findings[0], /router that lies/);
+});
+
+test("validateRouter: plugin names, host terms and non-kebab tokens are skipped by shape", () => {
+  const text =
+    "Install `specialist-qa` or the full `specialist`; see `.spec-gate` and `feat/topic` — " +
+    "entries: `role-analyst`, `role-dev`, `role-qa`.";
+  assert.deepEqual(validateRouter(text, ["role-analyst", "role-dev", "role-qa"]), []);
+});
+
+test("validateRouter: a forgotten role-entry skill is named", () => {
+  const findings = validateRouter("Entries: `role-analyst`, `role-dev`.", ["role-analyst", "role-dev"]);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /role-qa/);
+});
+
+test("freshContextFindings: a `scouts` dispatch without fresh is flagged — with fresh, a plain pin mention, or no scouts, it passes", () => {
+  assert.equal(freshContextFindings("alpha", "dispatch the `scouts` skill when the surface is large").length, 1);
+  assert.deepEqual(freshContextFindings("alpha", "dispatch the `scouts` skill — every scout a fresh context"), []);
+  // "the scouts pin" names the .spec-gate key, not a dispatch — no rule required.
+  assert.deepEqual(freshContextFindings("alpha", "the scouts pin answers the question standing"), []);
+  assert.deepEqual(freshContextFindings("alpha", "no subagents in this skill"), []);
 });

@@ -14,7 +14,10 @@
  *   - stale blocking: a plan task `- Blocked by: open question #N in <spec>`
  *     whose spec's Open-questions table no longer carries #N is work waiting
  *     on nothing; a blocked-by naming a spec the tree does not carry is a
- *     dead link.
+ *     dead link;
+ *   - dead citations: a plan task `- Source: [... spec §N]` citing a section
+ *     the cited spec does not carry — the citation resolves to a numbered
+ *     heading that exists.
  *
  * The judgment checks of the skill (findings that never closed, the untriaged
  * queue, implementation without review) stay with the agent — this script
@@ -40,6 +43,28 @@ const OPEN_QUESTIONS_HEADING_RE =
 
 const TEST_ID_RE = /\bTEST-[A-Z0-9]+(?:-[A-Z0-9]+)*-\d{3,}\b/g;
 const BLOCKED_BY_RE = /^(\s*-\s*Blocked by:\s*open question #(\d+) in (.+?)\s*)$/;
+const PLAN_SOURCE_RE = /^-\s*Source:\s*\[(?:repo|system|business) spec §(\d+)\]/i;
+const SECTION_HEADING_RE = /^#{2,4}\s+(\d+)\.\s/;
+
+/** The §N numbers a plan's task Source lines cite. */
+export function citedSections(planText) {
+  const nos = [];
+  for (const line of String(planText ?? "").split(/\r?\n/)) {
+    const m = PLAN_SOURCE_RE.exec(line);
+    if (m) nos.push(Number(m[1]));
+  }
+  return nos;
+}
+
+/** The numbered section headings a spec actually carries. */
+export function specSectionNumbers(text) {
+  const nos = new Set();
+  for (const line of String(text ?? "").split(/\r?\n/)) {
+    const m = SECTION_HEADING_RE.exec(line);
+    if (m) nos.add(Number(m[1]));
+  }
+  return nos;
+}
 
 /** Minimal frontmatter: only the traceability fields, inline children
  *  (`children: [a, b]`) and the YAML list form both parsed. */
@@ -188,6 +213,20 @@ export function auditArtifacts(docs) {
   }
 
   for (const plan of docs.plans) {
+    // Dead citations: a task Source naming `§N` of the plan's parent spec — the
+    // citation resolves to a numbered heading that exists; a section mention
+    // co-occurring with the task is not a citation.
+    const chainEntry = chain.find((c) => c.name === plan.name && c.fm.id);
+    const parent = chainEntry?.fm?.parent ? byId.get(chainEntry.fm.parent) : null;
+    const cited = citedSections(plan.text);
+    if (parent && cited.length) {
+      const nos = specSectionNumbers(parent.text);
+      for (const no of cited) {
+        if (!nos.has(no)) {
+          say(plan.name, "dead citation", `a task cites §${no}, which the parent spec ${parent.name} does not carry — the citation resolves to a numbered heading that exists`);
+        }
+      }
+    }
     for (const line of String(plan.text).split(/\r?\n/)) {
       const m = BLOCKED_BY_RE.exec(line);
       if (!m) continue;

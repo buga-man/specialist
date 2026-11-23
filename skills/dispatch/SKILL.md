@@ -76,6 +76,23 @@ even if the producing role's skills are not installed on that side.
 | qa → analyst | proposed amendments (spec gaps) inside the same report — the user approves them |
 | any → user | decisions only a human makes: changed intent, risk, scope |
 
+## Context boundaries — decide in order, at the boundary
+
+The pipeline spans sessions; when a phase ends or the context fills, choose the move
+**in this order** — and decide at the boundary, never mid-phase:
+
+1. **Continue** — the next phase needs this phase's thinking as its **primary source**.
+2. **Clear / new session** — the cheapest move when the next phase starts fresh anyway:
+   the specs and plans carry the state, so nothing not written down is lost.
+3. **A role subagent** — heavy stage work delegated with artifacts (§2's option 3).
+4. **Compact, with an instruction** — the last reach, not the first: state what the next
+   phase needs so the summary keeps it (`compact: we are entering QA on this area`).
+
+Every move but Continue turns this phase's thinking from a primary source into a
+**secondary** one — a fresh session confidently wrong about a decision the summary
+flattened is the failure to avoid. Adjacent planning phases (spec → plan) run in one
+context: the plan should not have to fetch the spec back.
+
 ## Nuances
 
 - On Claude Code and ZCode the skill-gate hook enforces this protocol: an out-of-role

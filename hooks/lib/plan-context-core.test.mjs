@@ -26,7 +26,13 @@ function project(files = {}) {
   return dir;
 }
 
+const APP = "---\nstatus: approved\n---\n";
+
 const PLAN = [
+  "---",
+  "status: approved",
+  "---",
+  "",
   "# Plan",
   "",
   "### Task 1: Add export endpoint",
@@ -124,7 +130,7 @@ test("soft and off without plans — still silence", () => {
 
 test("active plan: many tasks — titles are truncated with an ellipsis", () => {
   const many = Array.from({ length: 7 }, (_, i) => `### Task ${i + 1}: Do thing ${i + 1}\n- Files: \`src/f${i}.ts\``).join("\n\n");
-  const text = buildPlanContext(project({ "docs/plans/2026-01-01-t.md": `# Plan\n\n${many}\n` }));
+  const text = buildPlanContext(project({ "docs/plans/2026-01-01-t.md": APP + `# Plan\n\n${many}\n` }));
   assert.ok(text.startsWith("plan-context: 7 open task(s)"));
   assert.ok(text.includes("; …"));
 });
@@ -181,7 +187,7 @@ test("fast + onboarding: the profile and onboarding in one block without a plan"
 
 test("buildPlanContext: an unparsable Files line is named before it blocks every code edit", () => {
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: src/a.ts\n", // no backticks — scope unparsable
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: src/a.ts\n", // no backticks — scope unparsable
   });
   const text = buildPlanContext(dir);
   assert.ok(text, "the malformed open task still orients the session");
@@ -191,7 +197,7 @@ test("buildPlanContext: an unparsable Files line is named before it blocks every
 
 test("buildPlanContext: a well-formed plan does not carry the unparsed warning", () => {
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n",
   });
   const text = buildPlanContext(dir);
   assert.ok(text);
@@ -200,7 +206,7 @@ test("buildPlanContext: a well-formed plan does not carry the unparsed warning",
 
 test("buildPlanContext: a plan ending inside a code fence is named before its tasks vanish", () => {
   const dir = project({
-    "docs/plans/p.md": "### Task 1: X\n- Files: `src/a.ts`\n\n```markdown\nan example that never closes\n",
+    "docs/plans/p.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n\n```markdown\nan example that never closes\n",
   });
   const text = buildPlanContext(dir);
   assert.ok(text, "the open task still orients the session");
@@ -297,7 +303,7 @@ test("spec chain: -quality and -audit reports do not close the chain — only -r
 test("spec chain: open plan tasks win — the plan orientation is the current signal", () => {
   const dir = project({
     "docs/specs/2026-11-01-dark-mode.md": spec("approved"),
-    "docs/plans/2026-11-05-dark-mode-api.md": "### Task 1: X\n- Files: `src/a.ts`\n",
+    "docs/plans/2026-11-05-dark-mode-api.md": APP + "### Task 1: X\n- Files: `src/a.ts`\n",
   });
   const text = buildPlanContext(dir);
   assert.ok(text.startsWith("plan-context:"));
@@ -361,4 +367,27 @@ test("stale wrapper: absent when the block carries no plan/spec content", () => 
   const fastOnly = buildPlanContext(project({ ".spec-gate": "fast\n" }));
   assert.ok(fastOnly.includes("SDD profile `fast`"));
   assert.doesNotMatch(fastOnly, STALE);
+});
+
+test("an unapproved plan gates code edits — the orientation names it", () => {
+  const draft = project({
+    "docs/plans/2026-01-01-t.md": "---\nstatus: draft\n---\n\n# Plan\n\n### Task 1: X\n- Files: `src/a.ts`\n",
+  });
+  const text = buildPlanContext(draft);
+  assert.ok(text, "an unapproved plan with open work is orientation-worthy");
+  assert.match(text, /not approved/);
+  assert.doesNotMatch(text, /open task/);
+});
+
+test("a draft beside an active approved plan — the draft opens nothing, the approved scope stands", () => {
+  const dir = project({
+    "docs/plans/2026-01-01-a.md": APP + "# Plan\n\n### Task 1: A\n- Files: `src/a.ts`\n",
+    "docs/plans/2026-01-02-d.md": "---\nstatus: draft\n---\n\n# Draft\n\n### Task 1: D\n- Files: `src/d.ts`\n",
+  });
+  const text = buildPlanContext(dir);
+  assert.match(text, /plan-context: 1 open task\(s\)[^\n]*2026-01-01-a\.md/, "the approved plan orients the session");
+  assert.match(text, /2026-01-02-d\.md is not approved/);
+  assert.match(text, /its tasks open nothing/);
+  // The "every code edit blocks" claim would lie here — the approved plan's scope is open.
+  assert.doesNotMatch(text, /code edits stay blocked/);
 });

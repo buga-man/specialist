@@ -45,6 +45,10 @@ its missions to name), ask exactly one question:
 
 ## The mission charter — one mission per scout
 
+- **Preflight before the first dispatch**: the fixed point resolves, the diff is
+  non-empty, the mission's artifacts exist — a bad input fails in front of the lead,
+  not inside two scouts.
+
 - A mission names its scope boundary the way a charter does: what to walk, where
   to stop. "Look at the repo" is not a mission.
 - **Distinct missions by assignment.** The lead assigns each scout its focus —
@@ -54,7 +58,13 @@ its missions to name), ask exactly one question:
   resident in the lead's context for the rest of the session (hosts that
   compact still charge it). The scout returns conclusions, not a dump; when its
   findings live on disk, filing them was the lead's act — a scout writes its
-  report, it does not edit the repo.
+  report, it does not edit the repo. Reports serving a whole wave of scouts land
+  in a scratch directory outside the repository — shared reading for every mission
+  in the wave, never a paste into one dispatch.
+- **A charter is a brief, not coordinates**: it names what to find and how the answer
+  will be recognized — behavior and outcomes, not file, line, and keystroke. Paths go
+  stale between the lead's read and the scout's run; the pointer to where an artifact
+  lives travels, the intent travels as words.
 - **Never pre-judge a scout.** The mission states what to look for, never what
   to conclude — a "don't flag X" or a "confirm Y" in the prompt defeats the
   fresh eyes the scout was dispatched for.
@@ -73,7 +83,12 @@ its missions to name), ask exactly one question:
 - Scout reports are **hypotheses until verified**: a load-bearing conclusion is
   re-checked in the main context before it drives a decision — what the scout
   gathered as cited evidence rides along, what it concluded stays a hypothesis
-  until then. Scouts propose, the lead verifies.
+  until then. A belief reported as a fact becomes a false premise for everything
+  built on it — the report's own words keep the difference visible. Scouts
+  propose, the lead verifies.
+- **A claim rides with its primary source** — the file:line, the document anchor,
+  the command output: the source that owns the claim, not a secondary retelling
+  of it. "The docs say" without the anchor returns as an open question, not a fact.
 - **Dedup by scenario or claim**, not by location: two scouts naming the same
   trigger is one finding. Disagreement is resolved by building the case out,
   never by vote.

@@ -19,6 +19,7 @@
  * Fail-safe: parsing problems never block work — an unparsable plan yields no
  * restrictions rather than false blocks.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 
@@ -124,17 +125,71 @@ export function editedFilePaths(toolInput, cap = 20) {
   return patchPaths.slice(0, cap).map((p) => p.replace(/^@/, ""));
 }
 
+/** The plan's frontmatter carries `status: approved` — the user's approval that opens
+ *  code edits. Quoted values and trailing comments read as not-approved (conservative:
+ *  the gate blocks rather than opens on an ambiguous status). */
+function planIsApproved(text) {
+  const fm = String(text ?? "").match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return false;
+  const status = fm[1].match(/^status:\s*(\S[^\r\n]*)$/m);
+  return !!status && status[1].trim().toLowerCase() === "approved";
+}
+
+/** The committed version of a file — `git show HEAD:<path>` — or null when git cannot
+ *  answer (untracked, no commits yet, not a repo, no git). Never throws. */
+function committedText(projectDir, rel) {
+  try {
+    const r = spawnSync("git", ["-C", projectDir, "show", `HEAD:./${rel}`], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    return !r.error && r.status === 0 && typeof r.stdout === "string" ? r.stdout : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A whole-file Write of a plan whose content carries `status: approved` while the
+ *  committed version does not (or does not exist) — the flip an Edit's old/new delta
+ *  would have shown, taken through the Write route no delta covers. No projectDir or
+ *  silent git → no flip claimed (fail-safe: the note is advisory, silence is safe). */
+function writesApprovalFlip(path, content, projectDir) {
+  if (!projectDir || !planIsApproved(content)) return false;
+  let rel;
+  try {
+    rel = isAbsolute(path) ? relative(projectDir, path) : path;
+  } catch {
+    return false;
+  }
+  rel = rel.replace(/\\/g, "/");
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) return false; // outside the project — not this gate's plan
+  const committed = committedText(projectDir, rel);
+  return committed === null || !planIsApproved(committed);
+}
+
+const STATUS_FLIP_NOTE =
+  "spec-gate: the approval status of a plan in docs/plans/ was just edited — what the " +
+  "gate authorizes changes with it. `status: approved` opens code edits, and only the " +
+  "user's approval puts it there. If this was not the user's decision, revert the " +
+  "edit; the change is visible in the plan's git diff.";
+
 /** The visibility notes when an edit touches the gates' own boundaries: a "- Files:"
- *  scope line of a plan in docs/plans/, or one of the guard allowlists (.secrets-allow /
- *  .vuln-allow). The gates are discipline, not walls — the agent may edit a plan or an
- *  allowlist — but a boundary change must be seen, not pass silently: each note names
- *  what changed and points at the git diff where the change is reviewable. Returns
- *  string[] (empty — nothing to say). Pure: reads only the edit payload.
+ *  scope line of a plan in docs/plans/, the plan's approval status, or one of the guard
+ *  allowlists (.secrets-allow / .vuln-allow). The gates are discipline, not walls —
+ *  the agent may edit a plan or an allowlist — but a boundary change must be seen, not
+ *  pass silently: each note names what changed and points at the git diff where the
+ *  change is reviewable. Returns string[] (empty — nothing to say). Reads the edit
+ *  payload; the one payload-only exception is a Write's approval flip, which asks git
+ *  for the committed version — the only "before" a post-edit hook still has.
  *
- *  A whole-file Write of a plan produces no note: creating/rewriting a plan is the
- *  normal flow (the fast lane does exactly that); the note is for an Edit that touches
- *  an existing scope line — the shape a quiet self-expansion of scope would take. */
-export function scopeChangeNotes(toolInput) {
+ *  A whole-file Write of a plan produces no Files-line note: creating/rewriting a plan
+ *  is the normal flow (the fast lane does exactly that); that note is for an Edit that
+ *  touches an existing scope line — the shape a quiet self-expansion of scope would
+ *  take. The approval status is the exception: a Write that flips a plan to
+ *  `status: approved` (against git HEAD) is noted like an Edit — the flip is the
+ *  self-authorization the note exists for, and a Write is its quietest route. Git
+ *  trouble or no projectDir → no note (the fail-safe is silence, not noise). */
+export function scopeChangeNotes(toolInput, projectDir) {
   if (!toolInput || typeof toolInput !== "object" || Array.isArray(toolInput)) return [];
   const notes = [];
   const norm = (p) => String(p).replace(/^@/, "").replace(/\\/g, "/");
@@ -160,6 +215,9 @@ export function scopeChangeNotes(toolInput) {
   const filesLine = (s) =>
     /^\s*[-*+]\s*files?\s*:/i.test(s) || /^\s*[-*+]\s*files?\s*:/i.test(s.replace(/^[+-]/, ""));
   const touchesFilesLine = deltas.some((d) => d.split(/\r?\n/).some(filesLine));
+  const statusLine = (s) =>
+    /^\s*status\s*:/i.test(s) || /^\s*[-+]\s*status\s*:/i.test(s.replace(/^[+-]/, ""));
+  const touchesStatusLine = deltas.some((d) => d.split(/\r?\n/).some(statusLine));
 
   for (const target of targets) {
     const p = norm(target);
@@ -180,6 +238,12 @@ export function scopeChangeNotes(toolInput) {
             "the scope change is visible in the plan's git diff.",
         );
       }
+      if (touchesStatusLine && toolInput.content === undefined) {
+        notes.push(STATUS_FLIP_NOTE);
+      }
+      if (toolInput.content !== undefined && writesApprovalFlip(p, toolInput.content, projectDir)) {
+        notes.push(STATUS_FLIP_NOTE);
+      }
     }
   }
   return [...new Set(notes)];
@@ -187,7 +251,14 @@ export function scopeChangeNotes(toolInput) {
 
 /** Collect docs/plans/*.md and extract the file paths of all open (unticked) tasks.
  *  Also reports which plan files still have open work and the open tasks' titles —
- *  plan-context uses these to orient a fresh session; spec-gate ignores them. */
+ *  plan-context uses these to orient a fresh session; spec-gate ignores them.
+ *
+ *  A plan authorizes code edits only once the user has approved it — its frontmatter
+ *  carries `status: approved`. Anything else (draft, missing) leaves the plan a
+ *  proposal: its tasks open nothing, and its name lands in `unapprovedPlans` (decide()
+ *  blocks code edits with a "not approved" reason; plan-context surfaces the state).
+ *  The constrained agent cannot grant itself authorization: the flip to `approved` is
+ *  a boundary edit — scopeChangeNotes calls it out, and it lands in the git diff. */
 export function activePlanInfo(projectDir) {
   const result = {
     hasOpenTasks: false,
@@ -195,6 +266,9 @@ export function activePlanInfo(projectDir) {
     openPlans: [],
     openTaskTitles: [],
     openTaskCount: 0,
+    // Plans with open tasks whose frontmatter does not carry `status: approved` —
+    // proposals, not authorizations (see decide()).
+    unapprovedPlans: [],
     // An open task has a "- Files:" line but no backticked paths could be parsed —
     // the plan is malformed, so its scope is unknown (see decide()).
     unparsedFiles: false,
@@ -213,6 +287,7 @@ export function activePlanInfo(projectDir) {
   }
   const openFiles = new Set();
   const openPlans = new Set();
+  const unapprovedPlans = new Set();
   for (const f of files) {
     let text;
     try {
@@ -220,6 +295,7 @@ export function activePlanInfo(projectDir) {
     } catch {
       continue;
     }
+    const approved = planIsApproved(text);
     let inTask = false;
     let taskOpen = false;
     let taskHasFilesLine = false;
@@ -234,12 +310,16 @@ export function activePlanInfo(projectDir) {
     };
     const flush = () => {
       if (inTask && taskOpen) {
-        result.hasOpenTasks = true;
-        result.openTaskCount++;
-        openPlans.add(f);
-        result.openTaskTitles.push(taskTitle || "(untitled task)");
-        for (const p of taskFiles) openFiles.add(p);
-        if (taskHasFilesLine && taskFiles.length === 0) result.unparsedFiles = true;
+        if (approved) {
+          result.hasOpenTasks = true;
+          result.openTaskCount++;
+          openPlans.add(f);
+          result.openTaskTitles.push(taskTitle || "(untitled task)");
+          for (const p of taskFiles) openFiles.add(p);
+          if (taskHasFilesLine && taskFiles.length === 0) result.unparsedFiles = true;
+        } else {
+          unapprovedPlans.add(f);
+        }
       }
       inTask = false;
       taskOpen = false;
@@ -296,6 +376,7 @@ export function activePlanInfo(projectDir) {
   }
   result.openFiles = [...openFiles];
   result.openPlans = [...openPlans];
+  result.unapprovedPlans = [...unapprovedPlans];
   return result;
 }
 
@@ -385,6 +466,22 @@ export function decide({ projectDir, filePath, mode }) {
         "update the implementation plan (add the file to the proper task) and mark tasks done " +
         "with a `- Done:` line as you finish them — or stop and discuss the change with the user. " +
         "Docs/specs/plan files are always allowed.",
+    };
+  }
+  // A plan with open tasks that the user has not approved is a proposal, not an
+  // authorization: its tasks open nothing, so it gates every code edit until the
+  // frontmatter carries `status: approved` — the flip is a boundary edit the
+  // git diff shows (scopeChangeNotes notes it). Checked before the hard-mode
+  // fallback: the "not approved" reason is more specific than "no active plan".
+  if (info.unapprovedPlans.length > 0) {
+    return {
+      action: "block",
+      reason:
+        `spec-gate: the plan ${info.unapprovedPlans.join(", ")} in docs/plans/ is not approved ` +
+        "yet — its frontmatter does not carry `status: approved`, and a plan authorizes code " +
+        "edits only after the user approves it. Docs (docs/specs, docs/plans, *.md) stay " +
+        "editable: finish the plan, get the user's approval, then set the status — the flip " +
+        "is visible in the git diff.",
     };
   }
   if (mode === "hard") {

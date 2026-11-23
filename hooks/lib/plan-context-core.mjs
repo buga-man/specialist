@@ -235,17 +235,28 @@ export function buildPlanContext(projectDir) {
     const withExtras = (text) => (extras ? `${text}\n${extras}` : text);
 
     const info = activePlanInfo(projectDir);
+    // An unapproved plan (no `status: approved`) gates code edits without opening any
+    // scope — the fresh session must know why every code edit blocks. With an approved
+    // plan also carrying open tasks, the draft opens nothing itself — the "every code
+    // edit blocks" claim would lie about the approved plan's scope.
+    const unapproved = info.unapprovedPlans.length
+      ? `spec-gate: the plan ${info.unapprovedPlans.join(", ")} is not approved yet (no \`status: approved\`) — ` +
+        (info.hasOpenTasks
+          ? "its tasks open nothing until the user approves it.\n"
+          : "code edits stay blocked until the user approves it.\n")
+      : "";
     if (!info.hasOpenTasks) {
       // No open tasks — the spec chain takes over as the orientation: a mid-flight
       // chain is the thing a fresh session would otherwise not know to continue.
       const chain = specChainBlock(projectDir);
       if (mode === "fast") {
         return withExtras(
-          chain ? `${FAST_PROFILE_BLOCK}\n${chain}\n${STALE_CONTEXT_WRAP}` : FAST_PROFILE_BLOCK,
+          unapproved +
+            (chain ? `${FAST_PROFILE_BLOCK}\n${chain}\n${STALE_CONTEXT_WRAP}` : FAST_PROFILE_BLOCK),
         );
       }
-      if (!chain) return extras || null;
-      return withExtras(`${chain}\n${STALE_CONTEXT_WRAP}`);
+      if (!chain) return (unapproved + extras) || null;
+      return withExtras(`${unapproved}${chain}\n${STALE_CONTEXT_WRAP}`);
     }
 
     const n = info.openTaskCount || info.openTaskTitles.length || 1;
@@ -273,6 +284,7 @@ export function buildPlanContext(projectDir) {
       : "";
 
     const text =
+      unapproved +
       unparsed +
       unbalanced +
       `plan-context: ${n} open task(s) in docs/plans/${plans}:${titles.length ? `\n  - ${titles.join("\n  - ")}${more}` : ""}\n` +

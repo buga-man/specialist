@@ -50,7 +50,8 @@ implementation.
 
 The deep recon splits into independent areas: the repo's docs and conventions, the
 inventory of the affected area, contract counterparts, the in-repo blast radius. When the
-area is large, dispatch the `scouts` skill and keep the mapping (stage 4) in the main
+area is large, dispatch the `scouts` skill — every scout a fresh context, no session
+history traveling into a mission — and keep the mapping (stage 4) in the main
 context. The grant (one question — permission and count), the mission charter, and the
 fan-in rules live there; the specifics of this skill:
 
