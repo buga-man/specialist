@@ -101,9 +101,11 @@ proposed instead of a question), and turns it all into a business spec.
   and constraints, must/should acceptance criteria (each with a source `[request]/[docs]/[answer #N]`,
   an EARS shape per references/ears-patterns.md with the quality bar (fail test, discriminating
   power, measurable vocabulary, defined terms; a worked sharpening example included) and — for
-  must — a `Verify:` command or an explicit manual check; the mechanical part of the bar is a
-  runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify presence,
-  vague wording, the 5–20 must band, more than three blocking open questions). Business
+  must — a `Verify:` command or an explicit manual check plus a `Must-not:` boundary
+  (nothing else changes); the mechanical part of the bar is a
+  runnable self-check (`node <skill-dir>/scripts/check-criteria.mjs <spec>` — Verify and
+  Must-not presence, vague wording, the 5–20 must band, more than three blocking open
+  questions). Business
   cases "actor → action → outcome" (each covered by at least one criterion) carry a
   priority tier P1/P2/P3 — the P1 tier alone is a shippable slice and the plan's
   slicing order — plus a glossary slot for the terms the criteria rely on, success
@@ -762,7 +764,8 @@ The analyst's entry skill: mission (understanding, written down — specs a busi
 can verify and a developer implements without guessing), the working cycle
 (brainstorm → system-thinking → decompositor, kb-index to navigate, tech-writer after
 merge), and the role's principles — no code and no implementation decisions, at most 10
-questions before the spec, every criterion EARS-shaped with an explicit `Verify:`, the
+  questions before the spec, every criterion EARS-shaped with its `Verify:` and
+  `Must-not:`, the
 blast radius named. Out of role: writing/fixing code, verdicts, bug hunting — use the
 dispatch switching protocol. On hosts with the skill-gate, activation offers to pin
 `role: analyst` in `.spec-gate`.
