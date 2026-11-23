@@ -120,7 +120,9 @@ omp install github:buga-man/specialist
 ```
 
 Updating: omp checks plugin updates at startup (`/marketplace` → upgrade). After editing
-extensions: `/reload`. One wiring differs from pi: omp has no `agent_settled`, so the
+extensions: `/reload-plugins` — and a session restart for a changed extension module
+(omp refreshes skills and commands live; extension modules load per session). One wiring
+differs from pi: omp has no `agent_settled`, so the
 kb-gate block goes through omp's blocking `session_stop` stop hook
 ([hooks.md](hooks.md)); the other extensions run unchanged.
 

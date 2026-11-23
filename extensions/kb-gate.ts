@@ -18,13 +18,16 @@
  *   the Claude Code Stop block (exit 2 forces the agent to continue).
  * - omp — session_stop: the main-session blocking stop hook (the Claude Stop twin).
  *   A `{ decision: "block", reason }` return refuses the settle and feeds the reason
- *   to the agent as the continuation instruction; it never fires for task/subagent
- *   sessions, and an operator interrupt overrides a refusal.
+ *   to the agent as the continuation instruction; the event carries `stop_hook_active`
+ *   (omp names the fuse after the Claude flag) and the settle's abort `signal`; it
+ *   never fires for task/subagent sessions, and an operator interrupt overrides a
+ *   refusal.
  *
- * In both wirings the settle that follows a forced continuation is skipped (the
- * analog of the Stop hook's stop_hook_active), so the gate forces exactly one
- * continuation per settle and can never loop; an aborted run (pi carries `aborted`
- * on agent_settled) is never continued.
+ * The one-continuation fuse per host: omp reads the event's `stop_hook_active` (true
+ * exactly on the settle that follows a hook-forced continuation) and the abort
+ * `signal`; pi's agent_settled carries no such flag, so the pi wiring keeps its own
+ * latch — the settle right after a forced continuation is skipped, and an aborted
+ * run (`aborted` on the event) is never continued. Neither wiring can loop.
  *
  * Host detection: omp marks its ExtensionAPI with members pi does not carry
  * (registerLinkScheme and friends — any one hit decides). A future pi that grows
@@ -76,8 +79,6 @@ function staleMessage(projectDir: string): string | null {
 }
 
 export default function (pi: ExtensionAPI) {
-  let continuing = false; // the settle right after a forced continuation is skipped
-
   const isOmp = OMP_ONLY_MEMBERS.some(
     (member) => typeof (pi as unknown as Record<string, unknown>)[member] === "function",
   );
@@ -90,22 +91,20 @@ export default function (pi: ExtensionAPI) {
       on(
         name: "session_stop",
         handler: (
-          event: unknown,
+          event: { stop_hook_active: boolean; signal: AbortSignal },
           ctx: { cwd: string },
         ) => { decision: "block"; reason: string } | undefined,
       ): void;
     };
-    omp.on("session_stop", async (_event, ctx) => {
+    omp.on("session_stop", async (event, ctx) => {
       try {
-        const skip = continuing;
-        continuing = false;
-        if (skip) return;
+        // The host's fuse and abort: stop_hook_active is true exactly on the settle
+        // that follows a hook-forced continuation; an aborted settle is never gated.
+        if (event.stop_hook_active || event.signal.aborted) return;
 
         const projectDir = resolveProjectDir(ctx.cwd);
         const message = staleMessage(projectDir);
         if (!message) return;
-
-        continuing = true; // one forced continuation per settle — never a loop
         return { decision: "block", reason: message };
       } catch {
         /* fail-safe: never block on gate errors */
@@ -114,6 +113,9 @@ export default function (pi: ExtensionAPI) {
     return;
   }
 
+  // pi: agent_settled is notification-only — the continuation is a triggerTurn
+  // follow-up, and the latch is the fuse (the event carries no stop_hook_active).
+  let continuing = false; // the settle right after a forced continuation is skipped
   pi.on("agent_settled", async (event, ctx) => {
     try {
       const skip = continuing || event.aborted === true;

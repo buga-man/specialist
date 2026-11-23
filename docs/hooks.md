@@ -457,10 +457,12 @@ index somewhere other than where the hook looks for it, and the block would repe
 (`extensions/kb-gate.ts`). On pi the settle boundary (`agent_settled`) is
 notification-only — the gate pushes a `triggerTurn` follow-up that starts one
 continuation turn, and the settle that follows a forced continuation is skipped (the
-analog of `stop_hook_active`), so there is never a loop. On omp the boundary is the
-blocking `session_stop` stop hook — a `{ decision: "block", reason }` return, the
-Claude Stop twin — with the same one-continuation fuse. The host is told apart by its
-extension API: omp carries members pi does not (`registerLinkScheme` and friends).
+extension keeps its own latch — pi names no `stop_hook_active` here), so there is never
+a loop. On omp the boundary is the blocking `session_stop` stop hook — a
+`{ decision: "block", reason }` return, the Claude Stop twin down to the fuse's name:
+the event carries `stop_hook_active`, and the gate skips the settle that follows a
+forced continuation. The host is told apart by its extension API: omp carries members
+pi does not (`registerLinkScheme` and friends).
 
 ## How to check a hook by hand
 

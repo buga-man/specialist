@@ -55,7 +55,9 @@ automatically.
   `session_stop` stop hook (omp has no `agent_settled`). Logic:
   `../hooks/lib/kb-gate-core.mjs`.
 
-After installing/editing extensions: `/reload`.
+After installing/editing extensions: `/reload` inside pi; `/reload-plugins` inside
+oh-my-pi — and a session restart there for a changed extension module (omp refreshes
+skills and commands live; extension modules load per session).
 
 ## How to add an extension
 
@@ -83,7 +85,7 @@ After installing/editing extensions: `/reload`.
 - `input` — intercept and transform user input
 - `session_start` — session initialization
 - `agent_settled` — the run settled (notification-only; a `triggerTurn` follow-up starts the next turn) — pi
-- `session_stop` — the main-session blocking stop hook (a `{ decision: "block", reason }` return forces a continuation) — oh-my-pi
+- `session_stop` — the main-session blocking stop hook (carries `stop_hook_active`; a `{ decision: "block", reason }` return forces a continuation) — oh-my-pi
 - `session_compact` — the context was compacted (plan-context re-orients after it)
 
 The full list of events and the extension API:
