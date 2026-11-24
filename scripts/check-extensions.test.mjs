@@ -90,7 +90,7 @@ test("importFindings: a missing export, a missing file and an unknown package ar
 test("importFindings: the repository's own TypeScript surfaces are clean", async () => {
   const root = fileURLToPath(new URL("..", import.meta.url));
   const files = tsFiles(root);
-  assert.equal(files.length, 10); // nine extensions + the OpenCode plugin
+  assert.equal(files.length, 14); // nine extensions + four omp commands + the OpenCode plugin
   for (const file of files) {
     const findings = await importFindings(file);
     assert.deepEqual(findings, [], `${file}: ${findings.join("; ")}`);

@@ -23,11 +23,15 @@
  *   never fires for task/subagent sessions, and an operator interrupt overrides a
  *   refusal.
  *
- * The one-continuation fuse per host: omp reads the event's `stop_hook_active` (true
- * exactly on the settle that follows a hook-forced continuation) and the abort
- * `signal`; pi's agent_settled carries no such flag, so the pi wiring keeps its own
- * latch — the settle right after a forced continuation is skipped, and an aborted
- * run (`aborted` on the event) is never continued. Neither wiring can loop.
+ * The per-host fuse: omp reads the event's `stop_hook_active` (true exactly on the
+ * settle that follows a hook-forced continuation) and the abort `signal`; on top of
+ * the host flag the omp wiring keeps a settle budget — up to two consecutive blocks
+ * per chain (the first refusal plus one retry for the index rebuild), reset by a
+ * clean settle or an abort, silence after — so the richest host fuse buys a bounded
+ * retry, never a loop (omp's own continuation cap is 8, far above this fuse).
+ * pi's agent_settled carries no such flag, so the pi wiring keeps its own latch —
+ * the settle right after a forced continuation is skipped, and an aborted run
+ * (`aborted` on the event) is never continued. Neither wiring can loop.
  *
  * Host detection: omp marks its ExtensionAPI with members pi does not carry
  * (registerLinkScheme and friends — any one hit decides). A future pi that grows
@@ -60,6 +64,11 @@ const OMP_ONLY_MEMBERS = [
   "registerFileWriteFallback",
   "registerTranscriptPresenter",
 ] as const;
+
+/** The omp settle budget: consecutive blocks per continuation chain (the first
+ *  refusal plus one retry for the index rebuild). A clean settle or an abort resets
+ *  the chain; after the budget the gate goes silent — bounded, never a loop. */
+const SETTLE_BUDGET = 2;
 
 /** The stale-index verdict message, or null when there is no index or it matches
  *  the disk — the same text on every host. */
@@ -96,15 +105,23 @@ export default function (pi: ExtensionAPI) {
         ) => { decision: "block"; reason: string } | undefined,
       ): void;
     };
+    let chainBlocks = 0; // consecutive blocks in the current continuation chain
     omp.on("session_stop", async (event, ctx) => {
       try {
         // The host's fuse and abort: stop_hook_active is true exactly on the settle
-        // that follows a hook-forced continuation; an aborted settle is never gated.
-        if (event.stop_hook_active || event.signal.aborted) return;
+        // that follows a hook-forced continuation; an aborted settle is never gated
+        // and ends the chain, a fresh settle (the flag false) starts a new one.
+        if (event.signal.aborted) {
+          chainBlocks = 0;
+          return;
+        }
+        if (!event.stop_hook_active) chainBlocks = 0;
+        else if (chainBlocks >= SETTLE_BUDGET) return; // budget spent — silence
 
         const projectDir = resolveProjectDir(ctx.cwd);
         const message = staleMessage(projectDir);
         if (!message) return;
+        chainBlocks++;
         return { decision: "block", reason: message };
       } catch {
         /* fail-safe: never block on gate errors */

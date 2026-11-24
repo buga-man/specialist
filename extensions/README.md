@@ -47,12 +47,14 @@ automatically.
 - **codestyle-reminder.ts** — on `session_start` stores one persistent line when
   CODESTYLE.md may be stale (the same verdict and line the Claude Code hook injects).
   Logic: `../hooks/lib/git-watch-host.mjs` + `codestyle-core.mjs`.
-- **kb-gate.ts** — when the documentation index diverged from the disk, forces one
+- **kb-gate.ts** — when the documentation index diverged from the disk, forces a
   continuation turn carrying the rebuild command — the pi analog of the Claude Code
-  Stop block (one continuation per settle, no loop; aborted runs are never
-  continued). The wiring is per host: pi — a follow-up message from `agent_settled`
-  (`triggerTurn`); oh-my-pi — a `{ decision: "block" }` refusal from the blocking
-  `session_stop` stop hook (omp has no `agent_settled`). Logic:
+  Stop block (aborted runs are never continued). The wiring is per host: pi — a
+  follow-up message from `agent_settled` (`triggerTurn`), one continuation per settle,
+  no loop; oh-my-pi — a `{ decision: "block" }` refusal from the blocking
+  `session_stop` stop hook (omp has no `agent_settled`), with a settle budget: up to
+  two consecutive blocks per chain (the host's `stop_hook_active` fuse marks the
+  chain; a clean settle or an abort resets it). Logic:
   `../hooks/lib/kb-gate-core.mjs`.
 
 After installing/editing extensions: `/reload` inside pi; `/reload-plugins` inside

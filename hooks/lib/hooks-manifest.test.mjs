@@ -1,7 +1,7 @@
 /**
  * Tests for the host manifests and hook registrations: every hook command must point at
  * an existing adapter, and every host manifest (Codex agent plugin, Claude Code plugin,
- * marketplace, pi package, ZCode plugin) must reference paths that exist.
+ * marketplace, pi package, ZCode plugin, omp package key) must reference paths that exist.
  * Run: node --test hooks/lib/hooks-manifest.test.mjs
  */
 import { test } from "node:test";
@@ -145,6 +145,40 @@ test("SessionStart matchers include the compaction re-orientation on both hosts"
     assert.match(matchers, /clear/, `${file}: clear`);
     assert.match(matchers, /compact/, `${file}: compact`);
   }
+});
+
+test("omp-only surfaces: the omp layer rides the omp manifest key alone — base hosts stay clean", () => {
+  const pkg = readJSON("package.json");
+
+  // The omp layer exists and is wired: the command modules are listed in the omp
+  // manifest key and resolve to real files; the rule and prompt trees omp loads
+  // conventionally (the only host that scans rules/ and prompts/) are present.
+  assert.ok(Array.isArray(pkg.omp.commands) && pkg.omp.commands.length > 0, "omp.commands listed");
+  for (const entry of pkg.omp.commands) {
+    assert.match(entry, /^\.\/omp\/commands\/[^/]+\.ts$/, `omp command path shape: ${entry}`);
+    assert.ok(existsSync(join(REPO_ROOT, entry)), `omp command file exists: ${entry}`);
+  }
+  assert.ok(existsSync(join(REPO_ROOT, "rules")), "rules/ present (omp-only conventional load)");
+  assert.ok(existsSync(join(REPO_ROOT, "prompts")), "prompts/ present (omp-only conventional load)");
+
+  // The pi manifest twin stays base (skills + extensions only) — the layer must not
+  // leak to the host that shares the extensions tree.
+  assert.equal(pkg.pi.commands, undefined, "pi key carries no commands");
+  assert.deepEqual(Object.keys(pkg.pi).sort(), ["extensions", "skills"], "pi key stays base");
+
+  // The leak-prone conventional plugin dirs stay absent from the repo root: Claude
+  // Code and ZCode read commands/ and agents/ from plugin packages, so an omp
+  // command shipped there would ride every marketplace install.
+  for (const leak of ["commands", "agents"]) {
+    assert.ok(!existsSync(join(REPO_ROOT, leak)), `no root-level ${leak}/ (Claude Code and ZCode would load it)`);
+  }
+
+  // The omp fork of the settle gate stays wired and bounded: the session_stop fork
+  // exists and carries the settle budget (source probe — the TS branches have no
+  // executable tests here).
+  const kbGate = readFileSync(join(REPO_ROOT, "extensions", "kb-gate.ts"), "utf8");
+  assert.match(kbGate, /session_stop/, "kb-gate registers the omp settle fork");
+  assert.match(kbGate, /SETTLE_BUDGET/, "kb-gate bounds the omp continuation chain");
 });
 
 test("versions: every manifest field carries the same version (the version-sync rule, enforced)", () => {
