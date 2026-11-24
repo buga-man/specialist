@@ -97,9 +97,11 @@ traceability defect — spec-review and tech-writer check for it.
 .claude-plugin/marketplace.json  marketplace wrapper: the full plugin (source "./") + the three role plugins (source "roles/<role>") — what /plugin install lists
 plugin.json                      Codex agent-plugin manifest (Agent Plugins v1): points Codex at skills/ and hooks/hooks-codex.json
 .zcode-plugin/plugin.json        ZCode plugin manifest: points ZCode at skills/ and hooks/hooks.json (ZCode speaks the Claude Code hook protocol, so the Claude Code adapters run unchanged)
-package.json                     pi package manifest (pi.skills / pi.extensions); the omp twin for oh-my-pi (its extensions field registers the guards — skills/ omp scans conventionally)
+package.json                     pi package manifest (pi.skills / pi.extensions); the omp twin for oh-my-pi (its extensions field registers the guards — skills/ omp scans conventionally; its commands list also registers the omp-only slash commands)
 roles/                           the three role plugins (specialist-analyst / specialist-dev / specialist-qa): skills-only, generated from scripts/roles.mjs + skills/ and committed; compliance --fix rebuilds them on drift
 skills/                          pipeline skills (the same ones for every host); each is self-contained — its CLI and domain cores live in skills/<name>/scripts/
+rules/ + prompts/                the omp-only layer, loaded by omp alone from an installed plugin (no other host scans these directory names): a plan-discipline rule for docs/specs and docs/plans, and /prompts: templates — vibe-build, the review loop, a WATCHDOG.yml advisor roster
+omp/commands/                    four omp-only slash commands (/role-analyst, /role-dev, /role-qa, /dispatch) — TS command modules wired through the package.json omp key's commands list
 hooks/                           the hooks: hooks.json registers them in Claude Code, hooks-codex.json in Codex; the shared cores and adapters live in hooks/lib/ — spec-gate (edits outside the plan — blocked), skill-gate (fast profile and role pin at skill invocation), bash-policy (the provably read-only commands are auto-approved), mutation-guard (agent-run pushes and history rewrites — blocked, opt-in), secrets-guard (secrets at the git boundary — blocked), vuln-guard (semgrep on commit), suite-gate (a red suite from .suite-gate blocks the commit — opt-in), config-guard (an edit of an existing linter/formatter config — blocked), edit-guard (after an edit: boundary notes, formatter, linter, opt-in semgrep — one adapter, one order), git-watch (a signal after tree-changing git operations), plan-context (plan context at session start), codestyle-reminder (stale CODESTYLE.md reminder), kb-gate (a Stop block on a stale documentation index); docs and contract — docs/hooks.md
 extensions/                      the same rules for pi agent and oh-my-pi (TypeScript): spec-gate.ts, secrets-guard.ts, vuln-guard.ts, suite-gate.ts, edit-guard.ts, plan-context.ts, git-watch.ts, codestyle-reminder.ts, kb-gate.ts
 plugins/opencode/                the OpenCode plugin (TypeScript, V2 API + a V1 server() fallback) — the same guards on the same cores
@@ -220,7 +222,14 @@ omp install github:buga-man/specialist
 
 Updating: omp checks plugin updates at startup (`/marketplace` → upgrade). One wiring
 differs from pi: omp has no `agent_settled` — the kb-gate block goes through omp's
-blocking `session_stop` stop hook; the other extensions run unchanged.
+blocking `session_stop` stop hook (with a settle budget: the first refusal plus one
+retry, then silence); the other extensions run unchanged.
+
+omp also gets an omp-only layer the other hosts never see: the `/role-analyst`,
+`/role-dev`, `/role-qa`, and `/dispatch` slash commands (registered by the omp
+manifest key alone), a plan-discipline rule injected when docs/specs or docs/plans are
+edited, and `/prompts:` templates — vibe-build, the review loop, a WATCHDOG.yml advisor
+roster (details: [docs/installation.md](docs/installation.md)).
 
 ### Codex CLI
 

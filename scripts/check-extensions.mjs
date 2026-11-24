@@ -214,13 +214,20 @@ export async function importFindings(absPath) {
   return findings;
 }
 
-/** The TypeScript surfaces to check: the pi extensions and the OpenCode plugin. */
+/** The TypeScript surfaces to check: the pi/omp extensions, the omp-only command
+ *  modules, and the OpenCode plugin. */
 export function tsFiles(rootDir) {
   const ext = readdirSync(join(rootDir, "extensions"))
     .filter((f) => f.endsWith(".ts"))
     .map((f) => join(rootDir, "extensions", f));
+  const commandsDir = join(rootDir, "omp", "commands");
+  const ompCommands = existsSync(commandsDir)
+    ? readdirSync(commandsDir)
+        .filter((f) => f.endsWith(".ts"))
+        .map((f) => join(commandsDir, f))
+    : [];
   const openCode = join(rootDir, "plugins", "opencode", "index.ts");
-  return existsSync(openCode) ? [...ext, openCode] : ext;
+  return [...ext, ...ompCommands, ...(existsSync(openCode) ? [openCode] : [])];
 }
 
 async function main() {

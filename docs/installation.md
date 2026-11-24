@@ -126,6 +126,29 @@ differs from pi: omp has no `agent_settled`, so the
 kb-gate block goes through omp's blocking `session_stop` stop hook
 ([hooks.md](hooks.md)); the other extensions run unchanged.
 
+**The omp-only layer.** Everything below rides the `omp` manifest key or the directory
+names only omp scans from an installed plugin — the `pi` key and every other host stay
+base:
+
+- **Slash commands** — `/role-analyst`, `/role-dev`, `/role-qa`, `/dispatch`
+  (`omp/commands/`, listed in the omp key's `commands`): role entry bells over the
+  role skills; a command is the explicit user consent the dispatch protocol needs for
+  a mid-session role switch.
+- **Rule** — `rules/specialist-plan-discipline.md` (omp loads `rules/` and `prompts/`
+  conventionally; no other host scans those names): the plan protocol injected when
+  docs/specs or docs/plans are edited — markers are classes, tasks close with an
+  explicit `- Done:` evidence line, edits stay inside the open task's Files scope,
+  a `.spec-gate` role pin holds until the user switches.
+- **Prompt templates** — `prompts/`, via the `/prompts:` menu: `vibe-plan` (slice the
+  open plan into work packages and build them with vibe workers on the @task model),
+  `review-loop` (code-review → bug-hunt → @judge escalation), `advisor-roster` (draft a
+  WATCHDOG.yml in the specialist style — continuous reviewers with reviewMode/syncBacklog
+  tuned like the gates).
+
+Complementing the layer, the host's own knobs: the model roles (`modelRoles` in
+config.yml — `@task` for fan-out workers, `@judge` for typed verdicts, `@advisor` for
+the WATCHDOG reviewers) are host config, the plugin only references them.
+
 ## Roles — analyst / developer / QA
 
 The framework installs as one full plugin or as three skills-only role plugins

@@ -32,8 +32,11 @@ protocol, the Codex hook (the same stdin; JSON output where Codex differs —
 
 oh-my-pi (omp, a pi fork) runs the same `extensions/*.ts` — every row above reads as the
 pi column there too, except `kb-gate`: omp has no `agent_settled`, so the same block
-goes through omp's blocking `session_stop` stop hook. The `omp` key in package.json
-(the legacy `pi` key alongside it) registers the extensions.
+goes through omp's blocking `session_stop` stop hook, with a settle budget — up to two
+consecutive blocks per continuation chain (the first refusal plus one retry for the
+index rebuild; a clean settle or an abort resets the chain). The `omp` key in
+package.json (the legacy `pi` key alongside it) registers the extensions, and only it
+also registers the omp-only slash commands (`omp/commands/`).
 
 The ZCode column mirrors Claude Code on purpose: ZCode speaks the same hook protocol
 (the same events, the same `startup/resume/clear/compact` matchers, `${CLAUDE_PLUGIN_ROOT}`,
@@ -460,8 +463,10 @@ continuation turn, and the settle that follows a forced continuation is skipped 
 extension keeps its own latch — pi names no `stop_hook_active` here), so there is never
 a loop. On omp the boundary is the blocking `session_stop` stop hook — a
 `{ decision: "block", reason }` return, the Claude Stop twin down to the fuse's name:
-the event carries `stop_hook_active`, and the gate skips the settle that follows a
-forced continuation. The host is told apart by its extension API: omp carries members
+the event carries `stop_hook_active`, and the gate spends a budget of two consecutive
+blocks per continuation chain (the first refusal plus one retry for the rebuild; a
+clean settle or an abort resets the chain; silence after — never a loop). The host is
+told apart by its extension API: omp carries members
 pi does not (`registerLinkScheme` and friends).
 
 ## How to check a hook by hand
